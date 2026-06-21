@@ -38,11 +38,13 @@ If `pytest` is installed, the same test files are compatible with it.
 
 - `agents/personal_assistant/contract.md` - single-agent contract.
 - `docs/adr/` - architecture decision records.
-- `src/personal_assistant/shared/` - schemas, permissions, events, tracing,
-  durable-lite stores, guardrails.
-- `src/personal_assistant/reminders/` - deterministic reminder workflow.
-- `src/personal_assistant/tools/` - tool contracts and local adapters.
-- `src/personal_assistant/memory/` - tenant-scoped episodic/semantic memory.
-- `src/personal_assistant/documents/` - small document extraction/summarization.
-- `src/personal_assistant/scheduler/` - local reminder scheduler.
+- `src/personal_assistant/domain/` - business models, policies, events,
+  permissions, durable state, exceptions, and pure domain services.
+- `src/personal_assistant/application/` - use cases, DTOs, service ports, and
+  bounded runtime orchestration.
+- `src/personal_assistant/adapters/` - inbound channel/API adapters, outbound
+  local tools, scheduler implementations, and persistence adapters.
+- `src/personal_assistant/contracts/` - A2A and future interoperability
+  contracts that are not the internal runtime.
+- `src/personal_assistant/infrastructure/` - composition root and local wiring.
 - `eval/` and `tests/` - golden, failure-mode, and regression checks.
