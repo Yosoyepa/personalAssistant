@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "personal-assistant"
+version = "0.1.0"
+description = "Shared contracts for a tenant-aware personal assistant."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2,<3",
+]
+
+[project.optional-dependencies]
+api = [
+  "fastapi>=0.115",
+]
+test = [
+  "pytest>=8",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["personal_assistant*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

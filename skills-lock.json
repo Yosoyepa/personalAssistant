@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-builder": {
+      "source": "Moai-Team-LLC/agentic-product-standard",
+      "sourceType": "github",
+      "skillPath": "skills/agent-builder/SKILL.md",
+      "computedHash": "34ea5116bcbb1db77e1ad69a004b8aa8b52e4995eb2e1636c917dc8ba1c457c4"
+    },
+    "agentic-product-architect": {
+      "source": "Moai-Team-LLC/agentic-product-standard",
+      "sourceType": "github",
+      "skillPath": "skills/agentic-product-architect/SKILL.md",
+      "computedHash": "4ed5d0c4f7b398b0140ff3f5d0c5ee98bbb44c763fa1ac1035d04831f37459f6"
+    },
+    "deep-agents-memory": {
+      "source": "langchain-ai/langchain-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/deep-agents-memory/SKILL.md",
+      "computedHash": "54e4fd1e876f5e13bee1b52812a84befe00e8336c19d32766557fcb84c5ecf49"
+    },
+    "improve-codebase-architecture": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
+      "computedHash": "8bf292143ca93b00276a0de0fc5f84f2381f4690c5b0d32e99fa283a072f392f"
+    },
+    "langchain-architecture": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/llm-application-dev/skills/langchain-architecture/SKILL.md",
+      "computedHash": "eb8d13321fbff0a5d64d1106dbcc7ae10da43d41c64753948d4d379ec37c3a68"
+    },
+    "langchain-middleware": {
+      "source": "langchain-ai/langchain-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langchain-middleware/SKILL.md",
+      "computedHash": "f8b6897ba1f027d56ff9fffa72d4d27d8e048232fe1e1c13e219df98969d55b0"
+    },
+    "langfuse": {
+      "source": "langfuse/skills",
+      "sourceType": "github",
+      "skillPath": "skills/langfuse/SKILL.md",
+      "computedHash": "4c5fd7416a341ca8b56b2efcd96f68f867205f0b774ecb12f3078db490c0d5f3"
+    },
+    "langgraph-docs": {
+      "source": "langchain-ai/deepagents",
+      "sourceType": "github",
+      "skillPath": "libs/cli/examples/skills/langgraph-docs/SKILL.md",
+      "computedHash": "623b8c10cbb70f70ea875d1b0901f0fb0e174a837c2d6d10707627a46ae30631"
+    },
+    "langgraph-human-in-the-loop": {
+      "source": "langchain-ai/langchain-skills",
+      "sourceType": "github",
+      "skillPath": "config/skills/langgraph-human-in-the-loop/SKILL.md",
+      "computedHash": "283821ddcbdefb404d5e9c95149364c0962857a6f1e90db33ee5a0062500a88a"
+    }
+  }
+}
