@@ -51,11 +51,12 @@ class ReminderScheduler:
         require_trusted_principal(principal)
         if now.tzinfo is None or now.utcoffset() is None:
             raise ValueError("now must be timezone-aware")
-        return [
+        due_jobs = [
             job
             for job in self._jobs_by_key.values()
             if job.tenant_id == principal.tenant_id and not job.sent and job.notify_at <= now
         ]
+        return sorted(due_jobs, key=lambda job: (job.notify_at, job.reminder_id))
 
     def mark_sent(self, principal: Principal, reminder_id: str) -> ScheduledReminder:
         require_trusted_principal(principal)
