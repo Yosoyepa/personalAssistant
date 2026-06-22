@@ -6,18 +6,26 @@ from dataclasses import dataclass
 
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import AgentResult, AgentStatus
+from personal_assistant.application.ports.observability import TraceRecorderPort
 from personal_assistant.domain.common.guardrails import assert_prompt_safe
 from personal_assistant.domain.common.identity import Principal
-from personal_assistant.domain.common.tracing import TraceEvent, TraceEventType, TraceRecorder
+from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
+
+
+class NullTraceRecorder:
+    """No-op trace sink used when local runtime callers do not inject observability."""
+
+    def write(self, event: TraceEvent) -> None:
+        return None
 
 
 @dataclass(slots=True)
 class LocalAgentRuntime:
     agent_id: str = "personal_assistant"
-    traces: TraceRecorder | None = None
+    traces: TraceRecorderPort | None = None
 
     def run(self, task: str, *, principal: Principal, budget: TokenBudget) -> AgentResult:
-        recorder = self.traces or TraceRecorder()
+        recorder = self.traces or NullTraceRecorder()
         started = TraceEvent(
             agent_id=self.agent_id,
             event_type=TraceEventType.agent_started,

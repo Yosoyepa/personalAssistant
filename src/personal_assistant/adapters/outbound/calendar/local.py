@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from uuid import uuid4
 
 from personal_assistant.application.ports.calendar import CalendarEventRequest, CalendarEventResult
+from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier, require_approval
-from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.identity import Principal, require_trusted_principal
+
+
+def _fingerprint(request: CalendarEventRequest) -> str:
+    payload = json.dumps(request.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 class LocalCalendarTool:
@@ -16,6 +24,7 @@ class LocalCalendarTool:
 
     def __init__(self) -> None:
         self._events_by_key: dict[tuple[str, str], CalendarEventResult] = {}
+        self._fingerprints: dict[tuple[str, str], str] = {}
 
     def create_event(
         self,
@@ -24,11 +33,6 @@ class LocalCalendarTool:
         *,
         approval: ApprovalGrant | None = None,
     ) -> CalendarEventResult:
-        key = (principal.tenant_id, request.idempotency_key)
-        existing = self._events_by_key.get(key)
-        if existing is not None:
-            return existing.model_copy(update={"reused": True})
-
         require_approval(
             principal=principal,
             tier=self.permission_tier,
@@ -36,6 +40,17 @@ class LocalCalendarTool:
             action="calendar.create_event",
             resource=request.idempotency_key,
         )
+        key = (principal.tenant_id, request.idempotency_key)
+        request_fingerprint = _fingerprint(request)
+        existing = self._events_by_key.get(key)
+        if existing is not None:
+            if self._fingerprints[key] != request_fingerprint:
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "calendar idempotency conflict",
+                    tenant_id=principal.tenant_id,
+                )
+            return existing.model_copy(update={"reused": True})
         result = CalendarEventResult(
             event_id=f"cal_{uuid4().hex}",
             title=request.title,
@@ -43,7 +58,13 @@ class LocalCalendarTool:
             idempotency_key=request.idempotency_key,
         )
         self._events_by_key[key] = result
+        self._fingerprints[key] = request_fingerprint
         return result
 
     def list_events(self, principal: Principal) -> list[CalendarEventResult]:
-        return [event for (tenant_id, _), event in self._events_by_key.items() if tenant_id == principal.tenant_id]
+        require_trusted_principal(principal)
+        return [
+            event.model_copy()
+            for (tenant_id, _), event in self._events_by_key.items()
+            if tenant_id == principal.tenant_id
+        ]

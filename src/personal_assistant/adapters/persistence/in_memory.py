@@ -7,8 +7,8 @@ import json
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from personal_assistant.domain.common.durable import WorkflowState, WorkflowStatus
-from personal_assistant.domain.common.events import CloudEvent, OutboxMessage, OutboxStatus
+from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
+from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import Principal, require_trusted_principal
 

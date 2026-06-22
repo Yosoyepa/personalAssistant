@@ -24,11 +24,8 @@ class TelegramAdapter:
             raise ValueError("tenant_id is required from authenticated channel config")
         return NormalizedMessage(
             channel=self.channel,
-            tenant_id=tenant_id,
             actor_id=actor_id,
             conversation_id=conversation_id,
             message_id=message_id,
             text=text,
-            raw=payload,
         )
-

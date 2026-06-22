@@ -8,7 +8,8 @@ permission gates for external side effects.
 ## Architecture
 
 ```text
-Telegram / WhatsApp webhooks
+Telegram webhook
+WhatsApp adapter prepared but inactive
         -> Channel Gateway
         -> Message Normalizer
         -> Conversation Workflow
@@ -19,8 +20,9 @@ Telegram / WhatsApp webhooks
 ```
 
 MVP autonomy is L2: deterministic code owns the path, and LLM calls are bounded
-activities for classification/extraction/summarization. A2A and MCP contracts are
-prepared for interoperability, but neither protocol is the internal runtime.
+activities for classification/extraction/summarization. WhatsApp, A2A, and MCP
+contracts/adapters are prepared for interoperability, but they are not the
+internal runtime path for the MVP.
 
 ## Local Verification
 
@@ -52,4 +54,6 @@ hexagonal import direction from `domain` inward to `application` and outward to
 - `src/personal_assistant/contracts/` - A2A and future interoperability
   contracts that are not the internal runtime.
 - `src/personal_assistant/infrastructure/` - composition root and local wiring.
+- `docs/architecture/hexagonal-refactor-analysis.md` - latest architecture
+  review, findings, and follow-up backlog.
 - `eval/` and `tests/` - golden, failure-mode, and regression checks.

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from personal_assistant.domain.common.durable import WorkflowState
+from personal_assistant.application.dto.workflows import WorkflowState
 from personal_assistant.domain.common.identity import Principal
 
 

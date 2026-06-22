@@ -91,3 +91,4 @@ Negative consequences:
 | Local tool implementations live in adapters. | `rg -n "class LocalCalendarTool|class LocalNotificationTool|class ReminderScheduler" src/personal_assistant/adapters` |
 | Global errors are domain-owned. | `test -f src/personal_assistant/domain/common/exceptions.py` |
 | A2A contracts are not runtime modules. | `test -f src/personal_assistant/contracts/a2a.py` |
+| Physical package roots stay limited to the five layers plus root `__init__.py`. | `PYTHONPATH=src python3 -B -m unittest tests.test_architecture_boundaries` |

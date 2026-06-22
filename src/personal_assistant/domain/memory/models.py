@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from pydantic import Field
 
-from personal_assistant.domain.common.identity import SharedModel
+from personal_assistant.domain.common.base import DomainModel
 
 
 class MemoryKind(str, Enum):
@@ -17,7 +17,7 @@ class MemoryKind(str, Enum):
     procedural = "procedural"
 
 
-class MemoryRecord(SharedModel):
+class MemoryRecord(DomainModel):
     id: str = Field(default_factory=lambda: f"mem_{uuid4().hex}")
     tenant_id: str
     user_id: str | None = None

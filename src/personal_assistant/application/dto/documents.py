@@ -4,16 +4,16 @@ from __future__ import annotations
 
 from pydantic import Field
 
-from personal_assistant.domain.common.identity import SharedModel
+from personal_assistant.application.dto.base import ApplicationDTO
 
 
-class DocumentInput(SharedModel):
+class DocumentInput(ApplicationDTO):
     filename: str = Field(min_length=1)
     content: bytes = Field(min_length=1)
     content_type: str = "text/plain"
 
 
-class DocumentSummary(SharedModel):
+class DocumentSummary(ApplicationDTO):
     document_id: str
     tenant_id: str
     filename: str

@@ -1,4 +1,4 @@
-"""Durable-lite workflow state contracts."""
+"""Durable-lite workflow state DTOs."""
 
 from __future__ import annotations
 
@@ -57,4 +57,3 @@ class RetryPolicy(BaseModel):
     max_attempts: int = Field(default=3, ge=1, le=10)
     backoff_seconds: float = Field(default=1.0, ge=0)
     timeout_seconds: float = Field(default=30.0, gt=0)
-

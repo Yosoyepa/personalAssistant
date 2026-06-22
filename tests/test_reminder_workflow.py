@@ -12,8 +12,9 @@ from personal_assistant.adapters.outbound.notifications.local import LocalNotifi
 from personal_assistant.adapters.outbound.scheduler.local import ReminderScheduler
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.domain.common.identity import Principal
-from personal_assistant.domain.common.tracing import TraceEventType, TraceRecorder
+from personal_assistant.application.dto.tracing import TraceEventType
 from personal_assistant.adapters.persistence.in_memory import InMemoryEventStore, InMemoryOutbox, InMemoryWorkflowStateStore
+from personal_assistant.adapters.observability.local import TraceRecorder
 
 
 class ReminderWorkflowTests(unittest.TestCase):
@@ -25,7 +26,7 @@ class ReminderWorkflowTests(unittest.TestCase):
         )
         self.calendar = LocalCalendarTool()
         self.notifications = LocalNotificationTool()
-        self.scheduler = ReminderScheduler(self.notifications)
+        self.scheduler = ReminderScheduler()
         self.event_store = InMemoryEventStore()
         self.outbox = InMemoryOutbox()
         self.states = InMemoryWorkflowStateStore()

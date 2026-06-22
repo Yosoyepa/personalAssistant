@@ -44,7 +44,9 @@ class PermissionAndTenantTests(unittest.TestCase):
             tier=PermissionTier.P3,
         )
         created = tool.create_event(principal, request, approval=approval)
-        reused = tool.create_event(principal, request)
+        with self.assertRaises(AssistantError):
+            tool.create_event(principal, request)
+        reused = tool.create_event(principal, request, approval=approval)
         self.assertEqual(created.event_id, reused.event_id)
         self.assertTrue(reused.reused)
 
@@ -69,9 +71,124 @@ class PermissionAndTenantTests(unittest.TestCase):
             tier=PermissionTier.P5,
         )
         sent = tool.send(principal, request, approval=approval)
-        reused = tool.send(principal, request)
+        with self.assertRaises(AssistantError):
+            tool.send(principal, request)
+        reused = tool.send(principal, request, approval=approval)
         self.assertEqual(sent.notification_id, reused.notification_id)
         self.assertTrue(reused.reused)
+
+    def test_untrusted_principal_cannot_read_adapter_state(self) -> None:
+        calendar = LocalCalendarTool()
+        notifications = LocalNotificationTool()
+        principal = self.principal("tenant-a", PermissionTier.P5)
+        untrusted = Principal(
+            principal_id="forged",
+            tenant_id="tenant-a",
+            auth_subject="forged",
+            permission_tier=PermissionTier.P5,
+        )
+
+        calendar_request = CalendarEventRequest(
+            title="Clase",
+            starts_at=datetime(2026, 6, 23, 17, tzinfo=UTC),
+            idempotency_key="cal-read",
+        )
+        notification_request = NotificationRequest(
+            channel="telegram",
+            recipient="123",
+            body="Recordatorio",
+            idempotency_key="msg-read",
+        )
+        calendar.create_event(
+            principal,
+            calendar_request,
+            approval=ApprovalGrant.issue(
+                principal=principal,
+                action="calendar.create_event",
+                resource="cal-read",
+                tier=PermissionTier.P3,
+            ),
+        )
+        notifications.send(
+            principal,
+            notification_request,
+            approval=ApprovalGrant.issue(
+                principal=principal,
+                action="notification.send",
+                resource="msg-read",
+                tier=PermissionTier.P5,
+            ),
+        )
+
+        with self.assertRaises(AssistantError) as calendar_ctx:
+            calendar.list_events(untrusted)
+        with self.assertRaises(AssistantError) as notification_ctx:
+            notifications.list_sent(untrusted)
+
+        self.assertEqual(calendar_ctx.exception.code, ErrorCode.AUTHENTICATION_REQUIRED)
+        self.assertEqual(notification_ctx.exception.code, ErrorCode.AUTHENTICATION_REQUIRED)
+
+    def test_calendar_and_notification_idempotency_conflicts_are_not_silent(self) -> None:
+        calendar = LocalCalendarTool()
+        notifications = LocalNotificationTool()
+        principal = self.principal("tenant-a", PermissionTier.P5)
+        calendar_approval = ApprovalGrant.issue(
+            principal=principal,
+            action="calendar.create_event",
+            resource="same-calendar-key",
+            tier=PermissionTier.P3,
+        )
+        notification_approval = ApprovalGrant.issue(
+            principal=principal,
+            action="notification.send",
+            resource="same-notification-key",
+            tier=PermissionTier.P5,
+        )
+
+        calendar.create_event(
+            principal,
+            CalendarEventRequest(
+                title="Clase",
+                starts_at=datetime(2026, 6, 23, 17, tzinfo=UTC),
+                idempotency_key="same-calendar-key",
+            ),
+            approval=calendar_approval,
+        )
+        notifications.send(
+            principal,
+            NotificationRequest(
+                channel="telegram",
+                recipient="123",
+                body="Recordatorio",
+                idempotency_key="same-notification-key",
+            ),
+            approval=notification_approval,
+        )
+
+        with self.assertRaises(AssistantError) as calendar_ctx:
+            calendar.create_event(
+                principal,
+                CalendarEventRequest(
+                    title="Otro titulo",
+                    starts_at=datetime(2026, 6, 23, 17, tzinfo=UTC),
+                    idempotency_key="same-calendar-key",
+                ),
+                approval=calendar_approval,
+            )
+        with self.assertRaises(AssistantError) as notification_ctx:
+            notifications.send(
+                principal,
+                NotificationRequest(
+                    channel="telegram",
+                    recipient="123",
+                    body="Otro cuerpo",
+                    idempotency_key="same-notification-key",
+                ),
+                approval=notification_approval,
+            )
+
+        self.assertEqual(calendar_ctx.exception.code, ErrorCode.CONFLICT)
+        self.assertEqual(notification_ctx.exception.code, ErrorCode.CONFLICT)
 
     def test_memory_retrieval_is_tenant_scoped(self) -> None:
         store = TenantMemoryStore()

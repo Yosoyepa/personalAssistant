@@ -1,4 +1,4 @@
-"""CloudEvents-style event contracts."""
+"""CloudEvents-style application event DTOs."""
 
 from __future__ import annotations
 

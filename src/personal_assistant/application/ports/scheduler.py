@@ -37,3 +37,11 @@ class ReminderSchedulerPort(Protocol):
         idempotency_key: str,
     ) -> ScheduledReminder:
         """Schedule an idempotent reminder before a calendar event."""
+
+
+class ReminderSchedulerWorkerPort(ReminderSchedulerPort, Protocol):
+    def due(self, principal: Principal, now: datetime) -> list[ScheduledReminder]:
+        """Return unsent reminders due for the authenticated tenant."""
+
+    def mark_sent(self, principal: Principal, reminder_id: str) -> ScheduledReminder:
+        """Mark one reminder as sent for the authenticated tenant."""

@@ -4,6 +4,9 @@
 
 Accepted
 
+Superseded for package layout by
+[ADR-003: Hexagonal Boundaries Inside the Modular Monolith](ADR-003-hexagonal-boundaries.md).
+
 ## Date
 
 2026-06-20
@@ -17,8 +20,10 @@ The repo is early-stage, so the architecture should optimize for clarity, reliab
 ## Decision
 
 Build the MVP as a modular monolith with explicit internal module boundaries and stable ports.
+ADR-003 refines these boundaries into five source layers: `domain`,
+`application`, `adapters`, `contracts`, and `infrastructure`.
 
-The initial module map is:
+The original logical module map is:
 
 | Module | Responsibility |
 |---|---|
@@ -50,6 +55,22 @@ channels.telegram
 ```
 
 Cross-module writes go through application services or ports. Direct table access across modules is not part of the contract. All reads and writes receive `tenant_id` from the principal context, not from model output.
+
+Physical package placement now follows ADR-003:
+
+| ADR-001 logical module | ADR-003 physical layer |
+|---|---|
+| `channels.telegram` | `adapters.inbound.channels.telegram` |
+| `identity` | `domain.common.identity` plus `adapters.inbound.auth` for provider claims |
+| `agents.personal_assistant` | `application.use_cases` plus `agents/personal_assistant/contract.md` |
+| `llm` | `application.ports.services.LLMProvider` and future outbound adapter |
+| `reminders` | `domain.reminders`, `application.dto.reminders`, `application.use_cases.reminders` |
+| `calendar` | `application.ports.calendar`, `adapters.outbound.calendar` |
+| `documents` | `application.dto.documents`, `application.use_cases.documents` |
+| `memory` | `domain.memory`, `adapters.persistence.memory` |
+| `events` | `application.dto.events`, `application.ports.events`, `adapters.persistence.in_memory` |
+| `observability` | `application.dto.tracing`, `application.ports.observability`, `adapters.observability` |
+| `integrations` | `contracts` and future adapters |
 
 ## Consequences
 
@@ -105,4 +126,3 @@ Rejected. The agent should emit schema-valid intents and outbox events. Dispatch
 | MiniMax is isolated behind `LLMProvider`. | `rg -n "MiniMax.*LLMProvider|LLMProvider.*MiniMax" docs/adr/ADR-001-modular-monolith.md` |
 | Tenant authority comes from principal context. | `rg -n "tenant_id.*principal" docs/adr/ADR-001-modular-monolith.md` |
 | A2A and MCP are prepared but disabled in the MVP runtime path. | `rg -n "runtime invocation is disabled.*MVP" docs/adr/ADR-001-modular-monolith.md` |
-

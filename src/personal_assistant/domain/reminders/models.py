@@ -7,7 +7,7 @@ from enum import Enum
 
 from pydantic import Field, field_validator
 
-from personal_assistant.domain.common.identity import SharedModel
+from personal_assistant.domain.common.base import DomainModel
 
 
 class ReminderIntent(str, Enum):
@@ -15,7 +15,7 @@ class ReminderIntent(str, Enum):
     unsupported = "unsupported"
 
 
-class ReminderExtraction(SharedModel):
+class ReminderExtraction(DomainModel):
     title: str = Field(min_length=1)
     starts_at: datetime
     confidence: float = Field(ge=0, le=1)

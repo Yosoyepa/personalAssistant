@@ -8,10 +8,11 @@ from uuid import UUID, uuid4
 
 from pydantic import Field, computed_field, model_validator
 
-from personal_assistant.domain.common.identity import Principal, SharedModel
+from personal_assistant.application.dto.base import ApplicationDTO
+from personal_assistant.domain.common.identity import Principal
 
 
-class TokenBudget(SharedModel):
+class TokenBudget(ApplicationDTO):
     """Token accounting for a request, task, or worker step."""
 
     limit: int = Field(gt=0, le=10_000_000)
@@ -47,7 +48,7 @@ class TokenBudget(SharedModel):
         return self.model_copy(update={"reserved": self.reserved + tokens})
 
 
-class RequestContext(SharedModel):
+class RequestContext(ApplicationDTO):
     """Per-request context shared by API and worker layers."""
 
     request_id: UUID = Field(default_factory=uuid4)

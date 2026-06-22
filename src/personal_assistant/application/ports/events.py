@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from personal_assistant.domain.common.events import CloudEvent, OutboxMessage
+from personal_assistant.application.dto.events import CloudEvent, OutboxMessage
 from personal_assistant.domain.common.identity import Principal
 
 

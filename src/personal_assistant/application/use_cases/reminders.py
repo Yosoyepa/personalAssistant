@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from datetime import datetime
 
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput, ReminderWorkflowResult
 from personal_assistant.application.dto.runtime import AgentStatus
@@ -13,14 +12,15 @@ from personal_assistant.application.ports.events import EventStorePort, OutboxPo
 from personal_assistant.application.ports.observability import TraceRecorderPort
 from personal_assistant.application.ports.scheduler import ReminderSchedulerPort
 from personal_assistant.application.ports.workflow_state import WorkflowStateStorePort
-from personal_assistant.domain.common.durable import WorkflowState, WorkflowStatus
-from personal_assistant.domain.common.events import CloudEvent
+from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
+from personal_assistant.application.dto.events import CloudEvent
 from personal_assistant.domain.common.guardrails import assert_prompt_safe
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.domain.common.identity import Principal
-from personal_assistant.domain.common.tracing import TraceEvent, TraceEventType
-from personal_assistant.domain.reminders.models import ReminderExtraction, ReminderIntent
+from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
+from personal_assistant.domain.reminders.models import ReminderIntent
 from personal_assistant.domain.reminders.parser import extract_reminder
+from personal_assistant.domain.reminders.workflow_state import ReminderDraft, ReminderWorkflowStep
 
 
 def reminder_idempotency_key(tenant_id: str, message_id: str, text: str) -> str:
@@ -88,21 +88,20 @@ class ReminderWorkflow:
             tenant_id=principal.tenant_id,
             workflow_type="reminder.create",
             status=WorkflowStatus.running,
-            step="classify",
+            step=ReminderWorkflowStep.classify.value,
             idempotency_key=effective_key,
         )
         self.states.upsert(principal, state)
 
-        if existing and existing.step == "approval_required" and request.approval is not None:
-            extraction = ReminderExtraction(
-                title=str(existing.data["title"]),
-                starts_at=datetime.fromisoformat(str(existing.data["starts_at"])),
-                confidence=float(existing.data.get("confidence", 0.86)),
-            )
+        if existing and existing.step == ReminderWorkflowStep.approval_required.value and request.approval is not None:
+            extraction = ReminderDraft.from_mapping(existing.data).to_extraction()
         else:
             extraction = extract_reminder(request.text, request.now)
         if extraction is None:
-            waiting = state.transition(status=WorkflowStatus.waiting_approval, step="needs_clarification")
+            waiting = state.transition(
+                status=WorkflowStatus.waiting_approval,
+                step=ReminderWorkflowStep.needs_clarification.value,
+            )
             self.states.upsert(principal, waiting)
             return ReminderWorkflowResult(
                 status=AgentStatus.needs_clarification,
@@ -123,12 +122,8 @@ class ReminderWorkflow:
             self.traces.write(approval)
             waiting = state.transition(
                 status=WorkflowStatus.waiting_approval,
-                step="approval_required",
-                data={
-                    "title": extraction.title,
-                    "starts_at": extraction.starts_at.isoformat(),
-                    "confidence": extraction.confidence,
-                },
+                step=ReminderWorkflowStep.approval_required.value,
+                data=ReminderDraft.from_extraction(extraction).to_workflow_data(),
             )
             self.states.upsert(principal, waiting)
             return ReminderWorkflowResult(
@@ -191,7 +186,7 @@ class ReminderWorkflow:
         self.traces.write(completed_trace)
         completed = state.transition(
             status=WorkflowStatus.completed,
-            step="completed",
+            step=ReminderWorkflowStep.completed.value,
             data={"calendar_event_id": calendar_result.event_id, "reminder_id": reminder.reminder_id},
         )
         self.states.upsert(principal, completed)

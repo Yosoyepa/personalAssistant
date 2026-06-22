@@ -26,11 +26,8 @@ class WhatsAppAdapter:
         message_id = str(message.get("id") or "")
         return NormalizedMessage(
             channel=self.channel,
-            tenant_id=tenant_id,
             actor_id=actor_id,
             conversation_id=actor_id,
             message_id=message_id,
             text=text,
-            raw=payload,
         )
-

@@ -177,17 +177,6 @@ class ApprovalRequest(BaseModel):
         return self.permission_tier.rank >= PermissionTier.P3.rank
 
 
-class MemoryRecord(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    namespace: str = Field(min_length=1)
-    key: str = Field(min_length=1)
-    value: dict[str, Any] = Field(default_factory=dict)
-    tenant_id: str = Field(min_length=1, max_length=120)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-
-
 class ChannelMessage(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 

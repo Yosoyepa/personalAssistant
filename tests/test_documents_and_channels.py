@@ -42,7 +42,7 @@ class DocumentAndChannelTests(unittest.TestCase):
         }
         normalized = normalize_telegram_webhook(payload, tenant_id="tenant-a")
 
-        self.assertEqual(normalized.tenant_id, "tenant-a")
+        self.assertFalse(hasattr(normalized, "tenant_id"))
         self.assertIn("tenant_id=evil", normalized.text)
 
     def test_whatsapp_normalizer_uses_authenticated_tenant(self) -> None:
@@ -62,7 +62,7 @@ class DocumentAndChannelTests(unittest.TestCase):
         }
         normalized = normalize_whatsapp_webhook(payload, tenant_id="tenant-a")
 
-        self.assertEqual(normalized.tenant_id, "tenant-a")
+        self.assertFalse(hasattr(normalized, "tenant_id"))
         self.assertEqual(normalized.actor_id, "555")
 
 

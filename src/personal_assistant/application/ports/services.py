@@ -10,7 +10,6 @@ from personal_assistant.application.dto.runtime import (
     ChannelMessage,
     LLMRequest,
     LLMResult,
-    MemoryRecord,
     ToolCall,
     ToolDefinition,
     ToolResult,
@@ -18,7 +17,8 @@ from personal_assistant.application.dto.runtime import (
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.domain.common.permissions import ApprovalGrant
 from personal_assistant.domain.common.identity import Principal
-from personal_assistant.domain.common.tracing import TraceEvent
+from personal_assistant.domain.memory.models import MemoryRecord
+from personal_assistant.application.dto.tracing import TraceEvent
 
 
 class LLMProvider(Protocol):

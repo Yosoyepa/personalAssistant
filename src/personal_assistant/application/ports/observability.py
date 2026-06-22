@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from personal_assistant.domain.common.tracing import TraceEvent
+from personal_assistant.application.dto.tracing import TraceEvent
 
 
 class TraceRecorderPort(Protocol):
