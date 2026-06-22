@@ -7,6 +7,7 @@ import json
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
+from personal_assistant.application.dto.commands import PendingApproval, PendingApprovalStatus
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
 from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
@@ -131,6 +132,14 @@ class InMemoryOutbox:
                 return updated
         raise AssistantError(ErrorCode.NOT_FOUND, "outbox message not found", tenant_id=principal.tenant_id)
 
+    def list_for_tenant(self, principal: Principal) -> list[OutboxMessage]:
+        require_trusted_principal(principal)
+        return [
+            message
+            for (tenant_id, _), message in self._messages_by_key.items()
+            if tenant_id == principal.tenant_id
+        ]
+
 
 class InMemoryWorkflowStateStore:
     def __init__(self) -> None:
@@ -157,3 +166,68 @@ class InMemoryWorkflowStateStore:
     def list_for_tenant(self, principal: Principal) -> list[WorkflowState]:
         require_trusted_principal(principal)
         return [state for (tenant_id, _), state in self._states_by_key.items() if tenant_id == principal.tenant_id]
+
+
+class InMemoryApprovalStore:
+    def __init__(self) -> None:
+        self._approvals_by_id: dict[tuple[str, str], PendingApproval] = {}
+        self._approval_id_by_key: dict[tuple[str, str, str, str], str] = {}
+
+    def create(self, principal: Principal, approval: PendingApproval) -> PendingApproval:
+        require_trusted_principal(principal)
+        if approval.tenant_id != principal.tenant_id or approval.principal_id != principal.principal_id:
+            raise AssistantError(ErrorCode.PERMISSION_DENIED, "approval principal mismatch", tenant_id=principal.tenant_id)
+        idempotency_key = (
+            principal.tenant_id,
+            principal.principal_id,
+            approval.workflow_kind,
+            approval.idempotency_key,
+        )
+        existing_id = self._approval_id_by_key.get(idempotency_key)
+        if existing_id is not None:
+            return self._approvals_by_id[(principal.tenant_id, existing_id)]
+        key = (principal.tenant_id, approval.approval_id)
+        self._approvals_by_id[key] = approval
+        self._approval_id_by_key[idempotency_key] = approval.approval_id
+        return approval
+
+    def get(self, principal: Principal, approval_id: str) -> PendingApproval | None:
+        require_trusted_principal(principal)
+        approval = self._approvals_by_id.get((principal.tenant_id, approval_id))
+        if approval is None or approval.principal_id != principal.principal_id:
+            return None
+        return approval
+
+    def list_pending(self, principal: Principal) -> list[PendingApproval]:
+        require_trusted_principal(principal)
+        return [
+            approval
+            for (tenant_id, _), approval in self._approvals_by_id.items()
+            if tenant_id == principal.tenant_id
+            and approval.principal_id == principal.principal_id
+            and approval.status == PendingApprovalStatus.pending
+        ]
+
+    def mark_approved(self, principal: Principal, approval_id: str) -> PendingApproval:
+        approval = self.get(principal, approval_id)
+        if approval is None:
+            raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
+        if approval.status != PendingApprovalStatus.pending:
+            return approval
+        updated = approval.model_copy(
+            update={"status": PendingApprovalStatus.approved, "updated_at": datetime.now(UTC)}
+        )
+        self._approvals_by_id[(principal.tenant_id, approval_id)] = updated
+        return updated
+
+    def cancel(self, principal: Principal, approval_id: str) -> PendingApproval:
+        approval = self.get(principal, approval_id)
+        if approval is None:
+            raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
+        if approval.status != PendingApprovalStatus.pending:
+            return approval
+        updated = approval.model_copy(
+            update={"status": PendingApprovalStatus.cancelled, "updated_at": datetime.now(UTC)}
+        )
+        self._approvals_by_id[(principal.tenant_id, approval_id)] = updated
+        return updated

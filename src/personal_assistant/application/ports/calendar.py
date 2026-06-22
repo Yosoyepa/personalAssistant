@@ -36,3 +36,11 @@ class CalendarPort(Protocol):
         approval: ApprovalGrant | None = None,
     ) -> CalendarEventResult:
         """Create or reuse an idempotent calendar event."""
+
+    def list_events(self, principal: Principal) -> list[CalendarEventResult]:
+        """List tenant-scoped calendar events for the authenticated principal."""
+
+
+class CalendarReadPort(Protocol):
+    def list_events(self, principal: Principal) -> list[CalendarEventResult]:
+        """List tenant-scoped calendar events for read-only surfaces."""
