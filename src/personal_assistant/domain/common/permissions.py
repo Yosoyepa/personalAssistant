@@ -12,10 +12,10 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, computed_field, field_validator, model_validator
 
-from personal_assistant.shared.errors import AssistantError, ErrorCode
+from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 
 if TYPE_CHECKING:
-    from personal_assistant.shared.schemas import Principal
+    from personal_assistant.domain.common.identity import Principal
 
 
 class PermissionTier(str, Enum):
@@ -318,7 +318,7 @@ def __getattr__(name: str) -> Any:
     """Provide backward-compatible lazy access to Principal without a cycle."""
 
     if name == "Principal":
-        from personal_assistant.shared.schemas import Principal
+        from personal_assistant.domain.common.identity import Principal
 
         return Principal
     raise AttributeError(name)

@@ -8,8 +8,8 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from personal_assistant.notifications.local import LocalNotificationTool, NotificationRequest
-from personal_assistant.shared.permissions import ApprovalGrant
-from personal_assistant.shared.schemas import Principal
+from personal_assistant.domain.common.permissions import ApprovalGrant
+from personal_assistant.domain.common.identity import Principal
 
 
 class ScheduledReminder(BaseModel):

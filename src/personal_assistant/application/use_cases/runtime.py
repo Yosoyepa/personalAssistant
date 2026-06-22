@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from personal_assistant.agent_runtime.models import AgentResult, AgentStatus
-from personal_assistant.shared.guardrails import assert_prompt_safe
-from personal_assistant.shared.schemas import Principal, TokenBudget
-from personal_assistant.shared.tracing import TraceEvent, TraceEventType, TraceRecorder
+from personal_assistant.application.dto.context import TokenBudget
+from personal_assistant.application.dto.runtime import AgentResult, AgentStatus
+from personal_assistant.domain.common.guardrails import assert_prompt_safe
+from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.tracing import TraceEvent, TraceEventType, TraceRecorder
 
 
 @dataclass(slots=True)
@@ -41,4 +42,3 @@ class LocalAgentRuntime:
             reply="Solicitud recibida.",
             trace_ids=[started.trace_id, completed.trace_id],
         )
-

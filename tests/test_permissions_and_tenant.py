@@ -8,9 +8,9 @@ from pydantic import ValidationError
 from personal_assistant.calendar.local import CalendarEventRequest, LocalCalendarTool
 from personal_assistant.memory.store import MemoryKind, TenantMemoryStore
 from personal_assistant.notifications.local import LocalNotificationTool, NotificationRequest
-from personal_assistant.shared.errors import AssistantError, ErrorCode
-from personal_assistant.shared.permissions import ApprovalGrant, PermissionTier
-from personal_assistant.shared.schemas import Principal
+from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
+from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
+from personal_assistant.domain.common.identity import Principal
 
 
 class PermissionAndTenantTests(unittest.TestCase):

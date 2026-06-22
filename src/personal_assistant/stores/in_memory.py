@@ -7,10 +7,10 @@ import json
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
-from personal_assistant.shared.durable import WorkflowState, WorkflowStatus
-from personal_assistant.shared.events import CloudEvent, OutboxMessage, OutboxStatus
-from personal_assistant.shared.errors import AssistantError, ErrorCode
-from personal_assistant.shared.schemas import Principal, require_trusted_principal
+from personal_assistant.domain.common.durable import WorkflowState, WorkflowStatus
+from personal_assistant.domain.common.events import CloudEvent, OutboxMessage, OutboxStatus
+from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
+from personal_assistant.domain.common.identity import Principal, require_trusted_principal
 
 
 def _fingerprint(value: object) -> str:

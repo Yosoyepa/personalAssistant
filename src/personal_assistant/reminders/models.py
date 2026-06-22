@@ -7,8 +7,8 @@ from enum import Enum
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from personal_assistant.agent_runtime.models import AgentStatus
-from personal_assistant.shared.permissions import ApprovalGrant
+from personal_assistant.application.dto.runtime import AgentStatus
+from personal_assistant.domain.common.permissions import ApprovalGrant
 
 
 class ReminderIntent(str, Enum):

@@ -3,15 +3,15 @@ from __future__ import annotations
 from datetime import UTC, datetime
 import unittest
 
-from personal_assistant.agent_runtime.models import AgentStatus
+from personal_assistant.application.dto.runtime import AgentStatus
 from personal_assistant.calendar.local import LocalCalendarTool
 from personal_assistant.notifications.local import LocalNotificationTool
 from personal_assistant.reminders.models import ReminderWorkflowInput
 from personal_assistant.reminders.workflow import ReminderWorkflow, extract_reminder, reminder_idempotency_key
 from personal_assistant.scheduler.service import ReminderScheduler
-from personal_assistant.shared.permissions import ApprovalGrant, PermissionTier
-from personal_assistant.shared.schemas import Principal
-from personal_assistant.shared.tracing import TraceEventType, TraceRecorder
+from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
+from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.tracing import TraceEventType, TraceRecorder
 from personal_assistant.stores.in_memory import InMemoryEventStore, InMemoryOutbox, InMemoryWorkflowStateStore
 
 

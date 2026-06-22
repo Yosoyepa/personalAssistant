@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from personal_assistant.shared.schemas import Principal, require_trusted_principal
+from personal_assistant.domain.common.identity import Principal, require_trusted_principal
 
 
 class MemoryKind(str, Enum):

@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from personal_assistant.shared.permissions import PermissionTier
+from personal_assistant.domain.common.permissions import PermissionTier
 
 
 class SideEffect(str, Enum):

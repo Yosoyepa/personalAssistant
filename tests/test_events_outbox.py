@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import unittest
 
-from personal_assistant.shared.errors import AssistantError, ErrorCode
-from personal_assistant.shared.events import CloudEvent, OutboxStatus
-from personal_assistant.shared.permissions import PermissionTier
-from personal_assistant.shared.schemas import Principal
+from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
+from personal_assistant.domain.common.events import CloudEvent, OutboxStatus
+from personal_assistant.domain.common.permissions import PermissionTier
+from personal_assistant.domain.common.identity import Principal
 from personal_assistant.stores.in_memory import InMemoryEventStore, InMemoryOutbox
 
 

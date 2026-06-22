@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from personal_assistant.agent_runtime.models import (
+from personal_assistant.application.dto.runtime import (
     AgentResult,
     ApprovalRequest,
     ChannelMessage,
@@ -15,9 +15,10 @@ from personal_assistant.agent_runtime.models import (
     ToolDefinition,
     ToolResult,
 )
-from personal_assistant.shared.permissions import ApprovalGrant
-from personal_assistant.shared.schemas import Principal, TokenBudget
-from personal_assistant.shared.tracing import TraceEvent
+from personal_assistant.application.dto.context import TokenBudget
+from personal_assistant.domain.common.permissions import ApprovalGrant
+from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.tracing import TraceEvent
 
 
 class LLMProvider(Protocol):

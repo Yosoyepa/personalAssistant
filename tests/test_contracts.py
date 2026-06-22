@@ -6,8 +6,8 @@ import unittest
 from pydantic import ValidationError
 
 from personal_assistant.agent_registry.a2a import AgentTask, Message, MessageRole, personal_assistant_card
-from personal_assistant.agent_runtime.models import ToolCall
-from personal_assistant.shared.permissions import PermissionTier
+from personal_assistant.application.dto.runtime import ToolCall
+from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.tools.contracts import CALENDAR_CREATE_CONTRACT, NOTIFICATION_SEND_CONTRACT, SideEffect
 
 

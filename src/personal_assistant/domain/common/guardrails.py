@@ -7,7 +7,7 @@ from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
-from personal_assistant.shared.errors import AssistantError, ErrorCode
+from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 
 
 class GuardrailCategory(str, Enum):

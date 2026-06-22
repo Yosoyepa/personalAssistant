@@ -5,8 +5,8 @@ import unittest
 from personal_assistant.api import normalize_telegram_webhook, normalize_whatsapp_webhook
 from personal_assistant.documents.service import DocumentInput, DocumentService
 from personal_assistant.notifications.local import LocalNotificationTool
-from personal_assistant.shared.permissions import PermissionTier
-from personal_assistant.shared.schemas import Principal
+from personal_assistant.domain.common.permissions import PermissionTier
+from personal_assistant.domain.common.identity import Principal
 
 
 class DocumentAndChannelTests(unittest.TestCase):

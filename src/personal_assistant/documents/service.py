@@ -6,9 +6,9 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from personal_assistant.shared.errors import AssistantError, ErrorCode
-from personal_assistant.shared.guardrails import scan_prompt
-from personal_assistant.shared.schemas import Principal
+from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
+from personal_assistant.domain.common.guardrails import scan_prompt
+from personal_assistant.domain.common.identity import Principal
 
 
 class DocumentInput(BaseModel):

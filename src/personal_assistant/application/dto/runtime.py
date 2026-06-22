@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
-from personal_assistant.shared.permissions import PermissionTier
+from personal_assistant.domain.common.permissions import PermissionTier
 
 
 class AgentStatus(str, Enum):

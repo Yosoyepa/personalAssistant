@@ -8,7 +8,7 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from personal_assistant.agent_runtime.models import AgentStatus
+from personal_assistant.application.dto.runtime import AgentStatus
 from personal_assistant.calendar.local import CalendarEventRequest, LocalCalendarTool
 from personal_assistant.reminders.models import (
     ReminderExtraction,
@@ -17,12 +17,12 @@ from personal_assistant.reminders.models import (
     ReminderWorkflowResult,
 )
 from personal_assistant.scheduler.service import ReminderScheduler
-from personal_assistant.shared.durable import WorkflowState, WorkflowStatus
-from personal_assistant.shared.events import CloudEvent
-from personal_assistant.shared.guardrails import assert_prompt_safe
-from personal_assistant.shared.permissions import PermissionTier
-from personal_assistant.shared.schemas import Principal
-from personal_assistant.shared.tracing import TraceEvent, TraceEventType, TraceRecorder
+from personal_assistant.domain.common.durable import WorkflowState, WorkflowStatus
+from personal_assistant.domain.common.events import CloudEvent
+from personal_assistant.domain.common.guardrails import assert_prompt_safe
+from personal_assistant.domain.common.permissions import PermissionTier
+from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.tracing import TraceEvent, TraceEventType, TraceRecorder
 from personal_assistant.stores.in_memory import InMemoryEventStore, InMemoryOutbox, InMemoryWorkflowStateStore
 
 
