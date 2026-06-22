@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import unittest
 
-from personal_assistant.api import normalize_telegram_webhook, normalize_whatsapp_webhook
-from personal_assistant.documents.service import DocumentInput, DocumentService
-from personal_assistant.notifications.local import LocalNotificationTool
+from personal_assistant.adapters.inbound.api import normalize_telegram_webhook, normalize_whatsapp_webhook
+from personal_assistant.application.dto.documents import DocumentInput
+from personal_assistant.application.use_cases.documents import DocumentService
+from personal_assistant.adapters.outbound.notifications.local import LocalNotificationTool
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.domain.common.identity import Principal
 

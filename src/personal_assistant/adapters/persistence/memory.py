@@ -2,30 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from enum import Enum
-from uuid import uuid4
-
-from pydantic import BaseModel, Field
-
 from personal_assistant.domain.common.identity import Principal, require_trusted_principal
-
-
-class MemoryKind(str, Enum):
-    episodic = "episodic"
-    semantic = "semantic"
-    procedural = "procedural"
-
-
-class MemoryRecord(BaseModel):
-    id: str = Field(default_factory=lambda: f"mem_{uuid4().hex}")
-    tenant_id: str
-    user_id: str | None = None
-    kind: MemoryKind
-    text: str = Field(min_length=1)
-    source: str = Field(min_length=1)
-    confirmed: bool = False
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
 
 
 class TenantMemoryStore:

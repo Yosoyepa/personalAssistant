@@ -8,9 +8,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from personal_assistant.channels.models import NormalizedMessage
-from personal_assistant.channels.telegram import TelegramAdapter
-from personal_assistant.channels.whatsapp import WhatsAppAdapter
+from personal_assistant.application.dto.channels import NormalizedMessage
+from personal_assistant.adapters.inbound.channels.telegram import TelegramAdapter
+from personal_assistant.adapters.inbound.channels.whatsapp import WhatsAppAdapter
 
 
 def normalize_telegram_webhook(payload: dict[str, Any], *, tenant_id: str) -> NormalizedMessage:

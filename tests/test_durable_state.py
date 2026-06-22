@@ -6,7 +6,7 @@ from personal_assistant.domain.common.durable import WorkflowState, WorkflowStat
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.domain.common.identity import Principal
-from personal_assistant.stores.in_memory import InMemoryWorkflowStateStore
+from personal_assistant.adapters.persistence.in_memory import InMemoryWorkflowStateStore
 
 
 class DurableStateTests(unittest.TestCase):

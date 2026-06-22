@@ -6,7 +6,7 @@ from personal_assistant.domain.common.exceptions import AssistantError, ErrorCod
 from personal_assistant.domain.common.events import CloudEvent, OutboxStatus
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.domain.common.identity import Principal
-from personal_assistant.stores.in_memory import InMemoryEventStore, InMemoryOutbox
+from personal_assistant.adapters.persistence.in_memory import InMemoryEventStore, InMemoryOutbox
 
 
 class EventOutboxTests(unittest.TestCase):

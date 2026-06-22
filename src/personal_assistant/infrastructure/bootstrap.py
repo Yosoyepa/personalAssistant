@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from personal_assistant.calendar.local import LocalCalendarTool
-from personal_assistant.documents.service import DocumentService
-from personal_assistant.memory.store import TenantMemoryStore
-from personal_assistant.notifications.local import LocalNotificationTool
-from personal_assistant.scheduler.service import ReminderScheduler
+from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
+from personal_assistant.application.use_cases.documents import DocumentService
+from personal_assistant.adapters.persistence.memory import TenantMemoryStore
+from personal_assistant.adapters.outbound.notifications.local import LocalNotificationTool
+from personal_assistant.adapters.outbound.scheduler.local import ReminderScheduler
 
 
 @dataclass(slots=True)

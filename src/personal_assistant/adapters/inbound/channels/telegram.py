@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from personal_assistant.channels.models import ChannelName, NormalizedMessage
+from personal_assistant.application.dto.channels import ChannelName, NormalizedMessage
 
 
 class TelegramAdapter:

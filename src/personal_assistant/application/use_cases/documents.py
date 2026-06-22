@@ -4,27 +4,10 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
-
+from personal_assistant.application.dto.documents import DocumentInput, DocumentSummary
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.guardrails import scan_prompt
 from personal_assistant.domain.common.identity import Principal
-
-
-class DocumentInput(BaseModel):
-    filename: str = Field(min_length=1)
-    content: bytes = Field(min_length=1)
-    content_type: str = "text/plain"
-
-
-class DocumentSummary(BaseModel):
-    document_id: str
-    tenant_id: str
-    filename: str
-    summary: str
-    citations: list[str]
-    blocked: bool = False
-    warnings: list[str] = Field(default_factory=list)
 
 
 class DocumentService:

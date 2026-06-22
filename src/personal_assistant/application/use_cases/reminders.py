@@ -160,7 +160,7 @@ class ReminderWorkflow:
         )
         event = CloudEvent(
             type="reminder.created",
-            source="personal_assistant.reminders",
+            source="personal_assistant.application.reminders",
             subject=reminder.reminder_id,
             tenant_id=principal.tenant_id,
             data={
