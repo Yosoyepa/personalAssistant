@@ -33,6 +33,9 @@ PYTHONPATH=src python3 -B -m compileall src tests
 ```
 
 If `pytest` is installed, the same test files are compatible with it.
+The unittest suite includes architecture-boundary checks that enforce the
+hexagonal import direction from `domain` inward to `application` and outward to
+`adapters`.
 
 ## Layout
 
@@ -41,9 +44,11 @@ If `pytest` is installed, the same test files are compatible with it.
 - `src/personal_assistant/domain/` - business models, policies, events,
   permissions, durable state, exceptions, and pure domain services.
 - `src/personal_assistant/application/` - use cases, DTOs, service ports, and
-  bounded runtime orchestration.
+  bounded runtime orchestration:
+  `dto/`, `ports/`, and `use_cases/`.
 - `src/personal_assistant/adapters/` - inbound channel/API adapters, outbound
-  local tools, scheduler implementations, and persistence adapters.
+  local tools, scheduler implementations, and persistence adapters:
+  `inbound/`, `outbound/`, `persistence/`, and `observability/`.
 - `src/personal_assistant/contracts/` - A2A and future interoperability
   contracts that are not the internal runtime.
 - `src/personal_assistant/infrastructure/` - composition root and local wiring.

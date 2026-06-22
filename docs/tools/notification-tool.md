@@ -5,6 +5,9 @@
 Send a user notification only after communication approval. The local adapter is
 used for tests; Telegram/WhatsApp dispatchers can implement the same contract.
 
+Application port: `src/personal_assistant/application/ports/notifications.py`  
+Local adapter: `src/personal_assistant/adapters/outbound/notifications/local.py`
+
 ## Input Schema
 
 - `channel: string`

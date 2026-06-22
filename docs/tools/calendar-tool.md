@@ -5,6 +5,9 @@
 Create a calendar event for the authenticated principal's tenant. In the MVP this
 is a local adapter; Google Calendar can replace it behind the same contract.
 
+Application port: `src/personal_assistant/application/ports/calendar.py`  
+Local adapter: `src/personal_assistant/adapters/outbound/calendar/local.py`
+
 ## Input Schema
 
 - `title: string`
