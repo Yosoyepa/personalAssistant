@@ -10,19 +10,21 @@ from personal_assistant.application.dto.channels import NormalizedMessage
 from personal_assistant.application.dto.commands import CommandKind, CommandResult, PendingApproval
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
 from personal_assistant.application.dto.runtime import AgentStatus
-from personal_assistant.application.dto.workflows import WorkflowStatus
 from personal_assistant.application.ports.approvals import ApprovalStorePort
 from personal_assistant.application.ports.calendar import CalendarReadPort
 from personal_assistant.application.ports.events import EventStorePort, OutboxPort
 from personal_assistant.application.ports.workflow_state import WorkflowStateStorePort
 from personal_assistant.application.use_cases.reminders import ReminderWorkflow, reminder_idempotency_key
+from personal_assistant.domain.common.exceptions import AssistantError
 from personal_assistant.domain.common.identity import Principal
-from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
+from personal_assistant.domain.common.permissions import PermissionTier
 
 
 HELP_TEXT = "\n".join(
     [
         "Comandos disponibles:",
+        "/start - inicia la conversación.",
+        "/help - muestra esta ayuda.",
         "/recordar <texto> - crea un recordatorio con aprobación.",
         "/agenda - lista eventos locales.",
         "/pendientes - muestra aprobaciones pendientes.",
@@ -40,7 +42,7 @@ def _approval_id(*, tenant_id: str, principal_id: str, idempotency_key: str) -> 
 
 def _looks_like_reminder(text: str) -> bool:
     normalized = text.strip().lower()
-    return normalized.startswith(("/recordar ", "recuérdame ", "recuerdame "))
+    return normalized.startswith(("/recordar ", "recuérdame ", "recuerdame ", "recordarme "))
 
 
 def _extract_reminder_text(text: str) -> str:
@@ -48,6 +50,9 @@ def _extract_reminder_text(text: str) -> str:
     lowered = stripped.lower()
     if lowered.startswith("/recordar "):
         return stripped[len("/recordar ") :].strip()
+    if lowered.startswith("/"):
+        parts = stripped.split(maxsplit=1)
+        return parts[1].strip() if len(parts) == 2 else ""
     return stripped
 
 
@@ -70,24 +75,33 @@ class ConversationCommandService:
     ) -> CommandResult:
         text = message.text.strip()
         lowered = text.lower()
-        if lowered == "/start":
+        command = message.command
+        if command == "start" or lowered == "/start":
             return CommandResult(
                 status=AgentStatus.completed,
                 kind=CommandKind.start,
                 reply="Asistente personal activo. Usa /help para ver comandos.",
             )
-        if lowered == "/help":
+        if command == "help" or lowered == "/help":
             return CommandResult(status=AgentStatus.completed, kind=CommandKind.help, reply=HELP_TEXT)
-        if lowered == "/status":
+        if command == "status" or lowered == "/status":
             return self._status(principal)
-        if lowered == "/agenda":
+        if command == "agenda" or lowered == "/agenda":
             return self._agenda(principal)
-        if lowered == "/pendientes":
+        if command == "pendientes" or lowered == "/pendientes":
             return self._pending(principal)
-        if lowered.startswith("/aprobar"):
+        if command == "aprobar" or lowered.startswith("/aprobar"):
             return self._approve(principal, text, now=now, timezone=timezone)
-        if lowered.startswith("/cancelar"):
+        if command == "cancelar" or lowered.startswith("/cancelar"):
             return self._cancel(principal, text)
+        if command == "recordar":
+            return self._create_reminder(
+                principal,
+                message,
+                text=message.command_args.strip(),
+                now=now,
+                timezone=timezone,
+            )
         if _looks_like_reminder(text):
             return self._create_reminder(principal, message, text=_extract_reminder_text(text), now=now, timezone=timezone)
         return CommandResult(
@@ -101,7 +115,8 @@ class ConversationCommandService:
         pending_count = len(self.approvals.list_pending(principal))
         state_count = len(self.states.list_for_tenant(principal))
         event_count = len(self.event_store.list_for_tenant(principal))
-        outbox_count = len(getattr(self.outbox, "list_for_tenant")(principal))
+        list_outbox = getattr(self.outbox, "list_for_tenant", None)
+        outbox_count = len(list_outbox(principal)) if callable(list_outbox) else 0
         reply = (
             "Estado local: activo. "
             f"Pendientes: {pending_count}. Workflows: {state_count}. Eventos: {event_count}. Outbox: {outbox_count}."
@@ -144,6 +159,12 @@ class ConversationCommandService:
         now: datetime,
         timezone: str,
     ) -> CommandResult:
+        if not text.strip():
+            return CommandResult(
+                status=AgentStatus.needs_clarification,
+                kind=CommandKind.reminder_create,
+                reply="Indica qué quieres recordar: /recordar <texto>",
+            )
         idempotency_key = reminder_idempotency_key(principal.tenant_id, message.message_id, text)
         result = self.reminder_workflow.run(
             principal,
@@ -208,13 +229,10 @@ class ConversationCommandService:
                 kind=CommandKind.approve,
                 reply="Ese tipo de aprobación todavía no está soportado.",
             )
-        grant = ApprovalGrant.issue(
-            principal=principal,
-            action=approval.action,
-            resource=approval.resource,
-            tier=PermissionTier(approval.tier),
-            approval_id=approval.approval_id,
-        )
+        try:
+            grant = self.approvals.approve(principal, approval.approval_id)
+        except AssistantError as exc:
+            return CommandResult(status=AgentStatus.failed, kind=CommandKind.approve, reply=str(exc))
         result = self.reminder_workflow.run(
             principal,
             ReminderWorkflowInput(
@@ -229,7 +247,6 @@ class ConversationCommandService:
                 approval=grant,
             ),
         )
-        self.approvals.mark_approved(principal, approval.approval_id)
         return CommandResult(status=result.status, kind=CommandKind.approve, reply=result.reply)
 
     def _cancel(self, principal: Principal, text: str) -> CommandResult:
@@ -240,5 +257,8 @@ class ConversationCommandService:
                 kind=CommandKind.cancel,
                 reply="Indica el id: /cancelar <id>",
             )
-        self.approvals.cancel(principal, parts[1].strip())
+        try:
+            self.approvals.reject(principal, parts[1].strip())
+        except AssistantError as exc:
+            return CommandResult(status=AgentStatus.failed, kind=CommandKind.cancel, reply=str(exc))
         return CommandResult(status=AgentStatus.completed, kind=CommandKind.cancel, reply="Aprobación cancelada.")

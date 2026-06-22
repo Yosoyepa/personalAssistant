@@ -12,11 +12,32 @@ from personal_assistant.application.dto.workflows import WorkflowState, Workflow
 from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import Principal, require_trusted_principal
+from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionRequest, PermissionTier, require_permission
 
 
 def _fingerprint(value: object) -> str:
     payload = json.dumps(value, sort_keys=True, default=str, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _approval_hash(approval: PendingApproval) -> str:
+    return _fingerprint(
+        {
+            "approval_id": approval.approval_id,
+            "tenant_id": approval.tenant_id,
+            "principal_id": approval.principal_id,
+            "action": approval.action,
+            "resource": approval.resource,
+            "tier": approval.tier,
+            "workflow_kind": approval.workflow_kind,
+            "idempotency_key": approval.idempotency_key,
+            "message_id": approval.message_id,
+            "conversation_id": approval.conversation_id,
+            "channel": approval.channel,
+            "recipient": approval.recipient,
+            "request_text": approval.request_text,
+        }
+    )
 
 
 class InMemoryEventStore:
@@ -172,36 +193,53 @@ class InMemoryApprovalStore:
     def __init__(self) -> None:
         self._approvals_by_id: dict[tuple[str, str], PendingApproval] = {}
         self._approval_id_by_key: dict[tuple[str, str, str, str], str] = {}
+        self._fingerprints: dict[tuple[str, str], str] = {}
 
     def create(self, principal: Principal, approval: PendingApproval) -> PendingApproval:
         require_trusted_principal(principal)
         if approval.tenant_id != principal.tenant_id or approval.principal_id != principal.principal_id:
             raise AssistantError(ErrorCode.PERMISSION_DENIED, "approval principal mismatch", tenant_id=principal.tenant_id)
+        tier = PermissionTier(approval.tier)
+        if tier.rank < PermissionTier.P3.rank:
+            raise AssistantError(
+                ErrorCode.VALIDATION_FAILED,
+                "approval requests are only valid for P3+ actions",
+                tenant_id=principal.tenant_id,
+            )
         idempotency_key = (
             principal.tenant_id,
             principal.principal_id,
             approval.workflow_kind,
             approval.idempotency_key,
         )
+        approval_fingerprint = _approval_hash(approval)
         existing_id = self._approval_id_by_key.get(idempotency_key)
         if existing_id is not None:
-            return self._approvals_by_id[(principal.tenant_id, existing_id)]
+            existing_key = (principal.tenant_id, existing_id)
+            if self._fingerprints[existing_key] != approval_fingerprint:
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "approval request idempotency conflict",
+                    tenant_id=principal.tenant_id,
+                )
+            return self._approvals_by_id[existing_key].model_copy(deep=True)
         key = (principal.tenant_id, approval.approval_id)
-        self._approvals_by_id[key] = approval
+        self._approvals_by_id[key] = approval.model_copy(deep=True)
         self._approval_id_by_key[idempotency_key] = approval.approval_id
-        return approval
+        self._fingerprints[key] = approval_fingerprint
+        return approval.model_copy(deep=True)
 
     def get(self, principal: Principal, approval_id: str) -> PendingApproval | None:
         require_trusted_principal(principal)
         approval = self._approvals_by_id.get((principal.tenant_id, approval_id))
         if approval is None or approval.principal_id != principal.principal_id:
             return None
-        return approval
+        return approval.model_copy(deep=True)
 
     def list_pending(self, principal: Principal) -> list[PendingApproval]:
         require_trusted_principal(principal)
         return [
-            approval
+            approval.model_copy(deep=True)
             for (tenant_id, _), approval in self._approvals_by_id.items()
             if tenant_id == principal.tenant_id
             and approval.principal_id == principal.principal_id
@@ -220,14 +258,41 @@ class InMemoryApprovalStore:
         self._approvals_by_id[(principal.tenant_id, approval_id)] = updated
         return updated
 
+    def approve(self, principal: Principal, approval_id: str) -> ApprovalGrant:
+        approval = self.get(principal, approval_id)
+        if approval is None:
+            raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
+        if approval.status == PendingApprovalStatus.cancelled:
+            raise AssistantError(ErrorCode.PERMISSION_DENIED, "approval was cancelled", tenant_id=principal.tenant_id)
+        tier = PermissionTier(approval.tier)
+        require_permission(
+            principal,
+            PermissionRequest(action=approval.action, resource=approval.resource, required_tier=tier),
+        )
+        if approval.status == PendingApprovalStatus.pending:
+            approval = self.mark_approved(principal, approval_id)
+        return ApprovalGrant.issue(
+            principal=principal,
+            action=approval.action,
+            resource=approval.resource,
+            tier=tier,
+            approval_id=approval.approval_id,
+            request_hash=_approval_hash(approval),
+        )
+
     def cancel(self, principal: Principal, approval_id: str) -> PendingApproval:
         approval = self.get(principal, approval_id)
         if approval is None:
             raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
-        if approval.status != PendingApprovalStatus.pending:
+        if approval.status == PendingApprovalStatus.approved:
+            raise AssistantError(ErrorCode.CONFLICT, "approved approval cannot be cancelled", tenant_id=principal.tenant_id)
+        if approval.status == PendingApprovalStatus.cancelled:
             return approval
         updated = approval.model_copy(
             update={"status": PendingApprovalStatus.cancelled, "updated_at": datetime.now(UTC)}
         )
         self._approvals_by_id[(principal.tenant_id, approval_id)] = updated
         return updated
+
+    def reject(self, principal: Principal, approval_id: str) -> PendingApproval:
+        return self.cancel(principal, approval_id)

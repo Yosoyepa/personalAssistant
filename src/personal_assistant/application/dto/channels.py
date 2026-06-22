@@ -19,6 +19,9 @@ class NormalizedMessage(BaseModel):
     conversation_id: str = Field(min_length=1)
     message_id: str = Field(min_length=1)
     text: str = Field(min_length=1)
+    idempotency_key: str | None = Field(default=None, min_length=1)
+    command: str | None = Field(default=None, min_length=1)
+    command_args: str = ""
     received_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
