@@ -3,31 +3,17 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from uuid import uuid4
 
-from pydantic import BaseModel, Field
-
-from personal_assistant.notifications.local import LocalNotificationTool, NotificationRequest
+from personal_assistant.application.ports.notifications import NotificationPort, NotificationRequest
+from personal_assistant.application.ports.scheduler import ScheduledReminder
 from personal_assistant.domain.common.permissions import ApprovalGrant
 from personal_assistant.domain.common.identity import Principal
-
-
-class ScheduledReminder(BaseModel):
-    reminder_id: str = Field(default_factory=lambda: f"rem_{uuid4().hex}")
-    tenant_id: str
-    calendar_event_id: str
-    notify_at: datetime
-    channel: str
-    recipient: str
-    body: str
-    idempotency_key: str
-    sent: bool = False
 
 
 class ReminderScheduler:
     """Stores reminder jobs and can dispatch due notifications."""
 
-    def __init__(self, notification_tool: LocalNotificationTool) -> None:
+    def __init__(self, notification_tool: NotificationPort) -> None:
         self._notification_tool = notification_tool
         self._jobs_by_key: dict[tuple[str, str], ScheduledReminder] = {}
 

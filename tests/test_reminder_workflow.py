@@ -3,11 +3,12 @@ from __future__ import annotations
 from datetime import UTC, datetime
 import unittest
 
+from personal_assistant.application.dto.reminders import ReminderWorkflowInput
 from personal_assistant.application.dto.runtime import AgentStatus
+from personal_assistant.application.use_cases.reminders import ReminderWorkflow, reminder_idempotency_key
 from personal_assistant.calendar.local import LocalCalendarTool
+from personal_assistant.domain.reminders.parser import extract_reminder
 from personal_assistant.notifications.local import LocalNotificationTool
-from personal_assistant.reminders.models import ReminderWorkflowInput
-from personal_assistant.reminders.workflow import ReminderWorkflow, extract_reminder, reminder_idempotency_key
 from personal_assistant.scheduler.service import ReminderScheduler
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.domain.common.identity import Principal

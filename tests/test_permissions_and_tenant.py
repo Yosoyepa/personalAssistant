@@ -5,9 +5,11 @@ import unittest
 
 from pydantic import ValidationError
 
-from personal_assistant.calendar.local import CalendarEventRequest, LocalCalendarTool
+from personal_assistant.application.ports.calendar import CalendarEventRequest
+from personal_assistant.application.ports.notifications import NotificationRequest
+from personal_assistant.calendar.local import LocalCalendarTool
 from personal_assistant.memory.store import MemoryKind, TenantMemoryStore
-from personal_assistant.notifications.local import LocalNotificationTool, NotificationRequest
+from personal_assistant.notifications.local import LocalNotificationTool
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.domain.common.identity import Principal

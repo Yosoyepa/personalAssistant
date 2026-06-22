@@ -1,19 +1,14 @@
-"""Reminder workflow schemas."""
+"""Reminder use-case DTOs."""
 
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from personal_assistant.application.dto.runtime import AgentStatus
 from personal_assistant.domain.common.permissions import ApprovalGrant
-
-
-class ReminderIntent(str, Enum):
-    create = "reminder.create"
-    unsupported = "unsupported"
+from personal_assistant.domain.reminders.models import ReminderIntent
 
 
 class ReminderWorkflowInput(BaseModel):
@@ -34,21 +29,6 @@ class ReminderWorkflowInput(BaseModel):
     def require_aware_now(cls, value: datetime) -> datetime:
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("now must be timezone-aware")
-        return value
-
-
-class ReminderExtraction(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    title: str = Field(min_length=1)
-    starts_at: datetime
-    confidence: float = Field(ge=0, le=1)
-
-    @field_validator("starts_at")
-    @classmethod
-    def require_aware_starts_at(cls, value: datetime) -> datetime:
-        if value.tzinfo is None or value.utcoffset() is None:
-            raise ValueError("starts_at must be timezone-aware")
         return value
 
 

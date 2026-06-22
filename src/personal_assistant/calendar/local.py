@@ -2,29 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
-
+from personal_assistant.application.ports.calendar import CalendarEventRequest, CalendarEventResult
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier, require_approval
 from personal_assistant.domain.common.identity import Principal
-
-
-class CalendarEventRequest(BaseModel):
-    title: str = Field(min_length=1)
-    starts_at: datetime
-    ends_at: datetime | None = None
-    timezone: str = "America/Bogota"
-    idempotency_key: str = Field(min_length=1)
-
-
-class CalendarEventResult(BaseModel):
-    event_id: str
-    title: str
-    starts_at: datetime
-    idempotency_key: str
-    reused: bool = False
 
 
 class LocalCalendarTool:

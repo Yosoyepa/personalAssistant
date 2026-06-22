@@ -2,29 +2,11 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
-
+from personal_assistant.application.ports.notifications import NotificationRequest, NotificationResult
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier, require_approval
 from personal_assistant.domain.common.identity import Principal
-
-
-class NotificationRequest(BaseModel):
-    channel: str = Field(min_length=1)
-    recipient: str = Field(min_length=1)
-    body: str = Field(min_length=1)
-    send_at: datetime | None = None
-    idempotency_key: str = Field(min_length=1)
-
-
-class NotificationResult(BaseModel):
-    notification_id: str
-    channel: str
-    recipient: str
-    idempotency_key: str
-    reused: bool = False
 
 
 class LocalNotificationTool:
