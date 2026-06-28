@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import ast
+import os
 from pathlib import Path
 import unittest
 import warnings
+from unittest.mock import patch
 
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
@@ -50,6 +52,26 @@ class HttpRuntimeBoundaryTests(unittest.TestCase):
                     any(module == "fastapi" or module.startswith("fastapi.") for module in imports),
                     f"{file.relative_to(PROJECT_ROOT)} imports FastAPI",
                 )
+
+
+class AppSettingsTests(unittest.TestCase):
+    def test_llm_settings_accept_anthropic_style_aliases(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "LLM_PROVIDER": "anthropic_compatible",
+                "ANTHROPIC_AUTH_TOKEN": "token",
+                "ANTHROPIC_BASE_URL": "https://aerolink.example",
+                "ANTHROPIC_MODEL": "claude-test",
+            },
+            clear=True,
+        ):
+            settings = AppSettings.from_env()
+
+        self.assertEqual(settings.llm_provider, "anthropic_compatible")
+        self.assertEqual(settings.llm_api_key, "token")
+        self.assertEqual(settings.llm_base_url, "https://aerolink.example")
+        self.assertEqual(settings.llm_model, "claude-test")
 
 
 @unittest.skipIf(TestClient is None or create_app is None, "FastAPI optional dependency is not installed")
