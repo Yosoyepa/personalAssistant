@@ -118,6 +118,19 @@ class ReminderWorkflowTests(unittest.TestCase):
         self.assertEqual(extraction.notify_at, now + timedelta(minutes=2))
         self.assertIn("pagar arriendo", extraction.title)
 
+    def test_extract_reminder_parses_spelled_relative_minutes_from_voice_transcript(self) -> None:
+        now = datetime(2026, 6, 20, 12, 0, tzinfo=UTC)
+        extraction = extract_reminder(
+            "Necesito que me recuerdes dentro de dos minutos el revisar mis tareas de la universidad.",
+            now,
+        )
+
+        self.assertIsNotNone(extraction)
+        assert extraction is not None
+        self.assertEqual(extraction.starts_at, now + timedelta(minutes=2))
+        self.assertEqual(extraction.notify_at, now + timedelta(minutes=2))
+        self.assertIn("revisar mis tareas", extraction.title)
+
     def test_happy_path_creates_calendar_event_and_schedules_notice(self) -> None:
         result = self.workflow.run(self.principal, self.request())
 

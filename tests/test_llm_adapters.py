@@ -102,6 +102,31 @@ class LLMAdapterTests(unittest.TestCase):
         self.assertEqual(result.provider, "minimax")
         self.assertEqual(result.data["title"], "comer")
 
+    def test_anthropic_compatible_provider_preserves_http_error_body(self) -> None:
+        def fake_urlopen(req, timeout):
+            raise HTTPError(
+                req.full_url,
+                401,
+                "Unauthorized",
+                hdrs=None,
+                fp=io.BytesIO(b'{"error":{"message":"invalid api key"}}'),
+            )
+
+        provider = AnthropicCompatibleLLMProvider(
+            api_key="bad-key",
+            base_url="https://aerolink.example",
+            model="claude-test",
+            urlopen=fake_urlopen,
+        )
+
+        with self.assertRaises(AssistantError) as ctx:
+            provider.complete(
+                LLMRequest(prompt="clasifica", schema_name="conversation_intent"),
+                budget=TokenBudget(limit=1000),
+            )
+
+        self.assertIn("invalid api key", str(ctx.exception))
+
     def test_openai_compatible_transcription_provider_parses_text(self) -> None:
         captured: dict[str, object] = {}
 

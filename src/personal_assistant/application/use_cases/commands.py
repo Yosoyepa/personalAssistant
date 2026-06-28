@@ -47,11 +47,21 @@ def _looks_like_reminder(text: str) -> bool:
             "recuérdame ",
             "recuerdame ",
             "recordarme ",
+            "puedes recordarme ",
+            "podrías recordarme ",
+            "necesito que me recuerdes ",
+            "quiero que me recuerdes ",
+            "me recuerdas ",
+            "me recuerdes ",
             "agéndame ",
             "agendame ",
             "agendarme ",
             "agenda ",
             "agendar ",
+            "avísame ",
+            "avisame ",
+            "me avisas ",
+            "me puedes avisar ",
         )
     ) or ("cita" in normalized and "las " in normalized)
 

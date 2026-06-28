@@ -44,6 +44,11 @@ class LowConfidenceIntentLLMProvider:
         )
 
 
+class UnexpectedLLMProvider:
+    def complete(self, request, *, budget: TokenBudget) -> LLMResult:
+        raise AssertionError("LLM should not be called for deterministic reminder text")
+
+
 class CommandRouterTests(unittest.TestCase):
     def setUp(self) -> None:
         self.container = build_container()
@@ -247,6 +252,21 @@ class CommandRouterTests(unittest.TestCase):
         self.assertEqual(traces[0].output_summary["kind"], CommandKind.reminder_create.value)
         self.assertFalse(traces[0].output_summary["accepted"])
         self.assertEqual(traces[0].output_summary["confidence"], 0.31)
+
+    def test_voice_transcript_reminder_routes_without_llm_fallback(self) -> None:
+        container = build_container(llm=UnexpectedLLMProvider())
+
+        result = container.commands.handle(
+            self.principal,
+            self.message("Necesito que me recuerdes dentro de dos minutos el revisar mis tareas de la universidad."),
+            now=self.now,
+            timezone="America/Bogota",
+        )
+
+        self.assertEqual(result.status, AgentStatus.escalated)
+        self.assertEqual(result.kind, CommandKind.reminder_create)
+        self.assertIsNotNone(result.approval_id)
+        self.assertEqual(len(container.approvals.list_pending(self.principal)), 1)
 
 
 if __name__ == "__main__":

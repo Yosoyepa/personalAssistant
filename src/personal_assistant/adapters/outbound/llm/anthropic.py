@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from typing import Any
+from urllib.error import HTTPError
 from urllib import request as urllib_request
 
 from personal_assistant.application.dto.context import TokenBudget
@@ -106,8 +107,15 @@ class AnthropicCompatibleLLMProvider:
             headers=headers,
             method="POST",
         )
-        with self._urlopen(req, timeout=self._timeout_seconds) as response:
-            raw = response.read()
+        try:
+            with self._urlopen(req, timeout=self._timeout_seconds) as response:
+                raw = response.read()
+        except HTTPError as exc:
+            details = exc.read().decode("utf-8", errors="replace")[:500]
+            raise AssistantError(
+                ErrorCode.INTERNAL_ERROR,
+                f"LLM provider HTTP {exc.code}: {details or exc.reason}",
+            ) from exc
         decoded = json.loads(raw.decode("utf-8"))
         if not isinstance(decoded, Mapping):
             raise AssistantError(ErrorCode.INTERNAL_ERROR, "LLM provider returned invalid response")

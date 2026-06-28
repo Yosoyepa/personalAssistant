@@ -22,9 +22,29 @@ SPANISH_WEEKDAYS = {
 }
 
 REMINDER_TRIGGERS = ("recuerd", "record", "agend", "cita", "recordatorio")
+SPANISH_NUMBER_WORDS = {
+    "un": 1,
+    "una": 1,
+    "uno": 1,
+    "dos": 2,
+    "tres": 3,
+    "cuatro": 4,
+    "cinco": 5,
+    "seis": 6,
+    "siete": 7,
+    "ocho": 8,
+    "nueve": 9,
+    "diez": 10,
+    "once": 11,
+    "doce": 12,
+    "quince": 15,
+    "treinta": 30,
+    "sesenta": 60,
+}
 TITLE_STOPWORDS_RE = (
-    r"\b(recu[eé]rdame|recuerdame|recordarme|recordatorio|ag[eé]ndame|"
-    r"agendame|agendarme|agenda|agendar|el|la|los|las|este|esta|de|para)\b"
+    r"\b(recu[eé]rdame|recuerdame|recuerdes|recordarme|recordatorio|ag[eé]ndame|"
+    r"agendame|agendarme|agenda|agendar|necesito|quiero|que|me|el|la|los|las|"
+    r"este|esta|de|para)\b"
 )
 
 
@@ -58,21 +78,30 @@ def _clean_title(text: str) -> str:
     return re.sub(r"\s+", " ", title).strip(" .,:;-") or "Recordatorio"
 
 
+def _parse_amount(raw: str) -> int | None:
+    if raw.isdigit():
+        return int(raw)
+    return SPANISH_NUMBER_WORDS.get(raw)
+
+
 def extract_reminder(text: str, now: datetime) -> ReminderExtraction | None:
     lowered = _fold_text(text)
     if not any(trigger in lowered for trigger in REMINDER_TRIGGERS):
         return None
 
-    relative_match = re.search(r"\ben\s+(\d{1,4})\s*(minutos?|mins?|horas?|h)\b", lowered)
+    relative_match = re.search(
+        r"\b(?:en|dentro\s+de)\s+(\d{1,4}|[a-z]+)\s*(minutos?|mins?|horas?|h)\b",
+        lowered,
+    )
     if relative_match is not None:
-        amount = int(relative_match.group(1))
-        if amount < 1:
+        amount = _parse_amount(relative_match.group(1))
+        if amount is None or amount < 1:
             return None
         unit = relative_match.group(2)
         minutes = amount * 60 if unit.startswith(("hora", "h")) else amount
         starts_at = now + timedelta(minutes=minutes)
         title_source = re.sub(
-            r"\ben\s+\d{1,4}\s*(?:minutos?|mins?|horas?|h)\b",
+            r"\b(?:en|dentro\s+de)\s+(?:\d{1,4}|[a-z]+)\s*(?:minutos?|mins?|horas?|h)\b",
             " ",
             text,
             flags=re.I,
