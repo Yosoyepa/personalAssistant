@@ -122,7 +122,7 @@ class AppSettingsTests(unittest.TestCase):
                 "APP_ENV_FILE": "",
                 "LLM_PROVIDER": "minimax",
                 "MINIMAX_API_KEY": "sk-cp-test",
-                "MINIMAX_BASE_URL": "https://api.minimaxi.com/anthropic",
+                "MINIMAX_BASE_URL": "https://api.minimax.io/anthropic",
                 "MINIMAX_MODEL": "MiniMax-M3",
             },
             clear=True,
@@ -131,7 +131,7 @@ class AppSettingsTests(unittest.TestCase):
 
         self.assertEqual(settings.llm_provider, "minimax")
         self.assertEqual(settings.llm_api_key, "sk-cp-test")
-        self.assertEqual(settings.llm_base_url, "https://api.minimaxi.com/anthropic")
+        self.assertEqual(settings.llm_base_url, "https://api.minimax.io/anthropic")
         self.assertEqual(settings.llm_model, "MiniMax-M3")
 
     def test_audio_settings_accept_groq_and_minimax_tts_aliases(self) -> None:

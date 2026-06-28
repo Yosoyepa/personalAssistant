@@ -31,7 +31,7 @@ class MiniMaxTTSProvider:
         self,
         *,
         api_key: str,
-        base_url: str = "https://api.minimaxi.com",
+        base_url: str = "https://api.minimax.io",
         model: str = "speech-2.8-turbo",
         voice_id: str = "male-qn-qingse",
         audio_format: str = "mp3",

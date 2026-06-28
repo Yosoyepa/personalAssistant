@@ -92,7 +92,7 @@ class LLMAdapterTests(unittest.TestCase):
             budget=TokenBudget(limit=1000),
         )
 
-        self.assertEqual(captured["url"], "https://api.minimaxi.com/anthropic/v1/messages")
+        self.assertEqual(captured["url"], "https://api.minimax.io/anthropic/v1/messages")
         headers = captured["headers"]
         self.assertIsInstance(headers, dict)
         self.assertEqual(headers["Authorization"], "Bearer sk-cp-test")
@@ -212,7 +212,7 @@ class LLMAdapterTests(unittest.TestCase):
             budget=TokenBudget(limit=100),
         )
 
-        self.assertEqual(captured["url"], "https://api.minimaxi.com/v1/t2a_v2")
+        self.assertEqual(captured["url"], "https://api.minimax.io/v1/t2a_v2")
         headers = captured["headers"]
         self.assertIsInstance(headers, dict)
         self.assertEqual(headers["Authorization"], "Bearer sk-cp-test")

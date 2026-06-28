@@ -56,7 +56,7 @@ def build_llm_provider(settings: AppSettings) -> LLMProvider | None:
     if settings.llm_provider in {"minimax", "minimax_anthropic", "minimax-anthropic"}:
         return MiniMaxLLMProvider(
             api_key=settings.llm_api_key or "",
-            base_url=settings.llm_base_url or "https://api.minimaxi.com/anthropic",
+            base_url=settings.llm_base_url or "https://api.minimax.io/anthropic",
             model=settings.llm_model or "MiniMax-M3",
             timeout_seconds=settings.llm_timeout_seconds,
         )
@@ -92,7 +92,7 @@ def build_tts_provider(settings: AppSettings) -> AudioSynthesisProvider | None:
         raise ValueError(f"unsupported TTS_PROVIDER: {settings.tts_provider}")
     return MiniMaxTTSProvider(
         api_key=settings.tts_api_key or "",
-        base_url=settings.tts_base_url or "https://api.minimaxi.com",
+        base_url=settings.tts_base_url or "https://api.minimax.io",
         model=settings.tts_model or "speech-2.8-turbo",
         voice_id=settings.tts_voice_id,
         audio_format=settings.tts_audio_format,

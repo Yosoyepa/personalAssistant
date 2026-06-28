@@ -44,9 +44,24 @@ class LowConfidenceIntentLLMProvider:
         )
 
 
-class UnexpectedLLMProvider:
+class CapturingIntentLLMProvider:
+    def __init__(self, *, reminder_text: str) -> None:
+        self.reminder_text = reminder_text
+        self.prompts: list[str] = []
+
     def complete(self, request, *, budget: TokenBudget) -> LLMResult:
-        raise AssertionError("LLM should not be called for deterministic reminder text")
+        self.prompts.append(request.prompt)
+        return LLMResult(
+            provider="fake",
+            model="fake-router",
+            data={
+                "kind": "reminder.create",
+                "confidence": 0.94,
+                "reminder_text": self.reminder_text,
+            },
+            input_tokens=12,
+            output_tokens=8,
+        )
 
 
 class CommandRouterTests(unittest.TestCase):
@@ -253,8 +268,11 @@ class CommandRouterTests(unittest.TestCase):
         self.assertFalse(traces[0].output_summary["accepted"])
         self.assertEqual(traces[0].output_summary["confidence"], 0.31)
 
-    def test_voice_transcript_reminder_routes_without_llm_fallback(self) -> None:
-        container = build_container(llm=UnexpectedLLMProvider())
+    def test_voice_transcript_reminder_uses_llm_intent_before_text_heuristics(self) -> None:
+        llm = CapturingIntentLLMProvider(
+            reminder_text="dentro de dos minutos revisar mis tareas de la universidad"
+        )
+        container = build_container(llm=llm)
 
         result = container.commands.handle(
             self.principal,
@@ -267,6 +285,8 @@ class CommandRouterTests(unittest.TestCase):
         self.assertEqual(result.kind, CommandKind.reminder_create)
         self.assertIsNotNone(result.approval_id)
         self.assertEqual(len(container.approvals.list_pending(self.principal)), 1)
+        self.assertEqual(len(llm.prompts), 1)
+        self.assertIn("Necesito que me recuerdes", llm.prompts[0])
 
 
 if __name__ == "__main__":

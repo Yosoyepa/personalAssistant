@@ -14,7 +14,7 @@ class MiniMaxLLMProvider(AnthropicCompatibleLLMProvider):
         self,
         *,
         api_key: str,
-        base_url: str = "https://api.minimaxi.com/anthropic",
+        base_url: str = "https://api.minimax.io/anthropic",
         model: str = "MiniMax-M3",
         timeout_seconds: float = 30.0,
         urlopen: UrlOpen | None = None,

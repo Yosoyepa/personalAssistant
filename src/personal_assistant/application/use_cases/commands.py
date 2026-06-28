@@ -77,6 +77,13 @@ def _extract_reminder_text(text: str) -> str:
     return stripped
 
 
+def _workflow_text_from_inferred_reminder(original_text: str, reminder_text: str) -> str:
+    normalized = reminder_text.strip()
+    if not normalized:
+        return original_text
+    return f"recordatorio {normalized}"
+
+
 @dataclass(slots=True)
 class ConversationCommandService:
     approvals: ApprovalStorePort
@@ -126,6 +133,10 @@ class ConversationCommandService:
                 now=now,
                 timezone=timezone,
             )
+        if not lowered.startswith("/"):
+            inferred = self._infer_intent(principal, message, text, now=now, timezone=timezone)
+            if inferred is not None:
+                return self._handle_inferred_intent(principal, message, inferred, now=now, timezone=timezone)
         if _looks_like_reminder(text):
             return self._create_reminder(
                 principal,
@@ -134,9 +145,6 @@ class ConversationCommandService:
                 now=now,
                 timezone=timezone,
             )
-        inferred = self._infer_intent(principal, message, text, now=now, timezone=timezone)
-        if inferred is not None:
-            return self._handle_inferred_intent(principal, message, inferred, now=now, timezone=timezone)
         return CommandResult(
             status=AgentStatus.declined,
             kind=CommandKind.unsupported,
@@ -372,7 +380,13 @@ class ConversationCommandService:
         timezone: str,
     ) -> CommandResult:
         if inferred.kind == CommandKind.reminder_create and inferred.reminder_text:
-            return self._create_reminder(principal, message, text=inferred.reminder_text, now=now, timezone=timezone)
+            return self._create_reminder(
+                principal,
+                message,
+                text=_workflow_text_from_inferred_reminder(message.text, inferred.reminder_text),
+                now=now,
+                timezone=timezone,
+            )
         if inferred.kind == CommandKind.help:
             return CommandResult(status=AgentStatus.completed, kind=CommandKind.help, reply=self.replies.help())
         if inferred.kind == CommandKind.status:
@@ -406,7 +420,7 @@ def _intent_prompt(*, text: str, now: datetime, timezone: str) -> str:
             f"Allowed kind values: {json.dumps(allowed_intents, ensure_ascii=False)}",
             "Reglas:",
             "- Usa reminder.create si el usuario pide recordar, agendar, citar o avisar algo.",
-            "- Para reminder.create conserva el contenido accionable en reminder_text.",
+            "- Para reminder.create conserva tarea y tiempo en reminder_text.",
             "- Si el usuario da tiempos relativos como 'en 2 minutos', conserva esa frase.",
             "- Si solo hay una fecha/hora sin tarea clara, usa unsupported.",
             "- No clasifiques aprobar/cancelar desde texto libre; esos requieren comando explícito.",
