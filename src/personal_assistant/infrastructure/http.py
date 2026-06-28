@@ -48,6 +48,9 @@ from personal_assistant.infrastructure.config import AppSettings
 
 
 MAX_TELEGRAM_AUDIO_BYTES = 20 * 1024 * 1024
+SUPPORTED_TRANSCRIPTION_EXTENSIONS = frozenset(
+    {"flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "opus", "wav", "webm"}
+)
 REPLIES = AssistantReplies()
 
 
@@ -412,6 +415,20 @@ def _send_telegram_audio_reply(
     return True
 
 
+def _transcription_filename(message: NormalizedMessage, file_path: str) -> str:
+    extension = file_path.rsplit(".", 1)[-1].lower() if "." in file_path else ""
+    if extension == "oga":
+        extension = "ogg"
+    elif extension not in SUPPORTED_TRANSCRIPTION_EXTENSIONS:
+        if message.media_mime_type == "audio/ogg":
+            extension = "ogg"
+        elif message.media_mime_type == "audio/opus":
+            extension = "opus"
+        else:
+            extension = "ogg"
+    return f"telegram-{message.message_id}.{extension}"
+
+
 def _transcribe_telegram_media(
     container: AppContainer,
     settings: AppSettings,
@@ -426,6 +443,8 @@ def _transcribe_telegram_media(
     if message.media_file_size is not None and message.media_file_size > MAX_TELEGRAM_AUDIO_BYTES:
         return None, REPLIES.telegram_audio_too_large()
 
+    transcription_filename: str | None = None
+    telegram_file_extension: str | None = None
     try:
         client = TelegramBotApiClient(token=settings.telegram_bot_token)
         file_info = client.get_file(file_id=message.media_file_id)
@@ -436,10 +455,11 @@ def _transcribe_telegram_media(
         if len(audio) > MAX_TELEGRAM_AUDIO_BYTES:
             return None, REPLIES.telegram_audio_download_too_large()
 
-        extension = file_path.rsplit(".", 1)[-1] if "." in file_path else "ogg"
+        telegram_file_extension = file_path.rsplit(".", 1)[-1].lower() if "." in file_path else None
+        transcription_filename = _transcription_filename(message, file_path)
         transcript = container.transcription.transcribe(
             AudioTranscriptionRequest(
-                filename=f"telegram-{message.message_id}.{extension}",
+                filename=transcription_filename,
                 content_type=message.media_mime_type or "audio/ogg",
                 data=audio,
                 language="es",
@@ -458,6 +478,8 @@ def _transcribe_telegram_media(
                     "media_kind": message.media_kind,
                     "media_mime_type": message.media_mime_type,
                     "media_file_size": message.media_file_size,
+                    "telegram_file_extension": telegram_file_extension,
+                    "transcription_filename": transcription_filename,
                 },
                 error={"type": exc.__class__.__name__, "message": str(exc)[:500]},
             )

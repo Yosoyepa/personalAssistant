@@ -42,6 +42,15 @@ class FakeTranscriptionProvider:
         return AudioTranscriptionResult(provider="fake", model="fake", text="recuérdame clase a las 5")
 
 
+class CapturingTranscriptionProvider:
+    def __init__(self) -> None:
+        self.requests = []
+
+    def transcribe(self, request, *, budget):
+        self.requests.append(request)
+        return AudioTranscriptionResult(provider="fake", model="fake", text="recuérdame pagar arriendo en 2 minutos")
+
+
 class FailingTelegramClient:
     def __init__(self, *, token: str, timeout_seconds: float = 10.0) -> None:
         self.token = token
@@ -49,6 +58,18 @@ class FailingTelegramClient:
 
     def get_file(self, *, file_id: str):
         raise RuntimeError("telegram unavailable")
+
+
+class TelegramOgaClient:
+    def __init__(self, *, token: str, timeout_seconds: float = 10.0) -> None:
+        self.token = token
+        self.timeout_seconds = timeout_seconds
+
+    def get_file(self, *, file_id: str):
+        return {"file_path": "voice/file_42.oga"}
+
+    def download_file(self, *, file_path: str):
+        return b"telegram-ogg-opus-bytes"
 
 
 def imported_modules(file: Path) -> set[str]:
@@ -186,7 +207,7 @@ class HttpRuntimeTests(unittest.TestCase):
 
     def setUp(self) -> None:
         self.container = build_container()
-        self.client = TestClient(create_app(self.container))
+        self.client = TestClient(create_app(self.container, settings=AppSettings(tenant_id="tenant-a")))
 
     def principal(self, tenant_id: str = "tenant-a") -> Principal:
         return Principal.for_test(principal_id=f"user-{tenant_id}", tenant_id=tenant_id, permission_tier=PermissionTier.P5)
@@ -424,6 +445,35 @@ class HttpRuntimeTests(unittest.TestCase):
         ]
         self.assertEqual(len(trace_errors), 1)
         self.assertEqual(trace_errors[0]["type"], "RuntimeError")
+
+    def test_telegram_voice_oga_extension_is_normalized_for_transcription(self) -> None:
+        settings = AppSettings(
+            tenant_id="tenant-a",
+            telegram_webhook_secret="secret-1",
+            telegram_bot_token="123:secret",
+            telegram_allowed_user_ids=frozenset({"456"}),
+        )
+        transcription = CapturingTranscriptionProvider()
+        container = build_container(transcription=transcription)
+        message = NormalizedMessage(
+            channel=ChannelName.telegram,
+            actor_id="456",
+            conversation_id="chat-1",
+            message_id="45",
+            text="[voice]",
+            media_kind="voice",
+            media_file_id="voice-file-1",
+            media_mime_type="audio/ogg",
+            media_file_size=2048,
+        )
+
+        with patch("personal_assistant.infrastructure.http.TelegramBotApiClient", TelegramOgaClient):
+            transcribed, error = _transcribe_telegram_media(container, settings, message)
+
+        self.assertIsNone(error)
+        self.assertIsNotNone(transcribed)
+        self.assertEqual(transcription.requests[0].filename, "telegram-45.ogg")
+        self.assertEqual(transcription.requests[0].content_type, "audio/ogg")
 
     def test_telegram_webhook_rejects_invalid_secret_and_user(self) -> None:
         settings = AppSettings(
