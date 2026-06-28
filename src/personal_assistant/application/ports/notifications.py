@@ -3,12 +3,19 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Protocol
+from typing import Literal, Protocol
 
 from pydantic import BaseModel, Field
 
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant
+
+
+class NotificationMedia(BaseModel):
+    kind: Literal["audio"] = "audio"
+    filename: str = Field(min_length=1)
+    content_type: str = Field(min_length=1)
+    data: bytes = Field(min_length=1)
 
 
 class NotificationRequest(BaseModel):
@@ -17,6 +24,7 @@ class NotificationRequest(BaseModel):
     body: str = Field(min_length=1)
     send_at: datetime | None = None
     idempotency_key: str = Field(min_length=1)
+    media: NotificationMedia | None = None
 
 
 class NotificationResult(BaseModel):

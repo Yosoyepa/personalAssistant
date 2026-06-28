@@ -75,6 +75,27 @@ class AudioTranscriptionResult(BaseModel):
     input_tokens: int = Field(default=0, ge=0)
 
 
+class AudioSynthesisRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    text: str = Field(min_length=1, max_length=10_000)
+    voice_id: str | None = Field(default=None, min_length=1)
+    audio_format: Literal["mp3", "wav", "flac"] = "mp3"
+    language_boost: str | None = Field(default="Spanish", min_length=2, max_length=64)
+
+
+class AudioSynthesisResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    provider: str
+    model: str
+    audio: bytes = Field(min_length=1)
+    content_type: str = Field(min_length=1)
+    filename_extension: str = Field(min_length=1)
+    characters: int = Field(default=0, ge=0)
+    trace_id: str | None = None
+
+
 class ToolDefinition(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 

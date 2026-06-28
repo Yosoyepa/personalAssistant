@@ -6,6 +6,8 @@ from typing import Any, Protocol
 
 from personal_assistant.application.dto.runtime import (
     AgentResult,
+    AudioSynthesisRequest,
+    AudioSynthesisResult,
     AudioTranscriptionRequest,
     AudioTranscriptionResult,
     ApprovalRequest,
@@ -36,6 +38,16 @@ class AudioTranscriptionProvider(Protocol):
         budget: TokenBudget,
     ) -> AudioTranscriptionResult:
         """Return text from a bounded audio transcription call."""
+
+
+class AudioSynthesisProvider(Protocol):
+    def synthesize(
+        self,
+        request: AudioSynthesisRequest,
+        *,
+        budget: TokenBudget,
+    ) -> AudioSynthesisResult:
+        """Return audio bytes from bounded text-to-speech synthesis."""
 
 
 class ToolPort(Protocol):

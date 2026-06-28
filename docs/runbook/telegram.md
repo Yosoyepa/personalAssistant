@@ -255,10 +255,19 @@ shells and are not yet enforced by every runtime surface.
 | `LLM_BASE_URL` | Generic bounded LLM extraction | No | Provider base URL. `MINIMAX_BASE_URL`, `AEROLINK_BASE_URL`, and `ANTHROPIC_BASE_URL` are also accepted. |
 | `LLM_MODEL` | Generic bounded LLM extraction | No | Provider model id. `MINIMAX_MODEL`, `AEROLINK_MODEL`, and `ANTHROPIC_MODEL` are also accepted. |
 | `LLM_AUTH_HEADER` | Bounded LLM extraction | No | `x-api-key` by default; use `authorization` for bearer-token compatible proxies. |
-| `TRANSCRIPTION_PROVIDER` | Telegram voice messages | No | Use `openai_compatible` only when the provider exposes `/v1/audio/transcriptions`; otherwise leave `disabled`. |
-| `TRANSCRIPTION_API_KEY` | Telegram voice messages | Yes | Speech-to-text provider key. Defaults to `AEROLINK_API_KEY` if set. |
-| `TRANSCRIPTION_BASE_URL` | Telegram voice messages | No | Speech-to-text provider base URL. Defaults to `AEROLINK_BASE_URL` if set. |
+| `TRANSCRIPTION_PROVIDER` | Telegram voice messages | No | Use `openai_compatible` for Groq or another provider exposing `/v1/audio/transcriptions`; otherwise leave `disabled`. |
+| `TRANSCRIPTION_API_KEY` | Telegram voice messages | Yes | Speech-to-text provider key. `GROQ_API_KEY` and `AEROLINK_API_KEY` are also read as fallbacks. |
+| `TRANSCRIPTION_BASE_URL` | Telegram voice messages | No | For Groq use `https://api.groq.com/openai`. Defaults to `AEROLINK_BASE_URL` if set. |
 | `TRANSCRIPTION_MODEL` | Telegram voice messages | No | Speech-to-text model id, required when transcription is enabled. |
+| `TTS_PROVIDER` | Telegram audio replies | No | Use `minimax` to synthesize Telegram reply audio from MiniMax T2A; leave `disabled` for text-only replies. |
+| `TTS_API_KEY` | Telegram audio replies | Yes | TTS provider key. `MINIMAX_API_KEY` is read as a fallback for MiniMax Token Plan. |
+| `TTS_BASE_URL` | Telegram audio replies | No | Defaults to `https://api.minimaxi.com`. |
+| `TTS_MODEL` | Telegram audio replies | No | Defaults to `speech-2.8-turbo`. |
+| `TTS_VOICE_ID` | Telegram audio replies | No | Defaults to `male-qn-qingse`; choose another MiniMax system voice if preferred. |
+| `TTS_AUDIO_FORMAT` | Telegram audio replies | No | `mp3`, `wav`, or `flac`. Telegram replies use `sendAudio`; default `mp3`. |
+| `TTS_LANGUAGE_BOOST` | Telegram audio replies | No | Defaults to `Spanish` for Spanish assistant replies. |
+| `TTS_MAX_REPLY_CHARACTERS` | Telegram audio replies | No | Maximum text length to synthesize. Defaults to `280` to control cost and latency. |
+| `TELEGRAM_AUDIO_REPLY_MODE` | Telegram audio replies | No | `disabled`, `voice_only`, or `always`. Use `voice_only` for MVP voice UX. |
 
 Local `.env` files are ignored by git. Do not add a committed example with real
 tokens or tenant/customer data.

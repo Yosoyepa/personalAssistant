@@ -33,6 +33,16 @@ class AppSettings:
     transcription_base_url: str | None = None
     transcription_model: str | None = None
     transcription_timeout_seconds: float = 60.0
+    tts_provider: str = "disabled"
+    tts_api_key: str | None = None
+    tts_base_url: str | None = None
+    tts_model: str | None = None
+    tts_voice_id: str = "male-qn-qingse"
+    tts_audio_format: str = "mp3"
+    tts_language_boost: str | None = "Spanish"
+    tts_timeout_seconds: float = 30.0
+    tts_max_reply_characters: int = 280
+    telegram_audio_reply_mode: str = "disabled"
     admin_token: str | None = None
     public_base_url: str | None = None
     reminder_worker_interval_seconds: float = 15.0
@@ -43,6 +53,8 @@ class AppSettings:
         llm_timeout = os.getenv("LLM_TIMEOUT_SECONDS", "30")
         llm_max_tokens = os.getenv("LLM_MAX_TOKENS", "512")
         transcription_timeout = os.getenv("TRANSCRIPTION_TIMEOUT_SECONDS", "60")
+        tts_timeout = os.getenv("TTS_TIMEOUT_SECONDS", "30")
+        tts_max_reply_characters = os.getenv("TTS_MAX_REPLY_CHARACTERS", "280")
         return cls(
             tenant_id=os.getenv("ASSISTANT_TENANT_ID", "personal").strip() or "personal",
             timezone=os.getenv("ASSISTANT_TIMEZONE", "America/Bogota").strip() or "America/Bogota",
@@ -75,10 +87,25 @@ class AppSettings:
             llm_timeout_seconds=max(float(llm_timeout), 1.0),
             llm_max_tokens=max(int(llm_max_tokens), 1),
             transcription_provider=os.getenv("TRANSCRIPTION_PROVIDER", "disabled").strip().lower() or "disabled",
-            transcription_api_key=_optional_env("TRANSCRIPTION_API_KEY") or _optional_env("AEROLINK_API_KEY"),
+            transcription_api_key=(
+                _optional_env("TRANSCRIPTION_API_KEY")
+                or _optional_env("GROQ_API_KEY")
+                or _optional_env("AEROLINK_API_KEY")
+            ),
             transcription_base_url=_optional_env("TRANSCRIPTION_BASE_URL") or _optional_env("AEROLINK_BASE_URL"),
             transcription_model=_optional_env("TRANSCRIPTION_MODEL"),
             transcription_timeout_seconds=max(float(transcription_timeout), 1.0),
+            tts_provider=os.getenv("TTS_PROVIDER", "disabled").strip().lower() or "disabled",
+            tts_api_key=_optional_env("TTS_API_KEY") or _optional_env("MINIMAX_API_KEY"),
+            tts_base_url=_optional_env("TTS_BASE_URL") or _optional_env("MINIMAX_TTS_BASE_URL"),
+            tts_model=_optional_env("TTS_MODEL") or _optional_env("MINIMAX_TTS_MODEL"),
+            tts_voice_id=os.getenv("TTS_VOICE_ID", "male-qn-qingse").strip() or "male-qn-qingse",
+            tts_audio_format=os.getenv("TTS_AUDIO_FORMAT", "mp3").strip().lower() or "mp3",
+            tts_language_boost=_optional_env("TTS_LANGUAGE_BOOST") or "Spanish",
+            tts_timeout_seconds=max(float(tts_timeout), 1.0),
+            tts_max_reply_characters=max(int(tts_max_reply_characters), 1),
+            telegram_audio_reply_mode=os.getenv("TELEGRAM_AUDIO_REPLY_MODE", "disabled").strip().lower()
+            or "disabled",
             admin_token=_optional_env("ADMIN_TOKEN"),
             public_base_url=_optional_env("PUBLIC_BASE_URL"),
             reminder_worker_interval_seconds=max(float(interval), 1.0),

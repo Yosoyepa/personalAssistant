@@ -6,8 +6,9 @@ import unittest
 from personal_assistant.adapters.outbound.llm.anthropic import AnthropicCompatibleLLMProvider
 from personal_assistant.adapters.outbound.llm.minimax import MiniMaxLLMProvider
 from personal_assistant.adapters.outbound.transcription.openai_compatible import OpenAICompatibleTranscriptionProvider
+from personal_assistant.adapters.outbound.tts.minimax import MiniMaxTTSProvider
 from personal_assistant.application.dto.context import TokenBudget
-from personal_assistant.application.dto.runtime import AudioTranscriptionRequest, LLMRequest
+from personal_assistant.application.dto.runtime import AudioSynthesisRequest, AudioTranscriptionRequest, LLMRequest
 
 
 class FakeResponse:
@@ -127,6 +128,40 @@ class LLMAdapterTests(unittest.TestCase):
         self.assertIn("multipart/form-data", str(captured["content_type"]))
         self.assertIn(b"audio-bytes", captured["body"])
         self.assertIn("cita", result.text)
+
+    def test_minimax_tts_provider_decodes_hex_audio(self) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_urlopen(req, timeout):
+            captured["url"] = req.full_url
+            captured["headers"] = dict(req.header_items())
+            captured["body"] = json.loads(req.data.decode("utf-8"))
+            return FakeResponse(
+                {
+                    "data": {"audio": "6869", "status": 2},
+                    "extra_info": {"usage_characters": 4, "audio_format": "mp3"},
+                    "trace_id": "trace-1",
+                    "base_resp": {"status_code": 0, "status_msg": "success"},
+                }
+            )
+
+        provider = MiniMaxTTSProvider(api_key="sk-cp-test", urlopen=fake_urlopen)
+        result = provider.synthesize(
+            AudioSynthesisRequest(text="hola", voice_id="male-qn-qingse"),
+            budget=TokenBudget(limit=100),
+        )
+
+        self.assertEqual(captured["url"], "https://api.minimaxi.com/v1/t2a_v2")
+        headers = captured["headers"]
+        self.assertIsInstance(headers, dict)
+        self.assertEqual(headers["Authorization"], "Bearer sk-cp-test")
+        body = captured["body"]
+        self.assertIsInstance(body, dict)
+        self.assertEqual(body["model"], "speech-2.8-turbo")
+        self.assertEqual(body["voice_setting"]["voice_id"], "male-qn-qingse")
+        self.assertEqual(result.audio, b"hi")
+        self.assertEqual(result.content_type, "audio/mpeg")
+        self.assertEqual(result.characters, 4)
 
 
 if __name__ == "__main__":

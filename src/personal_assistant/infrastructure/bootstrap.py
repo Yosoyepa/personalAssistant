@@ -8,8 +8,9 @@ from personal_assistant.adapters.outbound.calendar.local import LocalCalendarToo
 from personal_assistant.adapters.outbound.llm.anthropic import AnthropicCompatibleLLMProvider
 from personal_assistant.adapters.outbound.llm.minimax import MiniMaxLLMProvider
 from personal_assistant.adapters.outbound.transcription.openai_compatible import OpenAICompatibleTranscriptionProvider
+from personal_assistant.adapters.outbound.tts.minimax import MiniMaxTTSProvider
 from personal_assistant.application.ports.notifications import NotificationPort
-from personal_assistant.application.ports.services import AudioTranscriptionProvider, LLMProvider
+from personal_assistant.application.ports.services import AudioSynthesisProvider, AudioTranscriptionProvider, LLMProvider
 from personal_assistant.application.use_cases.commands import ConversationCommandService
 from personal_assistant.application.use_cases.documents import DocumentService
 from personal_assistant.application.use_cases.reminder_notifications import DispatchDueReminders
@@ -45,6 +46,7 @@ class AppContainer:
     scheduler: ReminderScheduler
     states: InMemoryWorkflowStateStore
     transcription: AudioTranscriptionProvider | None
+    tts: AudioSynthesisProvider | None
     traces: TraceRecorder
 
 
@@ -83,11 +85,27 @@ def build_transcription_provider(settings: AppSettings) -> AudioTranscriptionPro
     )
 
 
+def build_tts_provider(settings: AppSettings) -> AudioSynthesisProvider | None:
+    if settings.tts_provider in {"", "disabled", "none"}:
+        return None
+    if settings.tts_provider not in {"minimax", "minimax_tts", "minimax-tts"}:
+        raise ValueError(f"unsupported TTS_PROVIDER: {settings.tts_provider}")
+    return MiniMaxTTSProvider(
+        api_key=settings.tts_api_key or "",
+        base_url=settings.tts_base_url or "https://api.minimaxi.com",
+        model=settings.tts_model or "speech-2.8-turbo",
+        voice_id=settings.tts_voice_id,
+        audio_format=settings.tts_audio_format,
+        timeout_seconds=settings.tts_timeout_seconds,
+    )
+
+
 def build_container(
     *,
     llm: LLMProvider | None = None,
     notifications: NotificationPort | None = None,
     transcription: AudioTranscriptionProvider | None = None,
+    tts: AudioSynthesisProvider | None = None,
     approve_reminder_notifications: bool = False,
 ) -> AppContainer:
     """Build in-memory adapters for local development and tests."""
@@ -138,5 +156,6 @@ def build_container(
         scheduler=scheduler,
         states=states,
         transcription=transcription,
+        tts=tts,
         traces=traces,
     )

@@ -19,6 +19,17 @@ class TelegramBotClient(Protocol):
     def send_message(self, *, chat_id: str, text: str) -> Mapping[str, Any]:
         """Send one Telegram message and return provider metadata."""
 
+    def send_audio(
+        self,
+        *,
+        chat_id: str,
+        caption: str,
+        filename: str,
+        content_type: str,
+        data: bytes,
+    ) -> Mapping[str, Any]:
+        """Send one Telegram audio file and return provider metadata."""
+
 
 class TelegramBotApiClient:
     """Small stdlib Telegram Bot API client for infrastructure dispatch."""
@@ -42,6 +53,37 @@ class TelegramBotApiClient:
         decoded = json.loads(raw.decode("utf-8"))
         if not isinstance(decoded, dict) or not decoded.get("ok"):
             raise RuntimeError("Telegram sendMessage failed")
+        result = decoded.get("result") or {}
+        if not isinstance(result, Mapping):
+            return {}
+        return result
+
+    def send_audio(
+        self,
+        *,
+        chat_id: str,
+        caption: str,
+        filename: str,
+        content_type: str,
+        data: bytes,
+    ) -> Mapping[str, Any]:
+        boundary = f"pa-{uuid4().hex}"
+        body = bytearray()
+        body.extend(_multipart_field(boundary, "chat_id", chat_id))
+        body.extend(_multipart_field(boundary, "caption", caption))
+        body.extend(_multipart_file(boundary, "audio", filename, content_type, data))
+        body.extend(f"--{boundary}--\r\n".encode("utf-8"))
+        req = urllib_request.Request(
+            f"https://api.telegram.org/bot{self._token}/sendAudio",
+            data=bytes(body),
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+            method="POST",
+        )
+        with urllib_request.urlopen(req, timeout=self._timeout_seconds) as response:
+            raw = response.read()
+        decoded = json.loads(raw.decode("utf-8"))
+        if not isinstance(decoded, dict) or not decoded.get("ok"):
+            raise RuntimeError("Telegram sendAudio failed")
         result = decoded.get("result") or {}
         if not isinstance(result, Mapping):
             return {}
@@ -74,8 +116,28 @@ class TelegramBotApiClient:
             return response.read()
 
 
+def _multipart_field(boundary: str, name: str, value: str) -> bytes:
+    return (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{name}"\r\n\r\n'
+        f"{value}\r\n"
+    ).encode("utf-8")
+
+
+def _multipart_file(boundary: str, name: str, filename: str, content_type: str, data: bytes) -> bytes:
+    header = (
+        f"--{boundary}\r\n"
+        f'Content-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'
+        f"Content-Type: {content_type}\r\n\r\n"
+    ).encode("utf-8")
+    return header + data + b"\r\n"
+
+
 def _fingerprint(request: NotificationRequest) -> str:
-    payload = json.dumps(request.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+    payload_data = request.model_dump(mode="python", exclude={"media": {"data"}})
+    if request.media is not None:
+        payload_data["media"]["sha256"] = hashlib.sha256(request.media.data).hexdigest()
+    payload = json.dumps(payload_data, sort_keys=True, separators=(",", ":"), default=str)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -121,7 +183,22 @@ class TelegramNotificationTool:
                 )
             return existing.model_copy(update={"reused": True})
 
-        provider_result = self._client.send_message(chat_id=request.recipient, text=request.body)
+        if request.media is None:
+            provider_result = self._client.send_message(chat_id=request.recipient, text=request.body)
+        elif request.media.kind == "audio":
+            provider_result = self._client.send_audio(
+                chat_id=request.recipient,
+                caption=request.body,
+                filename=request.media.filename,
+                content_type=request.media.content_type,
+                data=request.media.data,
+            )
+        else:
+            raise AssistantError(
+                ErrorCode.VALIDATION_FAILED,
+                "unsupported telegram notification media",
+                tenant_id=principal.tenant_id,
+            )
         provider_message_id = provider_result.get("message_id") if isinstance(provider_result, Mapping) else None
         result = NotificationResult(
             notification_id=f"telegram:{provider_message_id or uuid4().hex}",

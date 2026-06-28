@@ -91,6 +91,33 @@ class AppSettingsTests(unittest.TestCase):
         self.assertEqual(settings.llm_base_url, "https://api.minimaxi.com/anthropic")
         self.assertEqual(settings.llm_model, "MiniMax-M3")
 
+    def test_audio_settings_accept_groq_and_minimax_tts_aliases(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "TRANSCRIPTION_PROVIDER": "openai_compatible",
+                "GROQ_API_KEY": "gsk-test",
+                "TRANSCRIPTION_BASE_URL": "https://api.groq.com/openai",
+                "TRANSCRIPTION_MODEL": "whisper-large-v3-turbo",
+                "TTS_PROVIDER": "minimax",
+                "MINIMAX_API_KEY": "sk-cp-test",
+                "TTS_MODEL": "speech-2.8-turbo",
+                "TTS_VOICE_ID": "male-qn-qingse",
+                "TELEGRAM_AUDIO_REPLY_MODE": "voice_only",
+            },
+            clear=True,
+        ):
+            settings = AppSettings.from_env()
+
+        self.assertEqual(settings.transcription_provider, "openai_compatible")
+        self.assertEqual(settings.transcription_api_key, "gsk-test")
+        self.assertEqual(settings.transcription_base_url, "https://api.groq.com/openai")
+        self.assertEqual(settings.transcription_model, "whisper-large-v3-turbo")
+        self.assertEqual(settings.tts_provider, "minimax")
+        self.assertEqual(settings.tts_api_key, "sk-cp-test")
+        self.assertEqual(settings.tts_model, "speech-2.8-turbo")
+        self.assertEqual(settings.telegram_audio_reply_mode, "voice_only")
+
 
 @unittest.skipIf(TestClient is None or create_app is None, "FastAPI optional dependency is not installed")
 class HttpRuntimeTests(unittest.TestCase):
