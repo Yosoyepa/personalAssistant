@@ -25,6 +25,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = PROJECT_ROOT / "src" / "personal_assistant"
 
 
+class FailingNotificationTool:
+    def send(self, principal, request, *, approval=None):
+        raise RuntimeError("provider rejected notification")
+
+
 def imported_modules(file: Path) -> set[str]:
     tree = ast.parse(file.read_text(encoding="utf-8"), filename=str(file))
     imports: set[str] = set()
@@ -201,6 +206,37 @@ class HttpRuntimeTests(unittest.TestCase):
         )
         self.assertEqual(len(self.container.approvals.list_pending(principal)), 1)
         self.assertEqual(self.container.calendar.list_events(principal), [])
+
+    def test_telegram_webhook_does_not_retry_when_reply_send_fails(self) -> None:
+        settings = AppSettings(
+            tenant_id="tenant-a",
+            timezone="America/Bogota",
+            telegram_webhook_secret="secret-1",
+            telegram_bot_token="123:secret",
+            telegram_allowed_user_ids=frozenset({"456"}),
+        )
+        container = build_container(notifications=FailingNotificationTool())
+        client = TestClient(create_app(container, settings=settings))
+
+        response = client.post(
+            "/webhooks/telegram/secret-1",
+            headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
+            json={
+                "update_id": 10,
+                "message": {
+                    "message_id": 42,
+                    "chat": {"id": "chat-1"},
+                    "from": {"id": "456"},
+                    "text": "/help",
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        body = response.json()
+        self.assertEqual(body["status"], "completed")
+        self.assertEqual(body["command"], "help")
+        self.assertFalse(body["sent"])
 
     def test_telegram_webhook_rejects_invalid_secret_and_user(self) -> None:
         settings = AppSettings(

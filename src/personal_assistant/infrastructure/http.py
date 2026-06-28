@@ -283,7 +283,12 @@ def _send_telegram_reply(
         tier=PermissionTier.P5,
         approval_id=f"{idempotency_key}:reply",
     )
-    container.notifications.send(principal, request, approval=approval)
+    try:
+        container.notifications.send(principal, request, approval=approval)
+    except Exception:
+        # Telegram already delivered the update; provider send failures should
+        # not force Telegram to retry the webhook and duplicate workflow work.
+        return False
     return True
 
 
