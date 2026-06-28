@@ -234,6 +234,7 @@ shells and are not yet enforced by every runtime surface.
 
 | Variable | Required When | Secret | Purpose |
 |---|---|---:|---|
+| `APP_ENV_FILE=.env` | Local runtime startup | No | Optional env file loaded by `AppSettings`; use empty value to disable file loading in tests. |
 | `PYTHONPATH=src` | Local commands without editable install | No | Makes the package importable. |
 | `APP_HOST=127.0.0.1` | Uvicorn shell command | No | Local bind host; consumed by shell command, not `AppSettings`. |
 | `APP_PORT=8000` | Uvicorn shell command | No | Local bind port for runtime API or ngrok upstream. |

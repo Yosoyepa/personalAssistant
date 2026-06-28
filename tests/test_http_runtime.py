@@ -59,6 +59,7 @@ class AppSettingsTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
+                "APP_ENV_FILE": "",
                 "LLM_PROVIDER": "anthropic_compatible",
                 "ANTHROPIC_AUTH_TOKEN": "token",
                 "ANTHROPIC_BASE_URL": "https://aerolink.example",
@@ -77,6 +78,7 @@ class AppSettingsTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
+                "APP_ENV_FILE": "",
                 "LLM_PROVIDER": "minimax",
                 "MINIMAX_API_KEY": "sk-cp-test",
                 "MINIMAX_BASE_URL": "https://api.minimaxi.com/anthropic",
@@ -95,6 +97,7 @@ class AppSettingsTests(unittest.TestCase):
         with patch.dict(
             os.environ,
             {
+                "APP_ENV_FILE": "",
                 "TRANSCRIPTION_PROVIDER": "openai_compatible",
                 "GROQ_API_KEY": "gsk-test",
                 "TRANSCRIPTION_BASE_URL": "https://api.groq.com/openai",
@@ -119,10 +122,34 @@ class AppSettingsTests(unittest.TestCase):
         self.assertEqual(settings.telegram_audio_reply_mode, "voice_only")
 
     def test_reminder_minutes_before_is_configurable(self) -> None:
-        with patch.dict(os.environ, {"REMINDER_MINUTES_BEFORE": "2"}, clear=True):
+        with patch.dict(os.environ, {"APP_ENV_FILE": "", "REMINDER_MINUTES_BEFORE": "2"}, clear=True):
             settings = AppSettings.from_env()
 
         self.assertEqual(settings.reminder_minutes_before, 2)
+
+    def test_settings_load_local_env_file_when_not_sourced(self) -> None:
+        env_file = PROJECT_ROOT / ".test.local.env"
+        env_file.write_text(
+            "\n".join(
+                [
+                    'TRANSCRIPTION_PROVIDER="openai_compatible"',
+                    'GROQ_API_KEY="gsk-from-file"',
+                    'TRANSCRIPTION_BASE_URL="https://api.groq.com/openai"',
+                    'TRANSCRIPTION_MODEL="whisper-large-v3-turbo"',
+                ]
+            ),
+            encoding="utf-8",
+        )
+        try:
+            with patch.dict(os.environ, {"APP_ENV_FILE": str(env_file)}, clear=True):
+                settings = AppSettings.from_env()
+        finally:
+            env_file.unlink(missing_ok=True)
+
+        self.assertEqual(settings.transcription_provider, "openai_compatible")
+        self.assertEqual(settings.transcription_api_key, "gsk-from-file")
+        self.assertEqual(settings.transcription_base_url, "https://api.groq.com/openai")
+        self.assertEqual(settings.transcription_model, "whisper-large-v3-turbo")
 
 
 @unittest.skipIf(TestClient is None or create_app is None, "FastAPI optional dependency is not installed")
