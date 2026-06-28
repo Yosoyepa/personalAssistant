@@ -55,3 +55,9 @@ class PendingApproval(ApplicationDTO):
     status: PendingApprovalStatus = PendingApprovalStatus.pending
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = None
+
+
+class InferredCommandIntent(ApplicationDTO):
+    kind: CommandKind
+    confidence: float = Field(ge=0.0, le=1.0)
+    reminder_text: str | None = Field(default=None, min_length=1, max_length=500)

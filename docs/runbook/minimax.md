@@ -2,7 +2,8 @@
 
 MiniMax Token Plan is integrated as a bounded LLM provider behind
 `LLMProvider`. The assistant remains an L2 deterministic workflow: MiniMax is
-used only for fallback reminder extraction when deterministic parsing cannot
+used only for structured intent routing when deterministic command rules do not
+match, and for fallback reminder extraction when deterministic parsing cannot
 extract a clear date/time.
 
 MiniMax can also be used as an optional text-to-speech provider for Telegram
@@ -67,15 +68,28 @@ runtime reads the MiniMax key as a fallback.
 ## Verification
 
 After placing the key in `.env`, restart the API and send a message that the
-deterministic parser cannot handle, for example:
+deterministic router or parser cannot handle, for example:
 
 ```text
 necesito que quede lo de almorzar con Ana a las tres treinta y tres
 ```
 
+For Telegram-style relative reminders, this is also supported deterministically:
+
+```text
+recuérdame en 2 minutos pagar el arriendo
+```
+
+Relative reminders notify at the requested time. `REMINDER_MINUTES_BEFORE`
+applies only when the user creates a calendar event at a specific date/time and
+expects an advance notice.
+
 Expected behavior:
 
-1. The reminder workflow writes an `llm.called` trace.
-2. If MiniMax returns valid JSON with a confident date/time, the assistant asks
+1. If deterministic routing fails, MiniMax returns a `conversation_intent`
+   structured result from a closed intent set.
+2. If deterministic extraction fails, the reminder workflow writes an
+   `llm.called` trace.
+3. If MiniMax returns valid JSON with a confident date/time, the assistant asks
    for calendar approval.
-3. Calendar writes still require `/aprobar <id>`.
+4. Calendar writes still require `/aprobar <id>`.

@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import threading
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
@@ -25,9 +28,10 @@ from personal_assistant.application.dto.runtime import (
     AudioSynthesisRequest,
     AudioTranscriptionRequest,
 )
-from personal_assistant.application.dto.tracing import TraceEvent
+from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.application.dto.workflows import WorkflowState
 from personal_assistant.application.ports.notifications import NotificationMedia, NotificationRequest
+from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.use_cases.reminders import reminder_idempotency_key
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode, error_response
 from personal_assistant.domain.common.identity import Principal
@@ -44,6 +48,7 @@ from personal_assistant.infrastructure.config import AppSettings
 
 
 MAX_TELEGRAM_AUDIO_BYTES = 20 * 1024 * 1024
+REPLIES = AssistantReplies()
 
 
 class HealthResponse(BaseModel):
@@ -252,6 +257,33 @@ def build_runtime_container(settings: AppSettings) -> AppContainer:
     )
 
 
+def _run_reminder_worker_loop(
+    *,
+    container: AppContainer,
+    settings: AppSettings,
+    stop_event: threading.Event,
+) -> None:
+    principal = local_admin_principal(
+        tenant_id=settings.tenant_id,
+        principal_id="reminder-worker",
+        permission_tier=PermissionTier.P5,
+    )
+    while not stop_event.is_set():
+        try:
+            container.reminder_worker.run_once(principal)
+        except Exception as exc:
+            container.traces.write(
+                TraceEvent(
+                    run_id="reminder-worker",
+                    agent_id="personal_assistant",
+                    event_type=TraceEventType.agent_failed,
+                    tenant_id=settings.tenant_id,
+                    error={"type": exc.__class__.__name__, "message": str(exc)[:240]},
+                )
+            )
+        stop_event.wait(settings.reminder_worker_interval_seconds)
+
+
 def current_principal(
     x_principal_id: Annotated[str | None, Header(alias="X-Principal-Id")] = None,
     x_tenant_id: Annotated[str | None, Header(alias="X-Tenant-Id")] = None,
@@ -386,37 +418,37 @@ def _transcribe_telegram_media(
     message: NormalizedMessage,
 ) -> tuple[NormalizedMessage | None, str | None]:
     if not message.media_file_id:
-        return None, "Recibí un audio, pero Telegram no envió un file_id utilizable."
+        return None, REPLIES.telegram_audio_missing_file_id()
     if container.transcription is None:
-        return None, (
-            "Recibí tu audio, pero falta configurar transcripción. "
-            "Activa TRANSCRIPTION_PROVIDER y TRANSCRIPTION_API_KEY en el backend."
-        )
+        return None, REPLIES.telegram_transcription_not_configured()
     if not settings.telegram_bot_token:
-        return None, "Recibí tu audio, pero falta TELEGRAM_BOT_TOKEN para descargarlo desde Telegram."
+        return None, REPLIES.telegram_token_missing_for_audio()
     if message.media_file_size is not None and message.media_file_size > MAX_TELEGRAM_AUDIO_BYTES:
-        return None, "El audio supera el límite local de 20MB."
+        return None, REPLIES.telegram_audio_too_large()
 
-    client = TelegramBotApiClient(token=settings.telegram_bot_token)
-    file_info = client.get_file(file_id=message.media_file_id)
-    file_path = str(file_info.get("file_path") or "")
-    if not file_path:
-        return None, "No pude resolver el archivo de audio en Telegram."
-    audio = client.download_file(file_path=file_path)
-    if len(audio) > MAX_TELEGRAM_AUDIO_BYTES:
-        return None, "El audio descargado supera el límite local de 20MB."
+    try:
+        client = TelegramBotApiClient(token=settings.telegram_bot_token)
+        file_info = client.get_file(file_id=message.media_file_id)
+        file_path = str(file_info.get("file_path") or "")
+        if not file_path:
+            return None, REPLIES.telegram_file_path_missing()
+        audio = client.download_file(file_path=file_path)
+        if len(audio) > MAX_TELEGRAM_AUDIO_BYTES:
+            return None, REPLIES.telegram_audio_download_too_large()
 
-    extension = file_path.rsplit(".", 1)[-1] if "." in file_path else "ogg"
-    transcript = container.transcription.transcribe(
-        AudioTranscriptionRequest(
-            filename=f"telegram-{message.message_id}.{extension}",
-            content_type=message.media_mime_type or "audio/ogg",
-            data=audio,
-            language="es",
-            prompt="Transcribe mensajes de voz en español para crear recordatorios o citas.",
-        ),
-        budget=TokenBudget(limit=4_000),
-    )
+        extension = file_path.rsplit(".", 1)[-1] if "." in file_path else "ogg"
+        transcript = container.transcription.transcribe(
+            AudioTranscriptionRequest(
+                filename=f"telegram-{message.message_id}.{extension}",
+                content_type=message.media_mime_type or "audio/ogg",
+                data=audio,
+                language="es",
+                prompt="Transcribe mensajes de voz en español para crear recordatorios o citas.",
+            ),
+            budget=TokenBudget(limit=4_000),
+        )
+    except Exception:
+        return None, REPLIES.telegram_transcription_failed()
     return (
         message.model_copy(
             update={
@@ -447,10 +479,36 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
     runtime_settings = settings or AppSettings.from_env()
     runtime_container = container or build_runtime_container(runtime_settings)
     pending_approvals: dict[str, PendingReminderApproval] = {}
-    app = FastAPI(title="Personal Assistant Runtime", version="0.1.0")
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        if runtime_settings.reminder_worker_enabled:
+            thread = threading.Thread(
+                target=_run_reminder_worker_loop,
+                kwargs={
+                    "container": runtime_container,
+                    "settings": runtime_settings,
+                    "stop_event": app.state.reminder_worker_stop,
+                },
+                name="personal-assistant-reminder-worker",
+                daemon=True,
+            )
+            app.state.reminder_worker_thread = thread
+            thread.start()
+        try:
+            yield
+        finally:
+            app.state.reminder_worker_stop.set()
+            thread = app.state.reminder_worker_thread
+            if thread is not None:
+                thread.join(timeout=5)
+
+    app = FastAPI(title="Personal Assistant Runtime", version="0.1.0", lifespan=lifespan)
     app.state.container = runtime_container
     app.state.pending_approvals = pending_approvals
     app.state.settings = runtime_settings
+    app.state.reminder_worker_stop = threading.Event()
+    app.state.reminder_worker_thread = None
     dashboard = AdminDashboard(runtime_container)
 
     @app.exception_handler(AssistantError)

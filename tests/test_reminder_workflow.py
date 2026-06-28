@@ -41,6 +41,7 @@ class ReminderWorkflowTests(unittest.TestCase):
             tenant_id="tenant-a",
             permission_tier=PermissionTier.P5,
         )
+        self.now = datetime(2026, 6, 20, 12, tzinfo=UTC)
         self.calendar = LocalCalendarTool()
         self.notifications = LocalNotificationTool()
         self.scheduler = ReminderScheduler()
@@ -107,6 +108,16 @@ class ReminderWorkflowTests(unittest.TestCase):
         self.assertEqual(extraction.starts_at.minute, 33)
         self.assertIn("comer", extraction.title)
 
+    def test_extract_reminder_parses_relative_minutes(self) -> None:
+        now = datetime(2026, 6, 20, 12, 0, tzinfo=UTC)
+        extraction = extract_reminder("recuérdame en 2 minutos de pagar el arriendo", now)
+
+        self.assertIsNotNone(extraction)
+        assert extraction is not None
+        self.assertEqual(extraction.starts_at, now + timedelta(minutes=2))
+        self.assertEqual(extraction.notify_at, now + timedelta(minutes=2))
+        self.assertIn("pagar arriendo", extraction.title)
+
     def test_happy_path_creates_calendar_event_and_schedules_notice(self) -> None:
         result = self.workflow.run(self.principal, self.request())
 
@@ -145,6 +156,43 @@ class ReminderWorkflowTests(unittest.TestCase):
         self.assertEqual(jobs[0].notify_at, events[0].starts_at - timedelta(minutes=2))
         self.assertEqual(len(self.scheduler.due(self.principal, jobs[0].notify_at - timedelta(minutes=1))), 0)
         self.assertEqual(len(self.scheduler.due(self.principal, jobs[0].notify_at)), 1)
+
+    def test_relative_reminder_schedules_notice_at_requested_time(self) -> None:
+        text = "recuérdame en 2 minutos pagar el arriendo"
+        key = reminder_idempotency_key(self.principal.tenant_id, "relative-1", text)
+        workflow = ReminderWorkflow(
+            calendar=self.calendar,
+            scheduler=self.scheduler,
+            event_store=self.event_store,
+            outbox=self.outbox,
+            states=self.states,
+            traces=self.traces,
+            reminder_minutes_before=2,
+        )
+        approval = ApprovalGrant.issue(
+            principal=self.principal,
+            action="calendar.create_event",
+            resource=f"{key}:calendar",
+            tier=PermissionTier.P3,
+        )
+
+        result = workflow.run(
+            self.principal,
+            ReminderWorkflowInput(
+                message_id="relative-1",
+                conversation_id="chat-1",
+                text=text,
+                recipient="chat-1",
+                now=self.now,
+                idempotency_key=key,
+                approval=approval,
+            ),
+        )
+
+        self.assertEqual(result.status, AgentStatus.completed)
+        self.assertIn("momento indicado", result.reply)
+        self.assertEqual(len(self.scheduler.due(self.principal, self.now + timedelta(minutes=1))), 0)
+        self.assertEqual(len(self.scheduler.due(self.principal, self.now + timedelta(minutes=2))), 1)
 
     def test_duplicate_webhook_reuses_completed_state(self) -> None:
         first = self.workflow.run(self.principal, self.request())

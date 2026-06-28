@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import ast
 import os
+import threading
 from pathlib import Path
 import unittest
 import warnings
 from unittest.mock import patch
 
+from personal_assistant.application.dto.channels import ChannelName, NormalizedMessage
+from personal_assistant.application.dto.runtime import AudioTranscriptionResult
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
@@ -17,10 +20,12 @@ try:
         warnings.simplefilter("ignore")
         from fastapi.testclient import TestClient
 
-    from personal_assistant.infrastructure.http import create_app
+    from personal_assistant.infrastructure.http import _run_reminder_worker_loop, _transcribe_telegram_media, create_app
 except ModuleNotFoundError:
     TestClient = None  # type: ignore[assignment]
     create_app = None  # type: ignore[assignment]
+    _run_reminder_worker_loop = None  # type: ignore[assignment]
+    _transcribe_telegram_media = None  # type: ignore[assignment]
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +35,20 @@ SRC_ROOT = PROJECT_ROOT / "src" / "personal_assistant"
 class FailingNotificationTool:
     def send(self, principal, request, *, approval=None):
         raise RuntimeError("provider rejected notification")
+
+
+class FakeTranscriptionProvider:
+    def transcribe(self, request, *, budget):
+        return AudioTranscriptionResult(provider="fake", model="fake", text="recuérdame clase a las 5")
+
+
+class FailingTelegramClient:
+    def __init__(self, *, token: str, timeout_seconds: float = 10.0) -> None:
+        self.token = token
+        self.timeout_seconds = timeout_seconds
+
+    def get_file(self, *, file_id: str):
+        raise RuntimeError("telegram unavailable")
 
 
 def imported_modules(file: Path) -> set[str]:
@@ -122,10 +141,15 @@ class AppSettingsTests(unittest.TestCase):
         self.assertEqual(settings.telegram_audio_reply_mode, "voice_only")
 
     def test_reminder_minutes_before_is_configurable(self) -> None:
-        with patch.dict(os.environ, {"APP_ENV_FILE": "", "REMINDER_MINUTES_BEFORE": "2"}, clear=True):
+        with patch.dict(
+            os.environ,
+            {"APP_ENV_FILE": "", "REMINDER_MINUTES_BEFORE": "2", "REMINDER_WORKER_ENABLED": "true"},
+            clear=True,
+        ):
             settings = AppSettings.from_env()
 
         self.assertEqual(settings.reminder_minutes_before, 2)
+        self.assertTrue(settings.reminder_worker_enabled)
 
     def test_settings_load_local_env_file_when_not_sourced(self) -> None:
         env_file = PROJECT_ROOT / ".test.local.env"
@@ -366,6 +390,34 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertIn("falta configurar transcripción", body["reply"])
         self.assertFalse(body["sent"])
 
+    def test_telegram_voice_transcription_errors_return_controlled_reply(self) -> None:
+        settings = AppSettings(
+            tenant_id="tenant-a",
+            telegram_webhook_secret="secret-1",
+            telegram_bot_token="123:secret",
+            telegram_allowed_user_ids=frozenset({"456"}),
+        )
+        container = build_container(transcription=FakeTranscriptionProvider())
+        message = NormalizedMessage(
+            channel=ChannelName.telegram,
+            actor_id="456",
+            conversation_id="chat-1",
+            message_id="44",
+            text="[voice]",
+            media_kind="voice",
+            media_file_id="voice-file-1",
+            media_mime_type="audio/ogg",
+            media_file_size=2048,
+        )
+
+        with patch("personal_assistant.infrastructure.http.TelegramBotApiClient", FailingTelegramClient):
+            transcribed, error = _transcribe_telegram_media(container, settings, message)
+
+        self.assertIsNone(transcribed)
+        self.assertIsNotNone(error)
+        assert error is not None
+        self.assertIn("No pude transcribir", error)
+
     def test_telegram_webhook_rejects_invalid_secret_and_user(self) -> None:
         settings = AppSettings(
             tenant_id="tenant-a",
@@ -388,6 +440,24 @@ class HttpRuntimeTests(unittest.TestCase):
 
         self.assertEqual(wrong_secret.status_code, 403)
         self.assertEqual(wrong_user.status_code, 403)
+
+    def test_reminder_worker_starts_when_enabled(self) -> None:
+        settings = AppSettings(
+            tenant_id="tenant-a",
+            reminder_worker_enabled=True,
+            reminder_worker_interval_seconds=1,
+        )
+        stop_event = threading.Event()
+        thread = threading.Thread(
+            target=_run_reminder_worker_loop,
+            kwargs={"container": build_container(), "settings": settings, "stop_event": stop_event},
+            daemon=True,
+        )
+        thread.start()
+        self.assertTrue(thread.is_alive())
+        stop_event.set()
+        thread.join(timeout=5)
+        self.assertFalse(thread.is_alive())
 
     def test_admin_endpoints_use_default_settings_tenant(self) -> None:
         settings = AppSettings(tenant_id="tenant-a")

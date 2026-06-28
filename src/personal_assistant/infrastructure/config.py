@@ -52,6 +52,11 @@ def _optional_env(name: str, file_values: dict[str, str]) -> str | None:
     return value.strip()
 
 
+def _env_bool(name: str, file_values: dict[str, str], default: bool = False) -> bool:
+    value = _env(name, file_values, "true" if default else "false").strip().lower()
+    return value in {"1", "true", "yes", "y", "on"}
+
+
 @dataclass(frozen=True, slots=True)
 class AppSettings:
     tenant_id: str = "personal"
@@ -84,6 +89,7 @@ class AppSettings:
     telegram_audio_reply_mode: str = "disabled"
     admin_token: str | None = None
     public_base_url: str | None = None
+    reminder_worker_enabled: bool = False
     reminder_worker_interval_seconds: float = 15.0
     reminder_minutes_before: int = 30
 
@@ -153,6 +159,7 @@ class AppSettings:
             or "disabled",
             admin_token=_optional_env("ADMIN_TOKEN", file_values),
             public_base_url=_optional_env("PUBLIC_BASE_URL", file_values),
+            reminder_worker_enabled=_env_bool("REMINDER_WORKER_ENABLED", file_values),
             reminder_worker_interval_seconds=max(float(interval), 1.0),
             reminder_minutes_before=max(int(reminder_minutes_before), 1),
         )

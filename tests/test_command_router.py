@@ -4,12 +4,28 @@ from datetime import UTC, datetime
 import unittest
 
 from personal_assistant.application.dto.channels import ChannelName, NormalizedMessage
+from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.commands import CommandKind
-from personal_assistant.application.dto.runtime import AgentStatus
+from personal_assistant.application.dto.runtime import AgentStatus, LLMResult
 from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
+
+
+class FakeIntentLLMProvider:
+    def complete(self, request, *, budget: TokenBudget) -> LLMResult:
+        return LLMResult(
+            provider="fake",
+            model="fake-router",
+            data={
+                "kind": "reminder.create",
+                "confidence": 0.94,
+                "reminder_text": "recuérdame en 2 minutos pagar el arriendo",
+            },
+            input_tokens=12,
+            output_tokens=8,
+        )
 
 
 class CommandRouterTests(unittest.TestCase):
@@ -181,6 +197,21 @@ class CommandRouterTests(unittest.TestCase):
         self.assertEqual(result.status, AgentStatus.completed)
         self.assertIn("Estado local: activo", result.reply)
         self.assertIn("Pendientes: 0", result.reply)
+
+    def test_llm_intent_routes_free_text_to_reminder(self) -> None:
+        container = build_container(llm=FakeIntentLLMProvider())
+
+        result = container.commands.handle(
+            self.principal,
+            self.message("porfa avísame en 2 minutos pagar el arriendo"),
+            now=self.now,
+            timezone="America/Bogota",
+        )
+
+        self.assertEqual(result.status, AgentStatus.escalated)
+        self.assertEqual(result.kind, CommandKind.reminder_create)
+        self.assertIsNotNone(result.approval_id)
+        self.assertEqual(len(container.approvals.list_pending(self.principal)), 1)
 
 
 if __name__ == "__main__":

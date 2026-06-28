@@ -12,7 +12,8 @@ The repository currently provides:
 - `personal_assistant.infrastructure.http:app` with runtime, Telegram webhook,
   and local-only admin endpoints
 - `ConversationCommandService` for `/start`, `/help`, `/recordar`, `/agenda`,
-  `/pendientes`, `/aprobar`, `/cancelar`, and `/status`
+  `/pendientes`, `/aprobar`, `/cancelar`, `/status`, and structured LLM intent
+  routing when deterministic command rules do not match
 - `ReminderWorkflow` with local calendar, scheduler, event store, outbox,
   workflow state, and trace recorder adapters
 - `ReminderWorker` for due reminder notification dispatch
@@ -247,8 +248,9 @@ shells and are not yet enforced by every runtime surface.
 | `TELEGRAM_ALLOWED_USER_IDS` | Future Telegram auth mapping | No | Comma-separated Telegram user IDs allowed in local/dev. |
 | `NGROK_AUTHTOKEN` | Configuring ngrok agent | Yes | Used by `ngrok config add-authtoken`; do not commit. |
 | `ADMIN_TOKEN` | Future/non-local admin hardening | Yes | Reserved by settings; current admin app is loopback-only. |
+| `REMINDER_WORKER_ENABLED=true` | Reminder notification dispatch | No | Starts the FastAPI background worker that sends due reminder notifications. |
 | `REMINDER_WORKER_INTERVAL_SECONDS=15` | Worker loop config | No | Minimum interval is clamped to 1 second. |
-| `REMINDER_MINUTES_BEFORE=30` | Reminder scheduling | No | Minutes before the calendar event when the bot should notify. Use `2` or `3` for quick local Telegram tests. |
+| `REMINDER_MINUTES_BEFORE=30` | Event reminder scheduling | No | Minutes before a calendar event when the bot should notify. Relative reminders like `recuérdame en 2 minutos...` notify at the requested time instead. |
 | `LLM_PROVIDER` | Bounded LLM extraction | No | Use `minimax` for MiniMax Token Plan, `anthropic_compatible` for AeroLink/Claude-compatible gateways, or `disabled` for deterministic-only behavior. |
 | `MINIMAX_API_KEY` | MiniMax Token Plan LLM extraction | Yes | MiniMax subscription key. This is distinct from MiniMax pay-as-you-go API keys. |
 | `MINIMAX_BASE_URL` | MiniMax Token Plan LLM extraction | No | Defaults to `https://api.minimaxi.com/anthropic` for Anthropic-compatible Messages API. |

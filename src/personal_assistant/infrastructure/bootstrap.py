@@ -136,6 +136,7 @@ def build_container(
         states=states,
         event_store=event_store,
         outbox=outbox,
+        llm=llm,
     )
     return AppContainer(
         approvals=approvals,

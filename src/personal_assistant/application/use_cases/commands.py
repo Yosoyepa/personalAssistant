@@ -3,36 +3,33 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+import json
+from dataclasses import dataclass, field
 from datetime import datetime
 
 from personal_assistant.application.dto.channels import NormalizedMessage
-from personal_assistant.application.dto.commands import CommandKind, CommandResult, PendingApproval
+from personal_assistant.application.dto.commands import (
+    CommandKind,
+    CommandResult,
+    InferredCommandIntent,
+    PendingApproval,
+)
+from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
-from personal_assistant.application.dto.runtime import AgentStatus
+from personal_assistant.application.dto.runtime import AgentStatus, LLMRequest
 from personal_assistant.application.ports.approvals import ApprovalStorePort
 from personal_assistant.application.ports.calendar import CalendarReadPort
 from personal_assistant.application.ports.events import EventStorePort, OutboxPort
+from personal_assistant.application.ports.services import LLMProvider
 from personal_assistant.application.ports.workflow_state import WorkflowStateStorePort
+from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.use_cases.reminders import ReminderWorkflow, reminder_idempotency_key
 from personal_assistant.domain.common.exceptions import AssistantError
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 
 
-HELP_TEXT = "\n".join(
-    [
-        "Comandos disponibles:",
-        "/start - inicia la conversación.",
-        "/help - muestra esta ayuda.",
-        "/recordar <texto> - crea un recordatorio con aprobación.",
-        "/agenda - lista eventos locales.",
-        "/pendientes - muestra aprobaciones pendientes.",
-        "/aprobar <id> - aprueba una acción pendiente.",
-        "/cancelar <id> - cancela una aprobación pendiente.",
-        "/status - muestra el estado local del asistente.",
-    ]
-)
+LLM_INTENT_CONFIDENCE_THRESHOLD = 0.65
 
 
 def _approval_id(*, tenant_id: str, principal_id: str, idempotency_key: str) -> str:
@@ -76,6 +73,8 @@ class ConversationCommandService:
     states: WorkflowStateStorePort
     event_store: EventStorePort
     outbox: OutboxPort
+    llm: LLMProvider | None = None
+    replies: AssistantReplies = field(default_factory=AssistantReplies)
 
     def handle(
         self,
@@ -92,10 +91,10 @@ class ConversationCommandService:
             return CommandResult(
                 status=AgentStatus.completed,
                 kind=CommandKind.start,
-                reply="Asistente personal activo. Usa /help para ver comandos.",
+                reply=self.replies.start(),
             )
         if command == "help" or lowered == "/help":
-            return CommandResult(status=AgentStatus.completed, kind=CommandKind.help, reply=HELP_TEXT)
+            return CommandResult(status=AgentStatus.completed, kind=CommandKind.help, reply=self.replies.help())
         if command == "status" or lowered == "/status":
             return self._status(principal)
         if command == "agenda" or lowered == "/agenda":
@@ -115,11 +114,20 @@ class ConversationCommandService:
                 timezone=timezone,
             )
         if _looks_like_reminder(text):
-            return self._create_reminder(principal, message, text=_extract_reminder_text(text), now=now, timezone=timezone)
+            return self._create_reminder(
+                principal,
+                message,
+                text=_extract_reminder_text(text),
+                now=now,
+                timezone=timezone,
+            )
+        inferred = self._infer_intent(text, now=now, timezone=timezone)
+        if inferred is not None:
+            return self._handle_inferred_intent(principal, message, inferred, now=now, timezone=timezone)
         return CommandResult(
             status=AgentStatus.declined,
             kind=CommandKind.unsupported,
-            reply="No reconocí ese comando. Usa /help para ver opciones.",
+            reply=self.replies.unsupported(),
             dispatch_required=True,
         )
 
@@ -129,9 +137,11 @@ class ConversationCommandService:
         event_count = len(self.event_store.list_for_tenant(principal))
         list_outbox = getattr(self.outbox, "list_for_tenant", None)
         outbox_count = len(list_outbox(principal)) if callable(list_outbox) else 0
-        reply = (
-            "Estado local: activo. "
-            f"Pendientes: {pending_count}. Workflows: {state_count}. Eventos: {event_count}. Outbox: {outbox_count}."
+        reply = self.replies.status(
+            pending_count=pending_count,
+            state_count=state_count,
+            event_count=event_count,
+            outbox_count=outbox_count,
         )
         return CommandResult(status=AgentStatus.completed, kind=CommandKind.status, reply=reply)
 
@@ -141,12 +151,10 @@ class ConversationCommandService:
             return CommandResult(
                 status=AgentStatus.completed,
                 kind=CommandKind.agenda,
-                reply="No hay eventos locales registrados.",
+                reply=self.replies.agenda_empty(),
             )
-        lines = ["Agenda local:"]
-        for event in events[:10]:
-            lines.append(f"- {event.starts_at.isoformat()} | {event.title} ({event.event_id})")
-        return CommandResult(status=AgentStatus.completed, kind=CommandKind.agenda, reply="\n".join(lines))
+        rows = [(event.starts_at, event.title, event.event_id) for event in events[:10]]
+        return CommandResult(status=AgentStatus.completed, kind=CommandKind.agenda, reply=self.replies.agenda(rows))
 
     def _pending(self, principal: Principal) -> CommandResult:
         pending = self.approvals.list_pending(principal)
@@ -154,13 +162,14 @@ class ConversationCommandService:
             return CommandResult(
                 status=AgentStatus.completed,
                 kind=CommandKind.pending_approvals,
-                reply="No tienes aprobaciones pendientes.",
+                reply=self.replies.pending_empty(),
             )
-        lines = ["Aprobaciones pendientes:"]
-        for approval in pending:
-            lines.append(f"- {approval.approval_id}: {approval.action} para '{approval.request_text}'")
-        lines.append("Usa /aprobar <id> o /cancelar <id>.")
-        return CommandResult(status=AgentStatus.escalated, kind=CommandKind.pending_approvals, reply="\n".join(lines))
+        rows = [(approval.approval_id, approval.action, approval.request_text) for approval in pending]
+        return CommandResult(
+            status=AgentStatus.escalated,
+            kind=CommandKind.pending_approvals,
+            reply=self.replies.pending_approvals(rows),
+        )
 
     def _create_reminder(
         self,
@@ -175,7 +184,7 @@ class ConversationCommandService:
             return CommandResult(
                 status=AgentStatus.needs_clarification,
                 kind=CommandKind.reminder_create,
-                reply="Indica qué quieres recordar: /recordar <texto>",
+                reply=self.replies.reminder_missing_text(),
             )
         idempotency_key = reminder_idempotency_key(principal.tenant_id, message.message_id, text)
         result = self.reminder_workflow.run(
@@ -230,16 +239,20 @@ class ConversationCommandService:
             return CommandResult(
                 status=AgentStatus.needs_clarification,
                 kind=CommandKind.approve,
-                reply="Indica el id: /aprobar <id>",
+                reply=self.replies.approve_missing_id(),
             )
         approval = self.approvals.get(principal, parts[1].strip())
         if approval is None:
-            return CommandResult(status=AgentStatus.failed, kind=CommandKind.approve, reply="No encontré esa aprobación.")
+            return CommandResult(
+                status=AgentStatus.failed,
+                kind=CommandKind.approve,
+                reply=self.replies.approval_not_found(),
+            )
         if approval.workflow_kind != "reminder.create":
             return CommandResult(
                 status=AgentStatus.failed,
                 kind=CommandKind.approve,
-                reply="Ese tipo de aprobación todavía no está soportado.",
+                reply=self.replies.approval_type_unsupported(),
             )
         try:
             grant = self.approvals.approve(principal, approval.approval_id)
@@ -267,10 +280,84 @@ class ConversationCommandService:
             return CommandResult(
                 status=AgentStatus.needs_clarification,
                 kind=CommandKind.cancel,
-                reply="Indica el id: /cancelar <id>",
+                reply=self.replies.cancel_missing_id(),
             )
         try:
             self.approvals.reject(principal, parts[1].strip())
         except AssistantError as exc:
             return CommandResult(status=AgentStatus.failed, kind=CommandKind.cancel, reply=str(exc))
-        return CommandResult(status=AgentStatus.completed, kind=CommandKind.cancel, reply="Aprobación cancelada.")
+        return CommandResult(status=AgentStatus.completed, kind=CommandKind.cancel, reply=self.replies.approval_cancelled())
+
+    def _infer_intent(self, text: str, *, now: datetime, timezone: str) -> InferredCommandIntent | None:
+        if self.llm is None:
+            return None
+        try:
+            result = self.llm.complete(
+                LLMRequest(
+                    schema_name="conversation_intent",
+                    max_tokens=256,
+                    temperature=0.0,
+                    prompt=_intent_prompt(text=text, now=now, timezone=timezone),
+                ),
+                budget=TokenBudget(limit=1_000),
+            )
+            inferred = InferredCommandIntent.model_validate(result.data)
+        except Exception:
+            return None
+        if inferred.confidence < LLM_INTENT_CONFIDENCE_THRESHOLD:
+            return None
+        return inferred
+
+    def _handle_inferred_intent(
+        self,
+        principal: Principal,
+        message: NormalizedMessage,
+        inferred: InferredCommandIntent,
+        *,
+        now: datetime,
+        timezone: str,
+    ) -> CommandResult:
+        if inferred.kind == CommandKind.reminder_create and inferred.reminder_text:
+            return self._create_reminder(principal, message, text=inferred.reminder_text, now=now, timezone=timezone)
+        if inferred.kind == CommandKind.help:
+            return CommandResult(status=AgentStatus.completed, kind=CommandKind.help, reply=self.replies.help())
+        if inferred.kind == CommandKind.status:
+            return self._status(principal)
+        if inferred.kind == CommandKind.agenda:
+            return self._agenda(principal)
+        if inferred.kind == CommandKind.pending_approvals:
+            return self._pending(principal)
+        return CommandResult(
+            status=AgentStatus.declined,
+            kind=CommandKind.unsupported,
+            reply=self.replies.unsupported(),
+            dispatch_required=True,
+        )
+
+
+def _intent_prompt(*, text: str, now: datetime, timezone: str) -> str:
+    allowed_intents = [
+        CommandKind.reminder_create.value,
+        CommandKind.agenda.value,
+        CommandKind.pending_approvals.value,
+        CommandKind.status.value,
+        CommandKind.help.value,
+        CommandKind.unsupported.value,
+    ]
+    return "\n".join(
+        [
+            "Clasifica el mensaje de un usuario para un asistente personal local.",
+            "No ejecutes acciones. Devuelve solo JSON válido con esta forma:",
+            '{"kind": "reminder.create", "confidence": 0.0, "reminder_text": "texto normalizado o null"}',
+            f"Allowed kind values: {json.dumps(allowed_intents, ensure_ascii=False)}",
+            "Reglas:",
+            "- Usa reminder.create si el usuario pide recordar, agendar, citar o avisar algo.",
+            "- Para reminder.create conserva el contenido accionable en reminder_text.",
+            "- Si el usuario da tiempos relativos como 'en 2 minutos', conserva esa frase.",
+            "- Si solo hay una fecha/hora sin tarea clara, usa unsupported.",
+            "- No clasifiques aprobar/cancelar desde texto libre; esos requieren comando explícito.",
+            f"now={now.isoformat()}",
+            f"timezone={timezone}",
+            f"text={text!r}",
+        ]
+    )

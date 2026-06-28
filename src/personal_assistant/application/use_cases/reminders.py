@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
@@ -16,6 +16,7 @@ from personal_assistant.application.ports.observability import TraceRecorderPort
 from personal_assistant.application.ports.scheduler import ReminderSchedulerPort
 from personal_assistant.application.ports.services import LLMProvider
 from personal_assistant.application.ports.workflow_state import WorkflowStateStorePort
+from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
 from personal_assistant.application.dto.events import CloudEvent
 from personal_assistant.domain.common.guardrails import assert_prompt_safe
@@ -42,6 +43,7 @@ class ReminderWorkflow:
     traces: TraceRecorderPort
     llm: LLMProvider | None = None
     reminder_minutes_before: int = 30
+    replies: AssistantReplies = field(default_factory=AssistantReplies)
 
     def __post_init__(self) -> None:
         if self.reminder_minutes_before < 1:
@@ -87,7 +89,7 @@ class ReminderWorkflow:
             return ReminderWorkflowResult(
                 status=AgentStatus.completed,
                 intent=ReminderIntent.create,
-                reply="Ya tenía ese recordatorio registrado.",
+                reply=self.replies.reminder_duplicate(),
                 calendar_event_id=existing.data.get("calendar_event_id"),
                 reminder_id=existing.data.get("reminder_id"),
                 reused=True,
@@ -124,7 +126,7 @@ class ReminderWorkflow:
             return ReminderWorkflowResult(
                 status=AgentStatus.needs_clarification,
                 intent=ReminderIntent.unsupported,
-                reply="Necesito una fecha y hora claras para crear el recordatorio.",
+                reply=self.replies.reminder_needs_datetime(),
                 trace_ids=[
                     trace_id
                     for trace_id in [started.trace_id, guardrail_trace.trace_id, context_trace.trace_id, llm_trace_id]
@@ -151,7 +153,7 @@ class ReminderWorkflow:
             return ReminderWorkflowResult(
                 status=AgentStatus.escalated,
                 intent=ReminderIntent.create,
-                reply=f"Puedo crear '{extraction.title}', pero necesito aprobación para escribir en calendario.",
+                reply=self.replies.reminder_needs_approval(extraction.title),
                 approval_required=True,
                 trace_ids=[
                     trace_id
@@ -176,6 +178,7 @@ class ReminderWorkflow:
             ),
             approval=request.approval,
         )
+        notice_minutes_before = _notice_minutes_before(extraction, default_minutes=self.reminder_minutes_before)
         reminder = self.scheduler.schedule_before_event(
             principal,
             calendar_event_id=calendar_result.event_id,
@@ -183,7 +186,7 @@ class ReminderWorkflow:
             channel=request.channel,
             recipient=request.recipient,
             body=f"Recordatorio: {extraction.title}",
-            minutes_before=self.reminder_minutes_before,
+            minutes_before=notice_minutes_before,
             idempotency_key=f"{effective_key}:notify",
         )
         event = CloudEvent(
@@ -195,6 +198,7 @@ class ReminderWorkflow:
                 "calendar_event_id": calendar_result.event_id,
                 "reminder_id": reminder.reminder_id,
                 "starts_at": extraction.starts_at.isoformat(),
+                "notify_at": reminder.notify_at.isoformat(),
             },
         )
         self.event_store.append(principal, event)
@@ -220,13 +224,21 @@ class ReminderWorkflow:
         completed = state.transition(
             status=WorkflowStatus.completed,
             step=ReminderWorkflowStep.completed.value,
-            data={"calendar_event_id": calendar_result.event_id, "reminder_id": reminder.reminder_id},
+            data={
+                "calendar_event_id": calendar_result.event_id,
+                "reminder_id": reminder.reminder_id,
+                "notify_at": reminder.notify_at.isoformat(),
+            },
         )
         self.states.upsert(principal, completed)
         return ReminderWorkflowResult(
             status=AgentStatus.completed,
             intent=ReminderIntent.create,
-            reply=f"Listo. Te recordaré {extraction.title} {self.reminder_minutes_before} minutos antes.",
+            reply=self.replies.reminder_created(
+                title=extraction.title,
+                minutes_before=notice_minutes_before,
+                direct_notice=extraction.notify_at is not None,
+            ),
             calendar_event_id=calendar_result.event_id,
             reminder_id=reminder.reminder_id,
             reused=calendar_result.reused,
@@ -290,11 +302,16 @@ def _reminder_extraction_prompt(request: ReminderWorkflowInput) -> str:
         [
             "Extrae un recordatorio/calendario desde el texto del usuario.",
             "Devuelve solo JSON con esta forma:",
-            '{"is_reminder": true, "title": "texto corto", "starts_at": "ISO-8601 con timezone", "confidence": 0.0}',
+            (
+                '{"is_reminder": true, "title": "texto corto", '
+                '"starts_at": "ISO-8601 con timezone", "notify_at": "ISO-8601 opcional o null", '
+                '"confidence": 0.0}'
+            ),
             "Reglas:",
             "- Si no hay intención de recordatorio, is_reminder=false.",
             "- Si falta hora o fecha suficientemente clara, is_reminder=false.",
             "- Si el usuario da solo una hora, usa hoy si todavía no pasó; si ya pasó, usa mañana.",
+            "- Si pide un aviso relativo como 'en dos minutos', starts_at y notify_at deben ser ese momento.",
             "- Conserva el timezone/offset de now cuando construyas starts_at.",
             f"now={request.now.isoformat()}",
             f"timezone={request.timezone}",
@@ -314,7 +331,22 @@ def _reminder_extraction_from_llm(data: dict[str, Any], *, default_now: datetime
     starts_at = datetime.fromisoformat(starts_at_raw.replace("Z", "+00:00"))
     if starts_at.tzinfo is None or starts_at.utcoffset() is None:
         starts_at = starts_at.replace(tzinfo=default_now.tzinfo)
-    return ReminderExtraction(title=title, starts_at=starts_at, confidence=confidence)
+    notify_at_raw = str(data.get("notify_at") or "").strip()
+    notify_at = None
+    if notify_at_raw:
+        notify_at = datetime.fromisoformat(notify_at_raw.replace("Z", "+00:00"))
+        if notify_at.tzinfo is None or notify_at.utcoffset() is None:
+            notify_at = notify_at.replace(tzinfo=default_now.tzinfo)
+    return ReminderExtraction(title=title, starts_at=starts_at, notify_at=notify_at, confidence=confidence)
+
+
+def _notice_minutes_before(extraction: ReminderExtraction, *, default_minutes: int) -> int:
+    if extraction.notify_at is None:
+        return default_minutes
+    seconds_before = (extraction.starts_at - extraction.notify_at).total_seconds()
+    if seconds_before <= 0:
+        return 0
+    return max(int(seconds_before // 60), 0)
 
 
 def _llm_trace(
