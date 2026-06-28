@@ -83,7 +83,9 @@ class OpenAICompatibleTranscriptionProvider:
             data=bytes(body),
             headers={
                 "Authorization": f"Bearer {self._api_key}",
+                "Accept": "application/json",
                 "Content-Type": f"multipart/form-data; boundary={boundary}",
+                "User-Agent": "personal-assistant/0.1",
             },
             method="POST",
         )

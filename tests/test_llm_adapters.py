@@ -108,6 +108,8 @@ class LLMAdapterTests(unittest.TestCase):
         def fake_urlopen(req, timeout):
             captured["url"] = req.full_url
             captured["content_type"] = req.get_header("Content-type")
+            captured["accept"] = req.get_header("Accept")
+            captured["user_agent"] = req.get_header("User-agent")
             captured["body"] = req.data
             return FakeResponse({"text": "agendarme una cita a las 3:33 para comer"})
 
@@ -129,6 +131,8 @@ class LLMAdapterTests(unittest.TestCase):
 
         self.assertEqual(captured["url"], "https://stt.example/v1/audio/transcriptions")
         self.assertIn("multipart/form-data", str(captured["content_type"]))
+        self.assertEqual(captured["accept"], "application/json")
+        self.assertEqual(captured["user_agent"], "personal-assistant/0.1")
         self.assertIn(b"audio-bytes", captured["body"])
         self.assertIn("cita", result.text)
 
