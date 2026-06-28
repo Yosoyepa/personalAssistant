@@ -73,6 +73,24 @@ class AppSettingsTests(unittest.TestCase):
         self.assertEqual(settings.llm_base_url, "https://aerolink.example")
         self.assertEqual(settings.llm_model, "claude-test")
 
+    def test_llm_settings_accept_minimax_aliases(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "LLM_PROVIDER": "minimax",
+                "MINIMAX_API_KEY": "sk-cp-test",
+                "MINIMAX_BASE_URL": "https://api.minimaxi.com/anthropic",
+                "MINIMAX_MODEL": "MiniMax-M3",
+            },
+            clear=True,
+        ):
+            settings = AppSettings.from_env()
+
+        self.assertEqual(settings.llm_provider, "minimax")
+        self.assertEqual(settings.llm_api_key, "sk-cp-test")
+        self.assertEqual(settings.llm_base_url, "https://api.minimaxi.com/anthropic")
+        self.assertEqual(settings.llm_model, "MiniMax-M3")
+
 
 @unittest.skipIf(TestClient is None or create_app is None, "FastAPI optional dependency is not installed")
 class HttpRuntimeTests(unittest.TestCase):

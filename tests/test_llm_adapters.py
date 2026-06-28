@@ -4,6 +4,7 @@ import json
 import unittest
 
 from personal_assistant.adapters.outbound.llm.anthropic import AnthropicCompatibleLLMProvider
+from personal_assistant.adapters.outbound.llm.minimax import MiniMaxLLMProvider
 from personal_assistant.adapters.outbound.transcription.openai_compatible import OpenAICompatibleTranscriptionProvider
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import AudioTranscriptionRequest, LLMRequest
@@ -60,6 +61,42 @@ class LLMAdapterTests(unittest.TestCase):
         self.assertEqual(result.data["title"], "comer")
         self.assertEqual(result.input_tokens, 12)
         self.assertEqual(result.output_tokens, 8)
+
+    def test_minimax_provider_uses_token_plan_anthropic_endpoint(self) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_urlopen(req, timeout):
+            captured["url"] = req.full_url
+            captured["headers"] = dict(req.header_items())
+            captured["body"] = json.loads(req.data.decode("utf-8"))
+            return FakeResponse(
+                {
+                    "model": "MiniMax-M3",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": '{"is_reminder": true, "title": "comer", "starts_at": "2026-06-20T15:33:00+00:00", "confidence": 0.9}',
+                        }
+                    ],
+                    "usage": {"input_tokens": 10, "output_tokens": 7},
+                }
+            )
+
+        provider = MiniMaxLLMProvider(api_key="sk-cp-test", urlopen=fake_urlopen)
+        result = provider.complete(
+            LLMRequest(prompt="extrae", schema_name="reminder_extraction"),
+            budget=TokenBudget(limit=1000),
+        )
+
+        self.assertEqual(captured["url"], "https://api.minimaxi.com/anthropic/v1/messages")
+        headers = captured["headers"]
+        self.assertIsInstance(headers, dict)
+        self.assertEqual(headers["Authorization"], "Bearer sk-cp-test")
+        body = captured["body"]
+        self.assertIsInstance(body, dict)
+        self.assertEqual(body["model"], "MiniMax-M3")
+        self.assertEqual(result.provider, "minimax")
+        self.assertEqual(result.data["title"], "comer")
 
     def test_openai_compatible_transcription_provider_parses_text(self) -> None:
         captured: dict[str, object] = {}

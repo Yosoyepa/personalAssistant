@@ -247,10 +247,13 @@ shells and are not yet enforced by every runtime surface.
 | `NGROK_AUTHTOKEN` | Configuring ngrok agent | Yes | Used by `ngrok config add-authtoken`; do not commit. |
 | `ADMIN_TOKEN` | Future/non-local admin hardening | Yes | Reserved by settings; current admin app is loopback-only. |
 | `REMINDER_WORKER_INTERVAL_SECONDS=15` | Worker loop config | No | Minimum interval is clamped to 1 second. |
-| `LLM_PROVIDER` | Bounded LLM extraction | No | Use `anthropic_compatible` for AeroLink/Claude-compatible gateways; `disabled` keeps deterministic-only behavior. |
-| `LLM_API_KEY` | Bounded LLM extraction | Yes | Provider key. `AEROLINK_API_KEY`, `ANTHROPIC_API_KEY`, and `ANTHROPIC_AUTH_TOKEN` are also read as fallbacks. |
-| `LLM_BASE_URL` | Bounded LLM extraction | No | Provider base URL, for example `https://aerolink.lat` if it exposes `/v1/messages`. `AEROLINK_BASE_URL` and `ANTHROPIC_BASE_URL` are also accepted. |
-| `LLM_MODEL` | Bounded LLM extraction | No | Provider model id from the provider docs/account. `AEROLINK_MODEL` and `ANTHROPIC_MODEL` are also accepted. |
+| `LLM_PROVIDER` | Bounded LLM extraction | No | Use `minimax` for MiniMax Token Plan, `anthropic_compatible` for AeroLink/Claude-compatible gateways, or `disabled` for deterministic-only behavior. |
+| `MINIMAX_API_KEY` | MiniMax Token Plan LLM extraction | Yes | MiniMax subscription key. This is distinct from MiniMax pay-as-you-go API keys. |
+| `MINIMAX_BASE_URL` | MiniMax Token Plan LLM extraction | No | Defaults to `https://api.minimaxi.com/anthropic` for Anthropic-compatible Messages API. |
+| `MINIMAX_MODEL` | MiniMax Token Plan LLM extraction | No | Defaults to `MiniMax-M3`. |
+| `LLM_API_KEY` | Generic bounded LLM extraction | Yes | Provider key. `MINIMAX_API_KEY`, `AEROLINK_API_KEY`, `ANTHROPIC_API_KEY`, and `ANTHROPIC_AUTH_TOKEN` are also read as fallbacks. |
+| `LLM_BASE_URL` | Generic bounded LLM extraction | No | Provider base URL. `MINIMAX_BASE_URL`, `AEROLINK_BASE_URL`, and `ANTHROPIC_BASE_URL` are also accepted. |
+| `LLM_MODEL` | Generic bounded LLM extraction | No | Provider model id. `MINIMAX_MODEL`, `AEROLINK_MODEL`, and `ANTHROPIC_MODEL` are also accepted. |
 | `LLM_AUTH_HEADER` | Bounded LLM extraction | No | `x-api-key` by default; use `authorization` for bearer-token compatible proxies. |
 | `TRANSCRIPTION_PROVIDER` | Telegram voice messages | No | Use `openai_compatible` only when the provider exposes `/v1/audio/transcriptions`; otherwise leave `disabled`. |
 | `TRANSCRIPTION_API_KEY` | Telegram voice messages | Yes | Speech-to-text provider key. Defaults to `AEROLINK_API_KEY` if set. |

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
 from personal_assistant.adapters.outbound.llm.anthropic import AnthropicCompatibleLLMProvider
+from personal_assistant.adapters.outbound.llm.minimax import MiniMaxLLMProvider
 from personal_assistant.adapters.outbound.transcription.openai_compatible import OpenAICompatibleTranscriptionProvider
 from personal_assistant.application.ports.notifications import NotificationPort
 from personal_assistant.application.ports.services import AudioTranscriptionProvider, LLMProvider
@@ -50,6 +51,13 @@ class AppContainer:
 def build_llm_provider(settings: AppSettings) -> LLMProvider | None:
     if settings.llm_provider in {"", "disabled", "none"}:
         return None
+    if settings.llm_provider in {"minimax", "minimax_anthropic", "minimax-anthropic"}:
+        return MiniMaxLLMProvider(
+            api_key=settings.llm_api_key or "",
+            base_url=settings.llm_base_url or "https://api.minimaxi.com/anthropic",
+            model=settings.llm_model or "MiniMax-M3",
+            timeout_seconds=settings.llm_timeout_seconds,
+        )
     if settings.llm_provider not in {"anthropic_compatible", "anthropic-compatible", "aerolink"}:
         raise ValueError(f"unsupported LLM_PROVIDER: {settings.llm_provider}")
     return AnthropicCompatibleLLMProvider(

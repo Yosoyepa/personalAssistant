@@ -53,16 +53,23 @@ class AppSettings:
             llm_provider=os.getenv("LLM_PROVIDER", "disabled").strip().lower() or "disabled",
             llm_api_key=(
                 _optional_env("LLM_API_KEY")
+                or _optional_env("MINIMAX_API_KEY")
                 or _optional_env("AEROLINK_API_KEY")
                 or _optional_env("ANTHROPIC_API_KEY")
                 or _optional_env("ANTHROPIC_AUTH_TOKEN")
             ),
             llm_base_url=(
                 _optional_env("LLM_BASE_URL")
+                or _optional_env("MINIMAX_BASE_URL")
                 or _optional_env("AEROLINK_BASE_URL")
                 or _optional_env("ANTHROPIC_BASE_URL")
             ),
-            llm_model=_optional_env("LLM_MODEL") or _optional_env("AEROLINK_MODEL") or _optional_env("ANTHROPIC_MODEL"),
+            llm_model=(
+                _optional_env("LLM_MODEL")
+                or _optional_env("MINIMAX_MODEL")
+                or _optional_env("AEROLINK_MODEL")
+                or _optional_env("ANTHROPIC_MODEL")
+            ),
             llm_auth_header=os.getenv("LLM_AUTH_HEADER", "x-api-key").strip() or "x-api-key",
             llm_anthropic_version=os.getenv("LLM_ANTHROPIC_VERSION", "2023-06-01").strip() or "2023-06-01",
             llm_timeout_seconds=max(float(llm_timeout), 1.0),
