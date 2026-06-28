@@ -467,6 +467,24 @@ def _transcribe_telegram_media(
             ),
             budget=TokenBudget(limit=4_000),
         )
+        container.traces.write(
+            TraceEvent(
+                run_id=f"telegram:{message.conversation_id}:{message.message_id}:transcription",
+                agent_id="personal_assistant",
+                event_type=TraceEventType.tool_called,
+                tenant_id=settings.tenant_id,
+                input_summary={
+                    "media_kind": message.media_kind,
+                    "media_mime_type": message.media_mime_type,
+                    "media_file_size": message.media_file_size,
+                    "telegram_file_extension": telegram_file_extension,
+                    "transcription_filename": transcription_filename,
+                },
+                tool_call={"name": "audio.transcribe", "provider": transcript.provider},
+                model=transcript.model,
+                output_summary={"transcript": transcript.text[:500], "text_length": len(transcript.text)},
+            )
+        )
     except Exception as exc:
         container.traces.write(
             TraceEvent(

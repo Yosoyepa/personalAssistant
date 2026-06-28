@@ -7,6 +7,7 @@ from personal_assistant.application.dto.channels import ChannelName, NormalizedM
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.commands import CommandKind
 from personal_assistant.application.dto.runtime import AgentStatus, LLMResult
+from personal_assistant.application.dto.tracing import TraceEventType
 from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
@@ -22,6 +23,21 @@ class FakeIntentLLMProvider:
                 "kind": "reminder.create",
                 "confidence": 0.94,
                 "reminder_text": "recuérdame en 2 minutos pagar el arriendo",
+            },
+            input_tokens=12,
+            output_tokens=8,
+        )
+
+
+class LowConfidenceIntentLLMProvider:
+    def complete(self, request, *, budget: TokenBudget) -> LLMResult:
+        return LLMResult(
+            provider="fake",
+            model="fake-router",
+            data={
+                "kind": "reminder.create",
+                "confidence": 0.31,
+                "reminder_text": "pagar el arriendo",
             },
             input_tokens=12,
             output_tokens=8,
@@ -212,6 +228,25 @@ class CommandRouterTests(unittest.TestCase):
         self.assertEqual(result.kind, CommandKind.reminder_create)
         self.assertIsNotNone(result.approval_id)
         self.assertEqual(len(container.approvals.list_pending(self.principal)), 1)
+
+    def test_llm_intent_trace_records_rejected_low_confidence(self) -> None:
+        container = build_container(llm=LowConfidenceIntentLLMProvider())
+
+        result = container.commands.handle(
+            self.principal,
+            self.message("porfa me avisas eso"),
+            now=self.now,
+            timezone="America/Bogota",
+        )
+
+        self.assertEqual(result.status, AgentStatus.declined)
+        self.assertEqual(result.kind, CommandKind.unsupported)
+        traces = container.traces.list_for_tenant(self.principal.tenant_id)
+        self.assertEqual(len(traces), 1)
+        self.assertEqual(traces[0].event_type, TraceEventType.llm_called)
+        self.assertEqual(traces[0].output_summary["kind"], CommandKind.reminder_create.value)
+        self.assertFalse(traces[0].output_summary["accepted"])
+        self.assertEqual(traces[0].output_summary["confidence"], 0.31)
 
 
 if __name__ == "__main__":

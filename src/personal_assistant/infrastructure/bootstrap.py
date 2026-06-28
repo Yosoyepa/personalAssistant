@@ -137,6 +137,7 @@ def build_container(
         event_store=event_store,
         outbox=outbox,
         llm=llm,
+        traces=traces,
     )
     return AppContainer(
         approvals=approvals,

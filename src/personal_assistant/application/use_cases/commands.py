@@ -17,6 +17,8 @@ from personal_assistant.application.dto.commands import (
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
 from personal_assistant.application.dto.runtime import AgentStatus, LLMRequest
+from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
+from personal_assistant.application.ports.observability import TraceRecorderPort
 from personal_assistant.application.ports.approvals import ApprovalStorePort
 from personal_assistant.application.ports.calendar import CalendarReadPort
 from personal_assistant.application.ports.events import EventStorePort, OutboxPort
@@ -74,6 +76,7 @@ class ConversationCommandService:
     event_store: EventStorePort
     outbox: OutboxPort
     llm: LLMProvider | None = None
+    traces: TraceRecorderPort | None = None
     replies: AssistantReplies = field(default_factory=AssistantReplies)
 
     def handle(
@@ -121,7 +124,7 @@ class ConversationCommandService:
                 now=now,
                 timezone=timezone,
             )
-        inferred = self._infer_intent(text, now=now, timezone=timezone)
+        inferred = self._infer_intent(principal, message, text, now=now, timezone=timezone)
         if inferred is not None:
             return self._handle_inferred_intent(principal, message, inferred, now=now, timezone=timezone)
         return CommandResult(
@@ -288,9 +291,18 @@ class ConversationCommandService:
             return CommandResult(status=AgentStatus.failed, kind=CommandKind.cancel, reply=str(exc))
         return CommandResult(status=AgentStatus.completed, kind=CommandKind.cancel, reply=self.replies.approval_cancelled())
 
-    def _infer_intent(self, text: str, *, now: datetime, timezone: str) -> InferredCommandIntent | None:
+    def _infer_intent(
+        self,
+        principal: Principal,
+        message: NormalizedMessage,
+        text: str,
+        *,
+        now: datetime,
+        timezone: str,
+    ) -> InferredCommandIntent | None:
         if self.llm is None:
             return None
+        run_id = f"command:{message.channel.value}:{message.conversation_id}:{message.message_id}:intent"
         try:
             result = self.llm.complete(
                 LLMRequest(
@@ -302,11 +314,43 @@ class ConversationCommandService:
                 budget=TokenBudget(limit=1_000),
             )
             inferred = InferredCommandIntent.model_validate(result.data)
-        except Exception:
+        except Exception as exc:
+            self._write_trace(
+                TraceEvent(
+                    run_id=run_id,
+                    agent_id="personal_assistant",
+                    event_type=TraceEventType.agent_failed,
+                    tenant_id=principal.tenant_id,
+                    input_summary={"text": text[:500], "source": message.channel.value},
+                    error={"type": exc.__class__.__name__, "message": str(exc)[:500]},
+                )
+            )
             return None
-        if inferred.confidence < LLM_INTENT_CONFIDENCE_THRESHOLD:
+        accepted = inferred.confidence >= LLM_INTENT_CONFIDENCE_THRESHOLD
+        self._write_trace(
+            TraceEvent(
+                run_id=run_id,
+                agent_id="personal_assistant",
+                event_type=TraceEventType.llm_called,
+                tenant_id=principal.tenant_id,
+                input_summary={"text": text[:500], "source": message.channel.value},
+                model=result.model,
+                output_summary={
+                    "kind": inferred.kind.value,
+                    "confidence": inferred.confidence,
+                    "reminder_text": inferred.reminder_text,
+                    "accepted": accepted,
+                    "threshold": LLM_INTENT_CONFIDENCE_THRESHOLD,
+                },
+            )
+        )
+        if not accepted:
             return None
         return inferred
+
+    def _write_trace(self, event: TraceEvent) -> None:
+        if self.traces is not None:
+            self.traces.write(event)
 
     def _handle_inferred_intent(
         self,

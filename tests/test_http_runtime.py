@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 from personal_assistant.application.dto.channels import ChannelName, NormalizedMessage
 from personal_assistant.application.dto.runtime import AudioTranscriptionResult
+from personal_assistant.application.dto.tracing import TraceEventType
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
@@ -474,6 +475,11 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertIsNotNone(transcribed)
         self.assertEqual(transcription.requests[0].filename, "telegram-45.ogg")
         self.assertEqual(transcription.requests[0].content_type, "audio/ogg")
+        trace = container.traces.list_for_tenant("tenant-a")[0]
+        self.assertEqual(trace.event_type, TraceEventType.tool_called)
+        self.assertEqual(trace.tool_call["name"], "audio.transcribe")
+        self.assertEqual(trace.output_summary["transcript"], "recuérdame pagar arriendo en 2 minutos")
+        self.assertEqual(trace.input_summary["transcription_filename"], "telegram-45.ogg")
 
     def test_telegram_webhook_rejects_invalid_secret_and_user(self) -> None:
         settings = AppSettings(
