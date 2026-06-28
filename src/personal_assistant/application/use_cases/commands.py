@@ -42,7 +42,19 @@ def _approval_id(*, tenant_id: str, principal_id: str, idempotency_key: str) -> 
 
 def _looks_like_reminder(text: str) -> bool:
     normalized = text.strip().lower()
-    return normalized.startswith(("/recordar ", "recuérdame ", "recuerdame ", "recordarme "))
+    return normalized.startswith(
+        (
+            "/recordar ",
+            "recuérdame ",
+            "recuerdame ",
+            "recordarme ",
+            "agéndame ",
+            "agendame ",
+            "agendarme ",
+            "agenda ",
+            "agendar ",
+        )
+    ) or ("cita" in normalized and "las " in normalized)
 
 
 def _extract_reminder_text(text: str) -> str:

@@ -21,6 +21,8 @@ SPANISH_WEEKDAYS = {
     "domingo": 6,
 }
 
+REMINDER_TRIGGERS = ("recuerd", "record", "agend", "cita", "recordatorio")
+
 
 def _fold_text(text: str) -> str:
     normalized = unicodedata.normalize("NFKD", text.casefold())
@@ -38,14 +40,21 @@ def _next_weekday(now: datetime, target_weekday: int, *, hour: int, minute: int)
     return candidate
 
 
+def _today_or_tomorrow(now: datetime, *, hour: int, minute: int) -> datetime:
+    candidate = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if candidate <= now:
+        candidate = candidate + timedelta(days=1)
+    return candidate
+
+
 def extract_reminder(text: str, now: datetime) -> ReminderExtraction | None:
     lowered = _fold_text(text)
-    if "recuerd" not in lowered:
+    if not any(trigger in lowered for trigger in REMINDER_TRIGGERS):
         return None
 
     weekday = next((value for name, value in SPANISH_WEEKDAYS.items() if _fold_text(name) in lowered), None)
     hour_match = re.search(r"\b(?:a las|las|a)\s+(\d{1,2})(?::(\d{2}))?\b", lowered)
-    if weekday is None or hour_match is None:
+    if hour_match is None:
         return None
 
     hour = int(hour_match.group(1))
@@ -56,11 +65,25 @@ def extract_reminder(text: str, now: datetime) -> ReminderExtraction | None:
         hour += 12
     if "am" in lowered and hour == 12:
         hour = 0
+    if "am" not in lowered and "pm" not in lowered and weekday is None and 1 <= hour <= 7:
+        possible_pm = hour + 12
+        if possible_pm <= 23 and now.replace(hour=possible_pm, minute=minute, second=0, microsecond=0) > now:
+            hour = possible_pm
     if not 0 <= hour <= 23:
         return None
 
-    starts_at = _next_weekday(now, weekday, hour=hour, minute=minute)
-    title = re.sub(r"\b(recu[eé]rdame|recordarme|el|la|los|las|a|este|esta)\b", " ", text, flags=re.I)
+    starts_at = (
+        _next_weekday(now, weekday, hour=hour, minute=minute)
+        if weekday is not None
+        else _today_or_tomorrow(now, hour=hour, minute=minute)
+    )
+    title = re.sub(r"\b(?:a las|las|a)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\b", " ", text, flags=re.I)
+    title = re.sub(
+        r"\b(recu[eé]rdame|recuerdame|recordarme|recordatorio|ag[eé]ndame|agendame|agendarme|agenda|agendar|el|la|los|las|este|esta)\b",
+        " ",
+        title,
+        flags=re.I,
+    )
     for day in SPANISH_WEEKDAYS:
         title = re.sub(day, " ", title, flags=re.I)
     title = re.sub(r"\s+", " ", title).strip(" .,:;-") or "Recordatorio"

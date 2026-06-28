@@ -47,6 +47,32 @@ class TelegramBotApiClient:
             return {}
         return result
 
+    def get_file(self, *, file_id: str) -> Mapping[str, Any]:
+        payload = json.dumps({"file_id": file_id}).encode("utf-8")
+        req = urllib_request.Request(
+            f"https://api.telegram.org/bot{self._token}/getFile",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib_request.urlopen(req, timeout=self._timeout_seconds) as response:
+            raw = response.read()
+        decoded = json.loads(raw.decode("utf-8"))
+        if not isinstance(decoded, dict) or not decoded.get("ok"):
+            raise RuntimeError("Telegram getFile failed")
+        result = decoded.get("result") or {}
+        if not isinstance(result, Mapping):
+            raise RuntimeError("Telegram getFile returned invalid result")
+        return result
+
+    def download_file(self, *, file_path: str) -> bytes:
+        req = urllib_request.Request(
+            f"https://api.telegram.org/file/bot{self._token}/{file_path}",
+            method="GET",
+        )
+        with urllib_request.urlopen(req, timeout=self._timeout_seconds) as response:
+            return response.read()
+
 
 def _fingerprint(request: NotificationRequest) -> str:
     payload = json.dumps(request.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))

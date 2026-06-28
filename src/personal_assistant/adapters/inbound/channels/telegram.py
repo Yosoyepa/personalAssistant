@@ -32,7 +32,16 @@ class TelegramAdapter:
         message = payload.get("message") or payload.get("edited_message") or callback_query.get("message") or {}
         chat = message.get("chat") or {}
         user = callback_query.get("from") or message.get("from") or {}
+        voice = message.get("voice") or {}
+        audio = message.get("audio") or {}
+        media = voice or audio
+        media_kind = "voice" if voice else "audio" if audio else None
+        media_file_id = str(media.get("file_id") or "") if media else None
+        media_mime_type = str(media.get("mime_type") or "audio/ogg") if media else None
+        media_file_size = media.get("file_size") if media else None
         text = callback_query.get("data") or message.get("text") or message.get("caption") or ""
+        if not text and media_file_id:
+            text = f"[{media_kind} message]"
         message_id = str(callback_query.get("id") or message.get("message_id") or payload.get("update_id") or "")
         conversation_id = str(chat.get("id") or "")
         actor_id = str(user.get("id") or conversation_id)
@@ -54,4 +63,8 @@ class TelegramAdapter:
             idempotency_key=idempotency_key,
             command=command,
             command_args=command_args,
+            media_kind=media_kind,
+            media_file_id=media_file_id or None,
+            media_mime_type=media_mime_type,
+            media_file_size=int(media_file_size) if media_file_size is not None else None,
         )

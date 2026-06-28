@@ -56,6 +56,25 @@ class LLMResult(BaseModel):
     output_tokens: int = Field(default=0, ge=0)
 
 
+class AudioTranscriptionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    filename: str = Field(min_length=1)
+    content_type: str = Field(min_length=1)
+    data: bytes = Field(min_length=1)
+    language: str | None = Field(default="es", min_length=2, max_length=16)
+    prompt: str | None = Field(default=None, min_length=1, max_length=500)
+
+
+class AudioTranscriptionResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    provider: str
+    model: str
+    text: str = Field(min_length=1)
+    input_tokens: int = Field(default=0, ge=0)
+
+
 class ToolDefinition(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 

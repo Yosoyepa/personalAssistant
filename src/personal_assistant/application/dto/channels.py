@@ -22,6 +22,10 @@ class NormalizedMessage(BaseModel):
     idempotency_key: str | None = Field(default=None, min_length=1)
     command: str | None = Field(default=None, min_length=1)
     command_args: str = ""
+    media_kind: str | None = Field(default=None, min_length=1)
+    media_file_id: str | None = Field(default=None, min_length=1)
+    media_mime_type: str | None = Field(default=None, min_length=1)
+    media_file_size: int | None = Field(default=None, ge=0)
     received_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 

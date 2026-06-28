@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 import unittest
 
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
-from personal_assistant.application.dto.runtime import AgentStatus
+from personal_assistant.application.dto.runtime import AgentStatus, LLMResult
 from personal_assistant.application.use_cases.reminders import ReminderWorkflow, reminder_idempotency_key
 from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
 from personal_assistant.domain.reminders.parser import extract_reminder
@@ -13,8 +13,25 @@ from personal_assistant.adapters.outbound.scheduler.local import ReminderSchedul
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.application.dto.tracing import TraceEventType
+from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.adapters.persistence.in_memory import InMemoryEventStore, InMemoryOutbox, InMemoryWorkflowStateStore
 from personal_assistant.adapters.observability.local import TraceRecorder
+
+
+class FakeLLMProvider:
+    def complete(self, request, *, budget: TokenBudget) -> LLMResult:
+        return LLMResult(
+            provider="fake",
+            model="fake-model",
+            data={
+                "is_reminder": True,
+                "title": "almorzar con Ana",
+                "starts_at": "2026-06-20T15:33:00+00:00",
+                "confidence": 0.91,
+            },
+            input_tokens=20,
+            output_tokens=15,
+        )
 
 
 class ReminderWorkflowTests(unittest.TestCase):
@@ -80,6 +97,16 @@ class ReminderWorkflowTests(unittest.TestCase):
         self.assertEqual(extraction.starts_at.weekday(), 1)
         self.assertEqual(extraction.starts_at.hour, 5)
 
+    def test_extract_reminder_parses_natural_time_only_cita(self) -> None:
+        extraction = extract_reminder("agendarme una cita a las 3:33 para comer", datetime(2026, 6, 20, 12, tzinfo=UTC))
+
+        self.assertIsNotNone(extraction)
+        assert extraction is not None
+        self.assertEqual(extraction.starts_at.date().isoformat(), "2026-06-20")
+        self.assertEqual(extraction.starts_at.hour, 15)
+        self.assertEqual(extraction.starts_at.minute, 33)
+        self.assertIn("comer", extraction.title)
+
     def test_happy_path_creates_calendar_event_and_schedules_notice(self) -> None:
         result = self.workflow.run(self.principal, self.request())
 
@@ -115,6 +142,35 @@ class ReminderWorkflowTests(unittest.TestCase):
         self.assertEqual(self.calendar.list_events(self.principal), [])
         self.assertEqual(self.event_store.list_for_tenant(self.principal), [])
         self.assertEqual(self.outbox.claim(self.principal), [])
+
+    def test_llm_fallback_extracts_when_rules_need_help(self) -> None:
+        workflow = ReminderWorkflow(
+            calendar=self.calendar,
+            scheduler=self.scheduler,
+            event_store=self.event_store,
+            outbox=self.outbox,
+            states=self.states,
+            traces=self.traces,
+            llm=FakeLLMProvider(),
+        )
+        text = "necesito que quede lo de almorzar con Ana a las tres treinta y tres"
+        result = workflow.run(
+            self.principal,
+            ReminderWorkflowInput(
+                message_id="llm-1",
+                conversation_id="chat-1",
+                text=text,
+                recipient="chat-1",
+                now=datetime(2026, 6, 20, 12, tzinfo=UTC),
+                idempotency_key=reminder_idempotency_key(self.principal.tenant_id, "llm-1", text),
+                approval=None,
+            ),
+        )
+
+        self.assertEqual(result.status, AgentStatus.escalated)
+        self.assertTrue(result.approval_required)
+        trace_types = [event.event_type for event in self.traces.list_for_tenant(self.principal.tenant_id)]
+        self.assertIn(TraceEventType.llm_called, trace_types)
 
     def test_idempotency_key_is_derived_when_missing(self) -> None:
         text = "recuérdame clase el martes a las 5"

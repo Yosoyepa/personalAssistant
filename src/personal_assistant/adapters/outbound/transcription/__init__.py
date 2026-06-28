@@ -1,0 +1,1 @@
+"""Audio transcription outbound adapters."""

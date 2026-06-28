@@ -45,6 +45,24 @@ class DocumentAndChannelTests(unittest.TestCase):
         self.assertFalse(hasattr(normalized, "tenant_id"))
         self.assertIn("tenant_id=evil", normalized.text)
 
+    def test_telegram_normalizer_preserves_voice_file_id(self) -> None:
+        payload = {
+            "update_id": 11,
+            "message": {
+                "message_id": 43,
+                "chat": {"id": 123},
+                "from": {"id": 456},
+                "voice": {"file_id": "voice-file-1", "mime_type": "audio/ogg", "file_size": 2048},
+            },
+        }
+        normalized = normalize_telegram_webhook(payload, tenant_id="tenant-a")
+
+        self.assertEqual(normalized.text, "[voice message]")
+        self.assertEqual(normalized.media_kind, "voice")
+        self.assertEqual(normalized.media_file_id, "voice-file-1")
+        self.assertEqual(normalized.media_mime_type, "audio/ogg")
+        self.assertEqual(normalized.media_file_size, 2048)
+
     def test_whatsapp_normalizer_uses_authenticated_tenant(self) -> None:
         payload = {
             "entry": [

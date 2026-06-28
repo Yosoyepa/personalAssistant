@@ -238,6 +238,34 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(body["command"], "help")
         self.assertFalse(body["sent"])
 
+    def test_telegram_voice_requires_transcription_provider(self) -> None:
+        settings = AppSettings(
+            tenant_id="tenant-a",
+            telegram_webhook_secret="secret-1",
+            telegram_allowed_user_ids=frozenset({"456"}),
+        )
+        client = TestClient(create_app(self.container, settings=settings))
+
+        response = client.post(
+            "/webhooks/telegram/secret-1",
+            headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
+            json={
+                "update_id": 11,
+                "message": {
+                    "message_id": 43,
+                    "chat": {"id": "chat-1"},
+                    "from": {"id": "456"},
+                    "voice": {"file_id": "voice-file-1", "mime_type": "audio/ogg", "file_size": 2048},
+                },
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        body = response.json()
+        self.assertEqual(body["status"], "needs_clarification")
+        self.assertIn("falta configurar transcripción", body["reply"])
+        self.assertFalse(body["sent"])
+
     def test_telegram_webhook_rejects_invalid_secret_and_user(self) -> None:
         settings = AppSettings(
             tenant_id="tenant-a",

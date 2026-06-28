@@ -11,7 +11,8 @@ This repository is a local-first Python package with optional FastAPI surfaces.
 The code supports in-memory composition, Telegram webhook normalization,
 conversation command routing, reminder workflow execution, local
 calendar/scheduler adapters, tenant-scoped memory, trace recording, a runtime
-API, a local-only admin dashboard, a reminder notification worker, and
+API, a local-only admin dashboard, a reminder notification worker,
+Anthropic-compatible LLM fallback extraction, optional voice transcription, and
 deterministic tests.
 
 Runtime configuration is read from process environment by
@@ -112,10 +113,11 @@ Current implementation boundary:
 - Present: `normalize_telegram_webhook(payload, tenant_id=...)`, local
   `build_container()`, `ConversationCommandService`, `ReminderWorkflow`,
   `personal_assistant.infrastructure.http:app` for runtime endpoints, local-only
-  admin dashboard, Telegram webhook bridge, reminder worker, in-memory traces
-  and stores.
-- Not present yet: durable database, production deployment hardening, MiniMax
-  adapter, OAuth storage, external calendar sync.
+  admin dashboard, Telegram webhook bridge, reminder worker, Anthropic-compatible
+  LLM adapter, OpenAI-compatible transcription adapter, in-memory traces and
+  stores.
+- Not present yet: durable database, production deployment hardening, OAuth
+  storage, external calendar sync.
 - Forbidden by contract: direct `telegram.send` from the agent, MVP `mcp.*` or
   `a2a.*` tool calls, third-party messaging, financial actions, destructive bulk
   deletion, secret reads, and tenant authority from untrusted text.

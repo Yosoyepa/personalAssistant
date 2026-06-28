@@ -16,8 +16,10 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from personal_assistant.adapters.inbound.auth import principal_from_auth_claims
 from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
 from personal_assistant.adapters.outbound.notifications.telegram import TelegramBotApiClient, TelegramNotificationTool
+from personal_assistant.application.dto.channels import NormalizedMessage
+from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput, ReminderWorkflowResult
-from personal_assistant.application.dto.runtime import AgentStatus, ApprovalStatus
+from personal_assistant.application.dto.runtime import AgentStatus, ApprovalStatus, AudioTranscriptionRequest
 from personal_assistant.application.dto.tracing import TraceEvent
 from personal_assistant.application.dto.workflows import WorkflowState
 from personal_assistant.application.ports.notifications import NotificationRequest
@@ -26,8 +28,16 @@ from personal_assistant.domain.common.exceptions import AssistantError, ErrorCod
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.infrastructure.admin import AdminDashboard, clamp_limit, is_local_client, local_admin_principal
-from personal_assistant.infrastructure.bootstrap import AppContainer, build_container
+from personal_assistant.infrastructure.bootstrap import (
+    AppContainer,
+    build_container,
+    build_llm_provider,
+    build_transcription_provider,
+)
 from personal_assistant.infrastructure.config import AppSettings
+
+
+MAX_TELEGRAM_AUDIO_BYTES = 20 * 1024 * 1024
 
 
 class HealthResponse(BaseModel):
@@ -212,15 +222,19 @@ def _assert_same_actor(pending: PendingReminderApproval, principal: Principal) -
 
 
 def build_runtime_container(settings: AppSettings) -> AppContainer:
+    llm = build_llm_provider(settings)
+    transcription = build_transcription_provider(settings)
     if settings.telegram_bot_token:
         telegram_notifications = TelegramNotificationTool(
             TelegramBotApiClient(token=settings.telegram_bot_token),
         )
         return build_container(
+            llm=llm,
             notifications=telegram_notifications,
+            transcription=transcription,
             approve_reminder_notifications=True,
         )
-    return build_container()
+    return build_container(llm=llm, transcription=transcription)
 
 
 def current_principal(
@@ -290,6 +304,55 @@ def _send_telegram_reply(
         # not force Telegram to retry the webhook and duplicate workflow work.
         return False
     return True
+
+
+def _transcribe_telegram_media(
+    container: AppContainer,
+    settings: AppSettings,
+    message: NormalizedMessage,
+) -> tuple[NormalizedMessage | None, str | None]:
+    if not message.media_file_id:
+        return None, "Recibí un audio, pero Telegram no envió un file_id utilizable."
+    if container.transcription is None:
+        return None, (
+            "Recibí tu audio, pero falta configurar transcripción. "
+            "Activa TRANSCRIPTION_PROVIDER y TRANSCRIPTION_API_KEY en el backend."
+        )
+    if not settings.telegram_bot_token:
+        return None, "Recibí tu audio, pero falta TELEGRAM_BOT_TOKEN para descargarlo desde Telegram."
+    if message.media_file_size is not None and message.media_file_size > MAX_TELEGRAM_AUDIO_BYTES:
+        return None, "El audio supera el límite local de 20MB."
+
+    client = TelegramBotApiClient(token=settings.telegram_bot_token)
+    file_info = client.get_file(file_id=message.media_file_id)
+    file_path = str(file_info.get("file_path") or "")
+    if not file_path:
+        return None, "No pude resolver el archivo de audio en Telegram."
+    audio = client.download_file(file_path=file_path)
+    if len(audio) > MAX_TELEGRAM_AUDIO_BYTES:
+        return None, "El audio descargado supera el límite local de 20MB."
+
+    extension = file_path.rsplit(".", 1)[-1] if "." in file_path else "ogg"
+    transcript = container.transcription.transcribe(
+        AudioTranscriptionRequest(
+            filename=f"telegram-{message.message_id}.{extension}",
+            content_type=message.media_mime_type or "audio/ogg",
+            data=audio,
+            language="es",
+            prompt="Transcribe mensajes de voz en español para crear recordatorios o citas.",
+        ),
+        budget=TokenBudget(limit=4_000),
+    )
+    return (
+        message.model_copy(
+            update={
+                "text": transcript.text,
+                "command": None,
+                "command_args": "",
+            }
+        ),
+        None,
+    )
 
 
 def _admin_principal(settings: AppSettings, tenant_id: str | None, principal_id: str) -> Principal:
@@ -380,6 +443,29 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
 
         message = normalize_telegram_webhook(payload, tenant_id=runtime_settings.tenant_id)
         principal = telegram_principal(runtime_settings, message.actor_id)
+        if message.media_kind in {"voice", "audio"}:
+            transcribed, transcription_error = _transcribe_telegram_media(runtime_container, runtime_settings, message)
+            if transcription_error is not None:
+                sent = False
+                if runtime_settings.telegram_bot_token:
+                    sent = _send_telegram_reply(
+                        runtime_container,
+                        principal,
+                        chat_id=message.conversation_id,
+                        text=transcription_error,
+                        idempotency_key=message.idempotency_key
+                        or f"telegram:{message.conversation_id}:{message.message_id}",
+                    )
+                return TelegramWebhookResponse(
+                    status=AgentStatus.needs_clarification,
+                    reply=transcription_error,
+                    sent=sent,
+                    approval_id=None,
+                    command=message.command,
+                )
+            if transcribed is not None:
+                message = transcribed
+
         result = runtime_container.commands.handle(
             principal,
             message,

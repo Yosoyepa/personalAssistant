@@ -6,6 +6,8 @@ from typing import Any, Protocol
 
 from personal_assistant.application.dto.runtime import (
     AgentResult,
+    AudioTranscriptionRequest,
+    AudioTranscriptionResult,
     ApprovalRequest,
     ChannelMessage,
     LLMRequest,
@@ -24,6 +26,16 @@ from personal_assistant.application.dto.tracing import TraceEvent
 class LLMProvider(Protocol):
     def complete(self, request: LLMRequest, *, budget: TokenBudget) -> LLMResult:
         """Return schema-shaped data from a bounded LLM call."""
+
+
+class AudioTranscriptionProvider(Protocol):
+    def transcribe(
+        self,
+        request: AudioTranscriptionRequest,
+        *,
+        budget: TokenBudget,
+    ) -> AudioTranscriptionResult:
+        """Return text from a bounded audio transcription call."""
 
 
 class ToolPort(Protocol):

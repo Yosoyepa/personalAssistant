@@ -247,7 +247,15 @@ shells and are not yet enforced by every runtime surface.
 | `NGROK_AUTHTOKEN` | Configuring ngrok agent | Yes | Used by `ngrok config add-authtoken`; do not commit. |
 | `ADMIN_TOKEN` | Future/non-local admin hardening | Yes | Reserved by settings; current admin app is loopback-only. |
 | `REMINDER_WORKER_INTERVAL_SECONDS=15` | Worker loop config | No | Minimum interval is clamped to 1 second. |
-| `MINIMAX_API_KEY` | Future MiniMax adapter | Yes | Reserved for bounded LLM provider calls. |
+| `LLM_PROVIDER` | Bounded LLM extraction | No | Use `anthropic_compatible` for AeroLink/Claude-compatible gateways; `disabled` keeps deterministic-only behavior. |
+| `LLM_API_KEY` | Bounded LLM extraction | Yes | Provider key. `AEROLINK_API_KEY` and `ANTHROPIC_API_KEY` are also read as fallbacks. |
+| `LLM_BASE_URL` | Bounded LLM extraction | No | Provider base URL, for example `https://aerolink.lat` if it exposes `/v1/messages`. |
+| `LLM_MODEL` | Bounded LLM extraction | No | Provider model id from the provider docs/account. |
+| `LLM_AUTH_HEADER` | Bounded LLM extraction | No | `x-api-key` by default; use `authorization` for bearer-token compatible proxies. |
+| `TRANSCRIPTION_PROVIDER` | Telegram voice messages | No | Use `openai_compatible` only when the provider exposes `/v1/audio/transcriptions`; otherwise leave `disabled`. |
+| `TRANSCRIPTION_API_KEY` | Telegram voice messages | Yes | Speech-to-text provider key. Defaults to `AEROLINK_API_KEY` if set. |
+| `TRANSCRIPTION_BASE_URL` | Telegram voice messages | No | Speech-to-text provider base URL. Defaults to `AEROLINK_BASE_URL` if set. |
+| `TRANSCRIPTION_MODEL` | Telegram voice messages | No | Speech-to-text model id, required when transcription is enabled. |
 
 Local `.env` files are ignored by git. Do not add a committed example with real
 tokens or tenant/customer data.
