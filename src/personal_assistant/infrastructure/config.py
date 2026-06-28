@@ -46,10 +46,12 @@ class AppSettings:
     admin_token: str | None = None
     public_base_url: str | None = None
     reminder_worker_interval_seconds: float = 15.0
+    reminder_minutes_before: int = 30
 
     @classmethod
     def from_env(cls) -> "AppSettings":
         interval = os.getenv("REMINDER_WORKER_INTERVAL_SECONDS", "15")
+        reminder_minutes_before = os.getenv("REMINDER_MINUTES_BEFORE", "30")
         llm_timeout = os.getenv("LLM_TIMEOUT_SECONDS", "30")
         llm_max_tokens = os.getenv("LLM_MAX_TOKENS", "512")
         transcription_timeout = os.getenv("TRANSCRIPTION_TIMEOUT_SECONDS", "60")
@@ -109,6 +111,7 @@ class AppSettings:
             admin_token=_optional_env("ADMIN_TOKEN"),
             public_base_url=_optional_env("PUBLIC_BASE_URL"),
             reminder_worker_interval_seconds=max(float(interval), 1.0),
+            reminder_minutes_before=max(int(reminder_minutes_before), 1),
         )
 
 

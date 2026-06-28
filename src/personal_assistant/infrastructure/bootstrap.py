@@ -107,6 +107,7 @@ def build_container(
     transcription: AudioTranscriptionProvider | None = None,
     tts: AudioSynthesisProvider | None = None,
     approve_reminder_notifications: bool = False,
+    reminder_minutes_before: int = 30,
 ) -> AppContainer:
     """Build in-memory adapters for local development and tests."""
     notification_adapter = notifications or LocalNotificationTool()
@@ -126,6 +127,7 @@ def build_container(
         states=states,
         traces=traces,
         llm=llm,
+        reminder_minutes_before=reminder_minutes_before,
     )
     commands = ConversationCommandService(
         approvals=approvals,

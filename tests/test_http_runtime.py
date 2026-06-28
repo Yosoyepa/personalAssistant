@@ -118,6 +118,12 @@ class AppSettingsTests(unittest.TestCase):
         self.assertEqual(settings.tts_model, "speech-2.8-turbo")
         self.assertEqual(settings.telegram_audio_reply_mode, "voice_only")
 
+    def test_reminder_minutes_before_is_configurable(self) -> None:
+        with patch.dict(os.environ, {"REMINDER_MINUTES_BEFORE": "2"}, clear=True):
+            settings = AppSettings.from_env()
+
+        self.assertEqual(settings.reminder_minutes_before, 2)
+
 
 @unittest.skipIf(TestClient is None or create_app is None, "FastAPI optional dependency is not installed")
 class HttpRuntimeTests(unittest.TestCase):

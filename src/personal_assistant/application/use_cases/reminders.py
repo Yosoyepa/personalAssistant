@@ -41,6 +41,11 @@ class ReminderWorkflow:
     states: WorkflowStateStorePort
     traces: TraceRecorderPort
     llm: LLMProvider | None = None
+    reminder_minutes_before: int = 30
+
+    def __post_init__(self) -> None:
+        if self.reminder_minutes_before < 1:
+            raise ValueError("reminder_minutes_before must be greater than zero")
 
     def run(self, principal: Principal, request: ReminderWorkflowInput) -> ReminderWorkflowResult:
         assert_prompt_safe(request.text)
@@ -178,6 +183,7 @@ class ReminderWorkflow:
             channel=request.channel,
             recipient=request.recipient,
             body=f"Recordatorio: {extraction.title}",
+            minutes_before=self.reminder_minutes_before,
             idempotency_key=f"{effective_key}:notify",
         )
         event = CloudEvent(
@@ -220,7 +226,7 @@ class ReminderWorkflow:
         return ReminderWorkflowResult(
             status=AgentStatus.completed,
             intent=ReminderIntent.create,
-            reply=f"Listo. Te recordaré {extraction.title} 30 minutos antes.",
+            reply=f"Listo. Te recordaré {extraction.title} {self.reminder_minutes_before} minutos antes.",
             calendar_event_id=calendar_result.event_id,
             reminder_id=reminder.reminder_id,
             reused=calendar_result.reused,

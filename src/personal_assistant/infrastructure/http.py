@@ -242,8 +242,14 @@ def build_runtime_container(settings: AppSettings) -> AppContainer:
             transcription=transcription,
             tts=tts,
             approve_reminder_notifications=True,
+            reminder_minutes_before=settings.reminder_minutes_before,
         )
-    return build_container(llm=llm, transcription=transcription, tts=tts)
+    return build_container(
+        llm=llm,
+        transcription=transcription,
+        tts=tts,
+        reminder_minutes_before=settings.reminder_minutes_before,
+    )
 
 
 def current_principal(

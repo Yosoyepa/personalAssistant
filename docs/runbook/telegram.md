@@ -18,6 +18,7 @@ The repository currently provides:
 - `ReminderWorker` for due reminder notification dispatch
 - `TelegramNotificationTool` as a P5 dispatcher adapter; the agent runtime does
   not call it directly
+- MiniMax LLM and TTS adapters behind application ports
 - deterministic tests for tenant isolation, idempotency, permission gates,
   prompt-injection handling, HTTP runtime boundaries, local admin visibility,
   worker dispatch, command routing, and hexagonal boundaries
@@ -27,7 +28,6 @@ The repository does not yet provide:
 - persistent storage
 - production trace dashboard
 - external calendar sync
-- MiniMax provider adapter
 
 Do not wire direct Telegram delivery into the agent runtime. Per
 `agents/personal_assistant/contract.md`, Telegram send side effects belong to a
@@ -247,6 +247,7 @@ shells and are not yet enforced by every runtime surface.
 | `NGROK_AUTHTOKEN` | Configuring ngrok agent | Yes | Used by `ngrok config add-authtoken`; do not commit. |
 | `ADMIN_TOKEN` | Future/non-local admin hardening | Yes | Reserved by settings; current admin app is loopback-only. |
 | `REMINDER_WORKER_INTERVAL_SECONDS=15` | Worker loop config | No | Minimum interval is clamped to 1 second. |
+| `REMINDER_MINUTES_BEFORE=30` | Reminder scheduling | No | Minutes before the calendar event when the bot should notify. Use `2` or `3` for quick local Telegram tests. |
 | `LLM_PROVIDER` | Bounded LLM extraction | No | Use `minimax` for MiniMax Token Plan, `anthropic_compatible` for AeroLink/Claude-compatible gateways, or `disabled` for deterministic-only behavior. |
 | `MINIMAX_API_KEY` | MiniMax Token Plan LLM extraction | Yes | MiniMax subscription key. This is distinct from MiniMax pay-as-you-go API keys. |
 | `MINIMAX_BASE_URL` | MiniMax Token Plan LLM extraction | No | Defaults to `https://api.minimaxi.com/anthropic` for Anthropic-compatible Messages API. |

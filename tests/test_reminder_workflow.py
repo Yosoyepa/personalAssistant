@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import unittest
 
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
@@ -123,6 +123,28 @@ class ReminderWorkflowTests(unittest.TestCase):
         self.assertIn(TraceEventType.context_selected, trace_types)
         self.assertIn(TraceEventType.tool_called, trace_types)
         self.assertIn(TraceEventType.agent_completed, trace_types)
+
+    def test_custom_reminder_lead_time_schedules_notice(self) -> None:
+        workflow = ReminderWorkflow(
+            calendar=self.calendar,
+            scheduler=self.scheduler,
+            event_store=self.event_store,
+            outbox=self.outbox,
+            states=self.states,
+            traces=self.traces,
+            reminder_minutes_before=2,
+        )
+
+        result = workflow.run(self.principal, self.request())
+
+        self.assertEqual(result.status, AgentStatus.completed)
+        self.assertIn("2 minutos antes", result.reply)
+        jobs = self.scheduler.due(self.principal, datetime(2026, 6, 24, 0, 0, tzinfo=UTC))
+        self.assertEqual(len(jobs), 1)
+        events = self.calendar.list_events(self.principal)
+        self.assertEqual(jobs[0].notify_at, events[0].starts_at - timedelta(minutes=2))
+        self.assertEqual(len(self.scheduler.due(self.principal, jobs[0].notify_at - timedelta(minutes=1))), 0)
+        self.assertEqual(len(self.scheduler.due(self.principal, jobs[0].notify_at)), 1)
 
     def test_duplicate_webhook_reuses_completed_state(self) -> None:
         first = self.workflow.run(self.principal, self.request())
