@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import io
 import json
 import unittest
+from urllib.error import HTTPError
 
 from personal_assistant.adapters.outbound.llm.anthropic import AnthropicCompatibleLLMProvider
 from personal_assistant.adapters.outbound.llm.minimax import MiniMaxLLMProvider
@@ -9,6 +11,7 @@ from personal_assistant.adapters.outbound.transcription.openai_compatible import
 from personal_assistant.adapters.outbound.tts.minimax import MiniMaxTTSProvider
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import AudioSynthesisRequest, AudioTranscriptionRequest, LLMRequest
+from personal_assistant.domain.common.exceptions import AssistantError
 
 
 class FakeResponse:
@@ -128,6 +131,35 @@ class LLMAdapterTests(unittest.TestCase):
         self.assertIn("multipart/form-data", str(captured["content_type"]))
         self.assertIn(b"audio-bytes", captured["body"])
         self.assertIn("cita", result.text)
+
+    def test_openai_compatible_transcription_provider_preserves_http_error_body(self) -> None:
+        def fake_urlopen(req, timeout):
+            raise HTTPError(
+                req.full_url,
+                400,
+                "Bad Request",
+                hdrs=None,
+                fp=io.BytesIO(b'{"error":{"message":"unsupported audio format"}}'),
+            )
+
+        provider = OpenAICompatibleTranscriptionProvider(
+            api_key="key",
+            base_url="https://stt.example",
+            model="whisper-test",
+            urlopen=fake_urlopen,
+        )
+
+        with self.assertRaises(AssistantError) as ctx:
+            provider.transcribe(
+                AudioTranscriptionRequest(
+                    filename="voice.ogg",
+                    content_type="audio/ogg",
+                    data=b"audio-bytes",
+                ),
+                budget=TokenBudget(limit=1000),
+            )
+
+        self.assertIn("unsupported audio format", str(ctx.exception))
 
     def test_minimax_tts_provider_decodes_hex_audio(self) -> None:
         captured: dict[str, object] = {}

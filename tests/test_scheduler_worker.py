@@ -5,11 +5,29 @@ import unittest
 
 from personal_assistant.adapters.outbound.notifications.local import LocalNotificationTool
 from personal_assistant.adapters.outbound.scheduler.local import ReminderScheduler
+from personal_assistant.application.ports.notifications import NotificationRequest, NotificationResult
 from personal_assistant.application.use_cases.reminder_notifications import DispatchDueReminders
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.worker import ReminderWorker, RuntimeNotificationApprovalPolicy
+
+
+class PartiallyFailingNotificationTool:
+    def __init__(self) -> None:
+        self.sent: list[NotificationResult] = []
+
+    def send(self, principal, request: NotificationRequest, *, approval=None) -> NotificationResult:
+        if request.recipient == "bad-chat":
+            raise RuntimeError("provider rejected recipient")
+        result = NotificationResult(
+            notification_id=f"ok-{request.idempotency_key}",
+            channel=request.channel,
+            recipient=request.recipient,
+            idempotency_key=request.idempotency_key,
+        )
+        self.sent.append(result)
+        return result
 
 
 class SchedulerWorkerTests(unittest.TestCase):
@@ -79,6 +97,43 @@ class SchedulerWorkerTests(unittest.TestCase):
         self.assertEqual(tick.sent_count, 2)
         sent_keys = {notification.idempotency_key for notification in self.notifications.list_sent(self.principal)}
         self.assertEqual(sent_keys, {"notify-a", "notify-b"})
+
+    def test_provider_failure_does_not_block_other_due_reminders(self) -> None:
+        notifications = PartiallyFailingNotificationTool()
+        worker = ReminderWorker(
+            dispatcher=DispatchDueReminders(scheduler=self.scheduler, notifications=notifications),
+            approval_policy=RuntimeNotificationApprovalPolicy(approve_notifications=True),
+            clock=lambda: self.now,
+            sleep=lambda _: None,
+        )
+        bad = self.scheduler.schedule_before_event(
+            self.principal,
+            calendar_event_id="cal-bad",
+            starts_at=self.now,
+            channel="telegram",
+            recipient="bad-chat",
+            body="Bad recipient",
+            minutes_before=0,
+            idempotency_key="notify-bad",
+        )
+        good = self.scheduler.schedule_before_event(
+            self.principal,
+            calendar_event_id="cal-good",
+            starts_at=self.now,
+            channel="telegram",
+            recipient="good-chat",
+            body="Good recipient",
+            minutes_before=0,
+            idempotency_key="notify-good",
+        )
+
+        tick = worker.run_once(self.principal, now=self.now)
+
+        self.assertEqual(tick.due_count, 2)
+        self.assertEqual(tick.sent_notification_ids, ("ok-notify-good",))
+        self.assertEqual(tick.skipped_reminder_ids, (bad.reminder_id,))
+        self.assertEqual(self.scheduler.due(self.principal, self.now), [bad])
+        self.assertEqual([item.idempotency_key for item in notifications.sent], [good.idempotency_key])
 
     def test_principal_below_p5_cannot_dispatch_notification(self) -> None:
         low_tier = Principal.for_test(

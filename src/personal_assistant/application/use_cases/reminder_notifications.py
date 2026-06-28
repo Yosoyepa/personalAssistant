@@ -8,6 +8,7 @@ from datetime import datetime
 
 from personal_assistant.application.ports.notifications import NotificationPort, NotificationRequest
 from personal_assistant.application.ports.scheduler import ReminderSchedulerWorkerPort, ScheduledReminder
+from personal_assistant.domain.common.exceptions import AssistantError
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant
 
@@ -61,16 +62,22 @@ class DispatchDueReminders:
                 skipped_ids.append(job.reminder_id)
                 continue
 
-            result = self.notifications.send(
-                principal,
-                NotificationRequest(
-                    channel=job.channel,
-                    recipient=job.recipient,
-                    body=job.body,
-                    idempotency_key=job.idempotency_key,
-                ),
-                approval=job_approval,
-            )
+            try:
+                result = self.notifications.send(
+                    principal,
+                    NotificationRequest(
+                        channel=job.channel,
+                        recipient=job.recipient,
+                        body=job.body,
+                        idempotency_key=job.idempotency_key,
+                    ),
+                    approval=job_approval,
+                )
+            except AssistantError:
+                raise
+            except Exception:
+                skipped_ids.append(job.reminder_id)
+                continue
             self.scheduler.mark_sent(principal, job.reminder_id)
             sent_ids.append(result.notification_id)
         return ReminderDispatchOutcome(

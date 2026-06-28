@@ -447,7 +447,21 @@ def _transcribe_telegram_media(
             ),
             budget=TokenBudget(limit=4_000),
         )
-    except Exception:
+    except Exception as exc:
+        container.traces.write(
+            TraceEvent(
+                run_id=f"telegram:{message.conversation_id}:{message.message_id}:transcription",
+                agent_id="personal_assistant",
+                event_type=TraceEventType.agent_failed,
+                tenant_id=settings.tenant_id,
+                input_summary={
+                    "media_kind": message.media_kind,
+                    "media_mime_type": message.media_mime_type,
+                    "media_file_size": message.media_file_size,
+                },
+                error={"type": exc.__class__.__name__, "message": str(exc)[:500]},
+            )
+        )
         return None, REPLIES.telegram_transcription_failed()
     return (
         message.model_copy(
