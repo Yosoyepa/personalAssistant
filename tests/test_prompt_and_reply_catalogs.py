@@ -171,6 +171,9 @@ def test_repository_reply_catalog_loads_user_facing_copy_from_locale_file() -> N
     assert replies.runtime_request_received() == raw_catalog["runtime_request_received"]
     assert replies.approval_command_hint("apr-1") == raw_catalog["approval_command_hint"].format(approval_id="apr-1")
     assert replies.approval_reason_calendar_create_event() == raw_catalog["approval_reason_calendar_create_event"]
+    assert replies.reminder_notification_body("clase") == raw_catalog["reminder_notification_body"].format(title="clase")
+    assert replies.approval_failed() == raw_catalog["approval_failed"]
+    assert replies.approval_cancel_failed() == raw_catalog["approval_cancel_failed"]
 
 
 class CommandReplyDefaults(AssistantReplies):

@@ -14,6 +14,7 @@ from personal_assistant.domain.common.permissions import ApprovalGrant, Permissi
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.application.dto.tracing import TraceEventType
 from personal_assistant.application.dto.context import TokenBudget
+from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.adapters.persistence.in_memory import InMemoryEventStore, InMemoryOutbox, InMemoryWorkflowStateStore
 from personal_assistant.adapters.observability.local import TraceRecorder
 
@@ -138,7 +139,9 @@ class ReminderWorkflowTests(unittest.TestCase):
         self.assertIsNotNone(result.calendar_event_id)
         self.assertIsNotNone(result.reminder_id)
         self.assertEqual(len(self.calendar.list_events(self.principal)), 1)
-        self.assertEqual(len(self.scheduler.due(self.principal, datetime(2026, 6, 23, 16, 31, tzinfo=UTC))), 1)
+        due_jobs = self.scheduler.due(self.principal, datetime(2026, 6, 23, 16, 31, tzinfo=UTC))
+        self.assertEqual(len(due_jobs), 1)
+        self.assertEqual(due_jobs[0].body, AssistantReplies().reminder_notification_body("clase"))
         self.assertEqual(len(self.event_store.list_for_tenant(self.principal)), 1)
         self.assertEqual(len(self.outbox.claim(self.principal)), 1)
         trace_types = [event.event_type for event in self.traces.list_for_tenant(self.principal.tenant_id)]

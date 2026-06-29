@@ -97,6 +97,9 @@ class AssistantReplies:
     def approval_reason_calendar_create_event(self) -> str:
         return self._text("approval_reason_calendar_create_event")
 
+    def reminder_notification_body(self, title: str) -> str:
+        return self._format("reminder_notification_body", title=title)
+
     def reminder_created(self, *, title: str, minutes_before: int, direct_notice: bool = False) -> str:
         if direct_notice:
             return self._format("reminder_created_direct", title=title)
@@ -115,8 +118,14 @@ class AssistantReplies:
     def approval_type_unsupported(self) -> str:
         return self._text("approval_type_unsupported")
 
+    def approval_failed(self) -> str:
+        return self._text("approval_failed")
+
     def cancel_missing_id(self) -> str:
         return self._text("cancel_missing_id")
+
+    def approval_cancel_failed(self) -> str:
+        return self._text("approval_cancel_failed")
 
     def approval_cancelled(self) -> str:
         return self._text("approval_cancelled")

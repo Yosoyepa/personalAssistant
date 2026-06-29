@@ -188,7 +188,7 @@ class ReminderWorkflow:
             starts_at=extraction.starts_at,
             channel=request.channel,
             recipient=request.recipient,
-            body=f"Recordatorio: {extraction.title}",
+            body=self.replies.reminder_notification_body(extraction.title),
             minutes_before=notice_minutes_before,
             idempotency_key=f"{effective_key}:notify",
         )

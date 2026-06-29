@@ -283,8 +283,8 @@ class ConversationCommandService:
             )
         try:
             grant = self.approvals.approve(principal, approval.approval_id)
-        except AssistantError as exc:
-            return CommandResult(status=AgentStatus.failed, kind=CommandKind.approve, reply=str(exc))
+        except AssistantError:
+            return CommandResult(status=AgentStatus.failed, kind=CommandKind.approve, reply=self.replies.approval_failed())
         result = self.reminder_workflow.run(
             principal,
             ReminderWorkflowInput(
@@ -311,8 +311,8 @@ class ConversationCommandService:
             )
         try:
             self.approvals.reject(principal, parts[1].strip())
-        except AssistantError as exc:
-            return CommandResult(status=AgentStatus.failed, kind=CommandKind.cancel, reply=str(exc))
+        except AssistantError:
+            return CommandResult(status=AgentStatus.failed, kind=CommandKind.cancel, reply=self.replies.approval_cancel_failed())
         return CommandResult(status=AgentStatus.completed, kind=CommandKind.cancel, reply=self.replies.approval_cancelled())
 
     def _infer_intent(
