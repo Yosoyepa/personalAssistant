@@ -1,0 +1,27 @@
+Construir un asistente personal con LLM no empieza por "hacer un agente".
+Empieza por decidir dónde el modelo NO tiene autoridad.
+
+En esta fase dejé el MVP como un runtime local-first:
+
+- Telegram entra por webhook, pero el tenant sale de una identidad confiable.
+- Los recordatorios y calendario siguen un workflow determinístico L2.
+- El modelo solo ayuda en clasificación/extracción cuando las reglas no alcanzan.
+- Las acciones P3/P5 pasan por aprobaciones e idempotencia.
+- Hay outbox, trazas, estado durable-lite y un admin local de solo lectura.
+- Postgres es opcional para persistir approvals, eventos, outbox, estados,
+  memoria, calendario local, scheduler y trazas.
+- Audio es opt-in: STT compatible con OpenAI para mensajes de voz y TTS de
+  MiniMax para respuestas de Telegram cuando aplica.
+
+La decisión importante fue no usar un framework de agente como runtime central
+todavía. OpenClaw, Hermes Agent y OpenHands resuelven problemas reales, pero mi
+producto necesita que identidad, permisos, aprobaciones, tenant scope,
+idempotencia y persistencia sean parte del contrato local, no una convención que
+el agente intenta recordar.
+
+Para este caso, construir desde cero no significa rechazar frameworks. Significa
+mantener el harness pequeño, auditable y reemplazable hasta que el producto
+demuestre que necesita más abstracción.
+
+Siguiente paso: publicar una demo corta de Telegram con recordatorios,
+aprobaciones, audio opcional, Postgres y dashboard local.
