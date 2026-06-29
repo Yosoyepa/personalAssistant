@@ -7,13 +7,32 @@ Accepted for the MVP.
 ## Decision
 
 Build the personal assistant runtime from scratch as a small deterministic L2
-harness instead of adopting OpenClaw, Hermes Agent, or OpenHands as the core
-runtime.
+harness instead of adopting OpenClaw, HermeAgent/Hermes Agent, or OpenHands as
+the core runtime.
 
 This is not a rejection of those projects. They are useful references and may be
 integrated or revisited later. For the current assistant, the dominant
 constraint is product-specific control over identity, tenant scope, permission
 tiers, approvals, idempotency, persistence, and local observability.
+
+## Research Snapshot
+
+Reviewed on 2026-06-28 against the public project documentation:
+
+- OpenClaw focuses on gateway-level execution, sandboxing, and per-agent tool
+  policy. That is valuable when the main risk is arbitrary tool execution across
+  multiple agents.
+- HermeAgent is referred to publicly as Hermes Agent by Nous Research. It
+  already includes messaging integrations such as Telegram, scheduled cron jobs,
+  sessions, and a defense-in-depth security model.
+- OpenHands focuses on software-development automation and coding-agent
+  workflows such as code review, vulnerability remediation, dependency upgrades,
+  and broader SDLC tasks.
+
+Those capabilities are adjacent to this project, but they do not remove the
+need for the local assistant contract: trusted Telegram identity, tenant-scoped
+state, explicit P3/P5 approvals, idempotent reminders, Postgres persistence,
+audio/LLM error visibility, and a local admin dashboard.
 
 ## Why Build The Harness
 
@@ -52,7 +71,7 @@ authority, Telegram identity, P3/P5 approvals, replay-safe side effects, and
 local persistence. Those constraints belong in the assistant contract and local
 application services, not primarily in an execution sandbox.
 
-### Hermes Agent
+### HermeAgent / Hermes Agent
 
 Official links:
 
@@ -60,8 +79,9 @@ Official links:
 - <https://hermes-agent.nousresearch.com/docs/user-guide/features/cron>
 - <https://hermes-agent.nousresearch.com/docs/user-guide/security>
 
-Hermes Agent is relevant because it already documents Telegram messaging, cron
-features, and security concepts for an assistant-style product.
+Hermes Agent is relevant because it already documents Telegram messaging, voice
+memo handling, cron features, sessions, profiles, and security concepts for an
+assistant-style product.
 
 It is not the right core runtime for this MVP because the project needs its own
 workflow contract around approvals, idempotency keys, tenant-scoped memory,

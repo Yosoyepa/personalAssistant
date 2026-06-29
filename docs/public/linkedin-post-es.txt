@@ -14,10 +14,10 @@ En esta fase dejé el MVP como un runtime local-first:
   MiniMax para respuestas de Telegram cuando aplica.
 
 La decisión importante fue no usar un framework de agente como runtime central
-todavía. OpenClaw, Hermes Agent y OpenHands resuelven problemas reales, pero mi
-producto necesita que identidad, permisos, aprobaciones, tenant scope,
-idempotencia y persistencia sean parte del contrato local, no una convención que
-el agente intenta recordar.
+todavía. OpenClaw, HermeAgent/Hermes Agent y OpenHands resuelven problemas
+reales, pero mi producto necesita que identidad, permisos, aprobaciones,
+tenant scope, idempotencia y persistencia sean parte del contrato local, no una
+convención que el agente intenta recordar.
 
 Para este caso, construir desde cero no significa rechazar frameworks. Significa
 mantener el harness pequeño, auditable y reemplazable hasta que el producto

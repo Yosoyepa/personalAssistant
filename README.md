@@ -335,6 +335,9 @@ Forbidden by contract:
 - `docs/runbook/minimax.md` - MiniMax LLM and TTS provider notes.
 - `docs/adr/` - accepted architecture decisions.
 - `docs/architecture/` - architecture reviews and short design notes.
+- `docs/architecture/build-vs-frameworks.md` - why the MVP uses a small local
+  harness instead of OpenClaw, HermeAgent/Hermes Agent, or OpenHands as the core
+  runtime.
 - `docs/public/` - public written artifacts.
 
 ## Test Map
