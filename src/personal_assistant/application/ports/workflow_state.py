@@ -14,3 +14,6 @@ class WorkflowStateStorePort(Protocol):
 
     def get_by_idempotency_key(self, principal: Principal, idempotency_key: str) -> WorkflowState | None:
         """Read workflow state by idempotency key for the authenticated tenant."""
+
+    def list_for_tenant(self, principal: Principal) -> list[WorkflowState]:
+        """List workflow state records visible to the authenticated tenant."""

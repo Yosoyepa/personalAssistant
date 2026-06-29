@@ -57,10 +57,20 @@ def _env_bool(name: str, file_values: dict[str, str], default: bool = False) -> 
     return value in {"1", "true", "yes", "y", "on"}
 
 
+def load_persistence_settings_from_env() -> tuple[str, str | None]:
+    file_values = _load_env_file()
+    return (
+        _env("PERSISTENCE_BACKEND", file_values, "memory").strip().lower() or "memory",
+        _optional_env("DATABASE_URL", file_values),
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class AppSettings:
     tenant_id: str = "personal"
     timezone: str = "America/Bogota"
+    persistence_backend: str = "memory"
+    database_url: str | None = None
     telegram_webhook_secret: str = "local-dev-secret"
     telegram_bot_token: str | None = None
     telegram_allowed_user_ids: frozenset[str] = frozenset()
@@ -106,6 +116,8 @@ class AppSettings:
         return cls(
             tenant_id=_env("ASSISTANT_TENANT_ID", file_values, "personal").strip() or "personal",
             timezone=_env("ASSISTANT_TIMEZONE", file_values, "America/Bogota").strip() or "America/Bogota",
+            persistence_backend=_env("PERSISTENCE_BACKEND", file_values, "memory").strip().lower() or "memory",
+            database_url=_optional_env("DATABASE_URL", file_values),
             telegram_webhook_secret=_env("TELEGRAM_WEBHOOK_SECRET", file_values, "local-dev-secret").strip()
             or "local-dev-secret",
             telegram_bot_token=_optional_env("TELEGRAM_BOT_TOKEN", file_values),

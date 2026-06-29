@@ -246,6 +246,14 @@ class InMemoryApprovalStore:
             and approval.status == PendingApprovalStatus.pending
         ]
 
+    def list_for_tenant(self, principal: Principal) -> list[PendingApproval]:
+        require_trusted_principal(principal)
+        return [
+            approval.model_copy(deep=True)
+            for (tenant_id, _), approval in self._approvals_by_id.items()
+            if tenant_id == principal.tenant_id and approval.principal_id == principal.principal_id
+        ]
+
     def mark_approved(self, principal: Principal, approval_id: str) -> PendingApproval:
         approval = self.get(principal, approval_id)
         if approval is None:

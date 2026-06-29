@@ -161,8 +161,7 @@ class ConversationCommandService:
         pending_count = len(self.approvals.list_pending(principal))
         state_count = len(self.states.list_for_tenant(principal))
         event_count = len(self.event_store.list_for_tenant(principal))
-        list_outbox = getattr(self.outbox, "list_for_tenant", None)
-        outbox_count = len(list_outbox(principal)) if callable(list_outbox) else 0
+        outbox_count = len(self.outbox.list_for_tenant(principal))
         reply = self.replies.status(
             pending_count=pending_count,
             state_count=state_count,

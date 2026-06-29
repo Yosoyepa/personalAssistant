@@ -22,6 +22,9 @@ test = [
   "httpx>=0.27",
   "pytest>=8",
 ]
+postgres = [
+  "psycopg[binary]>=3.2,<4",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

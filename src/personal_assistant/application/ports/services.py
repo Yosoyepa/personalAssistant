@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import Protocol
 
 from personal_assistant.application.dto.runtime import (
     AgentResult,
@@ -21,7 +21,7 @@ from personal_assistant.application.dto.runtime import (
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.domain.common.permissions import ApprovalGrant
 from personal_assistant.domain.common.identity import Principal
-from personal_assistant.domain.memory.models import MemoryRecord
+from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
 from personal_assistant.application.dto.tracing import TraceEvent
 
 
@@ -60,11 +60,30 @@ class ToolPort(Protocol):
 
 
 class MemoryPort(Protocol):
-    def retrieve(self, query: str, *, principal: Principal, limit: int = 5) -> list[Any]:
+    def add(
+        self,
+        principal: Principal,
+        *,
+        kind: MemoryKind,
+        text: str,
+        source: str,
+        confirmed: bool = False,
+    ) -> MemoryRecord:
+        """Persist one tenant-scoped memory record."""
+
+    def retrieve(
+        self,
+        principal: Principal,
+        *,
+        query: str,
+        kind: MemoryKind | None = None,
+        confirmed_only: bool = True,
+        limit: int = 5,
+    ) -> list[MemoryRecord]:
         """Retrieve tenant-scoped memory context."""
 
-    def save(self, record: MemoryRecord, *, principal: Principal) -> MemoryRecord:
-        """Persist tenant-scoped memory or workflow state."""
+    def list_for_tenant(self, principal: Principal) -> list[MemoryRecord]:
+        """List memory records visible to the authenticated principal."""
 
 
 class ChannelAdapter(Protocol):

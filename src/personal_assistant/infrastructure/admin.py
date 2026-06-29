@@ -152,7 +152,7 @@ class AdminDashboard:
 
     def traces(self, principal: Principal, *, limit: int = DEFAULT_LIMIT) -> dict[str, Any]:
         events = sorted(
-            self.container.traces.list_for_tenant(principal.tenant_id),
+            self.container.traces.list_for_tenant(principal),
             key=lambda event: event.timestamp,
             reverse=True,
         )
@@ -251,7 +251,7 @@ class AdminDashboard:
             reverse=True,
         )
         raw_traces = sorted(
-            self.container.traces.list_for_tenant(principal.tenant_id),
+            self.container.traces.list_for_tenant(principal),
             key=lambda event: event.timestamp,
             reverse=True,
         )
@@ -421,21 +421,13 @@ def _format_cell(value: Any) -> str:
 
 
 def _tenant_outbox_messages(container: AppContainer, tenant_id: str) -> list[OutboxMessage]:
-    messages = getattr(container.outbox, "_messages_by_key", {})
-    return [
-        message
-        for key, message in messages.items()
-        if isinstance(key, tuple) and key[0] == tenant_id
-    ]
+    principal = local_admin_principal(tenant_id=tenant_id)
+    return container.outbox.list_for_tenant(principal)
 
 
 def _tenant_scheduler_jobs(container: AppContainer, tenant_id: str) -> list[ScheduledReminder]:
-    jobs = getattr(container.scheduler, "_jobs_by_key", {})
-    return [
-        job
-        for key, job in jobs.items()
-        if isinstance(key, tuple) and key[0] == tenant_id
-    ]
+    principal = local_admin_principal(tenant_id=tenant_id)
+    return container.scheduler.list_for_tenant(principal)
 
 
 def _trace_item(event: TraceEvent) -> dict[str, Any]:

@@ -19,6 +19,9 @@ class ApprovalStorePort(Protocol):
     def list_pending(self, principal: Principal) -> list[PendingApproval]:
         """List approval requests awaiting the principal."""
 
+    def list_for_tenant(self, principal: Principal) -> list[PendingApproval]:
+        """List approval requests visible to the principal."""
+
     def approve(self, principal: Principal, approval_id: str) -> ApprovalGrant:
         """Approve one pending request and issue a trusted grant."""
 

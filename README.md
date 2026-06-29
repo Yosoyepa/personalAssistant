@@ -108,6 +108,13 @@ Verification criteria:
 
 The local Telegram operational guide is in `docs/runbook/telegram.md`.
 
+## Persistence Runbook
+
+The local-first persistence guide is in `docs/runbook/persistence.md`. It
+documents the in-memory runtime, optional Postgres backend,
+`PERSISTENCE_BACKEND`/`DATABASE_URL`, `assistant_*` tables, idempotency rules,
+worker lease expectations, and current limitations.
+
 Current implementation boundary:
 
 - Present: `normalize_telegram_webhook(payload, tenant_id=...)`, local
@@ -115,9 +122,11 @@ Current implementation boundary:
   `personal_assistant.infrastructure.http:app` for runtime endpoints, local-only
   admin dashboard, Telegram webhook bridge, reminder worker, Anthropic-compatible
   LLM adapter, OpenAI-compatible transcription adapter, in-memory traces and
-  stores.
-- Not present yet: durable database, production deployment hardening, OAuth
-  storage, external calendar sync.
+  stores, optional Postgres persistence adapter for approvals, events, outbox,
+  workflow state, memory, local calendar, scheduler, and traces.
+- Not present yet in this branch: committed migration history, persisted
+  notification deliveries, production deployment hardening, OAuth storage,
+  external calendar sync.
 - Forbidden by contract: direct `telegram.send` from the agent, MVP `mcp.*` or
   `a2a.*` tool calls, third-party messaging, financial actions, destructive bulk
   deletion, secret reads, and tenant authority from untrusted text.

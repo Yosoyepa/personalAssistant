@@ -66,3 +66,11 @@ class ReminderScheduler:
                 self._jobs_by_key[key] = updated
                 return updated
         raise AssistantError(ErrorCode.NOT_FOUND, "scheduled reminder not found", tenant_id=principal.tenant_id)
+
+    def list_for_tenant(self, principal: Principal) -> list[ScheduledReminder]:
+        require_trusted_principal(principal)
+        return [
+            job
+            for (tenant_id, _), job in self._jobs_by_key.items()
+            if tenant_id == principal.tenant_id
+        ]

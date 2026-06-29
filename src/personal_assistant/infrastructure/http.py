@@ -245,6 +245,7 @@ def build_runtime_container(settings: AppSettings) -> AppContainer:
             TelegramBotApiClient(token=settings.telegram_bot_token),
         )
         return build_container(
+            settings=settings,
             llm=llm,
             notifications=telegram_notifications,
             transcription=transcription,
@@ -253,6 +254,7 @@ def build_runtime_container(settings: AppSettings) -> AppContainer:
             reminder_minutes_before=settings.reminder_minutes_before,
         )
     return build_container(
+        settings=settings,
         llm=llm,
         transcription=transcription,
         tts=tts,
@@ -918,8 +920,8 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         run_id: Annotated[str | None, Query(min_length=1)] = None,
     ) -> list[TraceEvent]:
         if run_id is not None:
-            return runtime_container.traces.list_for_run(principal.tenant_id, run_id)
-        return runtime_container.traces.list_for_tenant(principal.tenant_id)
+            return runtime_container.traces.list_for_run(principal, run_id)
+        return runtime_container.traces.list_for_tenant(principal)
 
     return app
 

@@ -45,3 +45,6 @@ class ReminderSchedulerWorkerPort(ReminderSchedulerPort, Protocol):
 
     def mark_sent(self, principal: Principal, reminder_id: str) -> ScheduledReminder:
         """Mark one reminder as sent for the authenticated tenant."""
+
+    def list_for_tenant(self, principal: Principal) -> list[ScheduledReminder]:
+        """List scheduled reminders visible to the authenticated tenant."""
