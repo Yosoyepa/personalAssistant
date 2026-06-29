@@ -39,8 +39,8 @@ dispatcher outside the agent-owned run artifact.
 Run this before and after any Telegram wrapper change:
 
 ```bash
-PYTHONPATH=src python3 -B -m unittest discover -s tests
-PYTHONPATH=src python3 -B -m compileall src tests
+PYTHONPATH=src python3 -B -m pytest -q
+PYTHONPATH=src python3 -B -m compileall -q src tests
 python3 -m json.tool eval/cases.json >/dev/null
 ```
 

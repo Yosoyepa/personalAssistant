@@ -63,7 +63,7 @@ HTTP sessions.
 ```bash
 export APP_ENV_FILE=disabled
 export PERSISTENCE_BACKEND=memory
-PYTHONPATH=src python3 -B -m unittest discover -s tests
+PYTHONPATH=src python3 -B -m pytest -q
 ```
 
 Start the runtime API:
@@ -192,8 +192,8 @@ Memory backend gate:
 ```bash
 export APP_ENV_FILE=disabled
 export PERSISTENCE_BACKEND=memory
-PYTHONPATH=src python3 -B -m unittest discover -s tests
-PYTHONPATH=src python3 -B -m compileall src tests
+PYTHONPATH=src python3 -B -m pytest -q
+PYTHONPATH=src python3 -B -m compileall -q src tests
 python3 -m json.tool eval/cases.json >/dev/null
 ```
 
