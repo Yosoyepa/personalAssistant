@@ -99,15 +99,18 @@ The main local gate does not require Telegram, MiniMax, Groq, Postgres, or other
 network services:
 
 ```bash
-PYTHONPATH=src python3 -B -m unittest discover -s tests
-PYTHONPATH=src python3 -B -m compileall src tests
+APP_ENV_FILE=disabled PYTHONPATH=src python3 -B -m pytest -q
+PYTHONPATH=src python3 -B -m compileall -q src tests
 python3 -m json.tool eval/cases.json >/dev/null
 ```
 
-If `pytest` is installed:
+For the focused API/persistence/admin gate used during this MVP:
 
 ```bash
-PYTHONPATH=src python3 -B -m pytest
+APP_ENV_FILE=disabled PYTHONPATH=src python3 -B -m pytest -q \
+  tests/test_llm_adapters.py tests/test_telegram_notifications.py tests/test_http_runtime.py \
+  tests/test_postgres_persistence.py tests/test_persistence_config.py \
+  tests/test_admin_dashboard.py tests/test_prompt_and_reply_catalogs.py
 ```
 
 Expected properties:

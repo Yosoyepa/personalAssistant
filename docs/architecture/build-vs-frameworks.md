@@ -92,7 +92,7 @@ important surfaces, but they are not the whole harness.
 
 Official links:
 
-- <https://github.com/All-Hands-AI/OpenHands>
+- <https://github.com/OpenHands/OpenHands>
 - <https://docs.openhands.dev/openhands/usage/use-cases/overview>
 
 OpenHands is relevant as a mature coding-agent product with a strong autonomous
