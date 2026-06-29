@@ -9,11 +9,12 @@ import warnings
 from unittest.mock import patch
 
 from personal_assistant.application.dto.channels import ChannelName, NormalizedMessage
-from personal_assistant.application.dto.runtime import AudioTranscriptionResult
+from personal_assistant.application.dto.runtime import AudioSynthesisResult, AudioTranscriptionResult
 from personal_assistant.application.dto.tracing import TraceEventType
 from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
+from personal_assistant.infrastructure.admin import AdminDashboard
 from personal_assistant.infrastructure.bootstrap import build_container
 from personal_assistant.infrastructure.config import AppSettings
 
@@ -22,11 +23,17 @@ try:
         warnings.simplefilter("ignore")
         from fastapi.testclient import TestClient
 
-    from personal_assistant.infrastructure.http import _run_reminder_worker_loop, _transcribe_telegram_media, create_app
+    from personal_assistant.infrastructure.http import (
+        _run_reminder_worker_loop,
+        _send_telegram_audio_reply,
+        _transcribe_telegram_media,
+        create_app,
+    )
 except ModuleNotFoundError:
     TestClient = None  # type: ignore[assignment]
     create_app = None  # type: ignore[assignment]
     _run_reminder_worker_loop = None  # type: ignore[assignment]
+    _send_telegram_audio_reply = None  # type: ignore[assignment]
     _transcribe_telegram_media = None  # type: ignore[assignment]
 
 
@@ -37,6 +44,23 @@ SRC_ROOT = PROJECT_ROOT / "src" / "personal_assistant"
 class FailingNotificationTool:
     def send(self, principal, request, *, approval=None):
         raise RuntimeError("provider rejected notification")
+
+
+class FakeTTSProvider:
+    def synthesize(self, request, *, budget):
+        return AudioSynthesisResult(
+            provider="fake",
+            model="fake-tts",
+            audio=b"audio-bytes",
+            content_type="audio/mpeg",
+            filename_extension="mp3",
+            characters=len(request.text),
+        )
+
+
+class FailingTTSProvider:
+    def synthesize(self, request, *, budget):
+        raise RuntimeError("tts unavailable")
 
 
 class FakeTranscriptionProvider:
@@ -414,6 +438,58 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(body["status"], "completed")
         self.assertEqual(body["command"], "help")
         self.assertFalse(body["sent"])
+
+    def test_telegram_audio_reply_tts_failures_are_traced_for_dashboard(self) -> None:
+        settings = AppSettings(tenant_id="tenant-a", tts_voice_id="voice-1", tts_audio_format="mp3")
+        container = build_container(tts=FailingTTSProvider())
+        principal = self.principal()
+
+        sent = _send_telegram_audio_reply(
+            container,
+            principal,
+            settings,
+            chat_id="chat-1",
+            text="Te recuerdo pagar arriendo.",
+            idempotency_key="idem-1",
+        )
+
+        self.assertFalse(sent)
+        events = container.traces.list_for_tenant(principal)
+        self.assertEqual(len(events), 1)
+        trace = events[0]
+        self.assertEqual(trace.event_type, TraceEventType.agent_failed)
+        self.assertEqual(trace.tool_call["name"], "audio.synthesize")
+        self.assertEqual(trace.input_summary["stage"], "synthesize")
+        self.assertEqual(trace.error["category"], "audio")
+        self.assertIn("tts unavailable", trace.error["message"])
+        errors = AdminDashboard(container).errors(principal, category="audio")
+        self.assertEqual(errors["total"], 1)
+
+    def test_telegram_audio_reply_send_failures_are_traced_for_dashboard(self) -> None:
+        settings = AppSettings(tenant_id="tenant-a", tts_voice_id="voice-1", tts_audio_format="mp3")
+        container = build_container(tts=FakeTTSProvider(), notifications=FailingNotificationTool())
+        principal = self.principal()
+
+        sent = _send_telegram_audio_reply(
+            container,
+            principal,
+            settings,
+            chat_id="chat-1",
+            text="Te recuerdo pagar arriendo.",
+            idempotency_key="idem-2",
+        )
+
+        self.assertFalse(sent)
+        events = container.traces.list_for_tenant(principal)
+        self.assertEqual(len(events), 1)
+        trace = events[0]
+        self.assertEqual(trace.event_type, TraceEventType.agent_failed)
+        self.assertEqual(trace.tool_call["name"], "notification.send")
+        self.assertEqual(trace.input_summary["stage"], "send")
+        self.assertEqual(trace.error["category"], "audio")
+        self.assertIn("provider rejected notification", trace.error["message"])
+        errors = AdminDashboard(container).errors(principal, category="audio")
+        self.assertEqual(errors["total"], 1)
 
     def test_telegram_voice_requires_transcription_provider(self) -> None:
         settings = AppSettings(

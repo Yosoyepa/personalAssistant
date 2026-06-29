@@ -373,6 +373,41 @@ def _should_send_audio_reply(settings: AppSettings, message: NormalizedMessage, 
     return False
 
 
+def _trace_telegram_audio_reply_failure(
+    container: AppContainer,
+    principal: Principal,
+    *,
+    chat_id: str,
+    text: str,
+    idempotency_key: str,
+    stage: str,
+    tool_name: str,
+    exc: Exception,
+) -> None:
+    container.traces.write(
+        TraceEvent(
+            run_id=f"telegram:{chat_id}:{idempotency_key}:audio-reply",
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_failed,
+            tenant_id=principal.tenant_id,
+            input_summary={
+                "operation": "telegram.audio_reply",
+                "stage": stage,
+                "text_length": len(text),
+            },
+            tool_call={
+                "name": tool_name,
+                "idempotency_key": f"{idempotency_key}:reply-audio",
+            },
+            error={
+                "type": exc.__class__.__name__,
+                "message": str(exc)[:500],
+                "category": "audio",
+            },
+        )
+    )
+
+
 def _send_telegram_audio_reply(
     container: AppContainer,
     principal: Principal,
@@ -396,6 +431,20 @@ def _send_telegram_audio_reply(
             ),
             budget=TokenBudget(limit=settings.tts_max_reply_characters),
         )
+    except Exception as exc:
+        _trace_telegram_audio_reply_failure(
+            container,
+            principal,
+            chat_id=chat_id,
+            text=text,
+            idempotency_key=idempotency_key,
+            stage="synthesize",
+            tool_name="audio.synthesize",
+            exc=exc,
+        )
+        return False
+
+    try:
         request = NotificationRequest(
             channel="telegram",
             recipient=chat_id,
@@ -415,7 +464,17 @@ def _send_telegram_audio_reply(
             approval_id=f"{idempotency_key}:reply-audio",
         )
         container.notifications.send(principal, request, approval=approval)
-    except Exception:
+    except Exception as exc:
+        _trace_telegram_audio_reply_failure(
+            container,
+            principal,
+            chat_id=chat_id,
+            text=text,
+            idempotency_key=idempotency_key,
+            stage="send",
+            tool_name="notification.send",
+            exc=exc,
+        )
         return False
     return True
 
