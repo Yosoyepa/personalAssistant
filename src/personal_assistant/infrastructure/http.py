@@ -6,7 +6,6 @@ import hashlib
 import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
@@ -20,6 +19,7 @@ from personal_assistant.adapters.inbound.auth import principal_from_auth_claims
 from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
 from personal_assistant.adapters.outbound.notifications.telegram import TelegramBotApiClient, TelegramNotificationTool
 from personal_assistant.application.dto.channels import NormalizedMessage
+from personal_assistant.application.dto.commands import PendingApproval, PendingApprovalStatus
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput, ReminderWorkflowResult
 from personal_assistant.application.dto.runtime import (
@@ -155,32 +155,6 @@ class TelegramWebhookResponse(BaseModel):
     command: str | None = None
 
 
-@dataclass(slots=True)
-class PendingReminderApproval:
-    approval_id: str
-    principal_id: str
-    tenant_id: str
-    request: ReminderCommandRequest
-    idempotency_key: str
-    action: str
-    resource: str
-    permission_tier: PermissionTier
-    reason: str
-    status: ApprovalStatus = ApprovalStatus.pending
-    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-
-    def view(self) -> ApprovalView:
-        return ApprovalView(
-            approval_id=self.approval_id,
-            action=self.action,
-            resource=self.resource,
-            permission_tier=self.permission_tier,
-            reason=self.reason,
-            status=self.status,
-            created_at=self.created_at,
-        )
-
-
 def _status_for_error(code: ErrorCode) -> int:
     return {
         ErrorCode.AUTHENTICATION_REQUIRED: 401,
@@ -200,9 +174,83 @@ def _effective_idempotency_key(principal: Principal, request: ReminderCommandReq
     return request.idempotency_key or reminder_idempotency_key(principal.tenant_id, request.message_id, request.text)
 
 
-def _approval_id(tenant_id: str, idempotency_key: str, action: str) -> str:
-    digest = hashlib.sha256(f"{tenant_id}:{idempotency_key}:{action}".encode("utf-8")).hexdigest()[:24]
+def _approval_id(tenant_id: str, principal_id: str, idempotency_key: str, action: str) -> str:
+    digest = hashlib.sha256(f"{tenant_id}:{principal_id}:{idempotency_key}:{action}".encode("utf-8")).hexdigest()[:24]
     return f"apr_{digest}"
+
+
+def _approval_status_from_pending(status: PendingApprovalStatus) -> ApprovalStatus:
+    if status == PendingApprovalStatus.approved:
+        return ApprovalStatus.approved
+    if status == PendingApprovalStatus.cancelled:
+        return ApprovalStatus.rejected
+    return ApprovalStatus.pending
+
+
+def _pending_status_from_approval(status: ApprovalStatus) -> PendingApprovalStatus | None:
+    if status == ApprovalStatus.approved:
+        return PendingApprovalStatus.approved
+    if status == ApprovalStatus.rejected:
+        return PendingApprovalStatus.cancelled
+    if status == ApprovalStatus.pending:
+        return PendingApprovalStatus.pending
+    return None
+
+
+def _approval_view_from_pending(pending: PendingApproval, *, reason: str) -> ApprovalView:
+    return ApprovalView(
+        approval_id=pending.approval_id,
+        action=pending.action,
+        resource=pending.resource,
+        permission_tier=PermissionTier(pending.tier),
+        reason=reason,
+        status=_approval_status_from_pending(pending.status),
+        created_at=pending.created_at,
+    )
+
+
+def _pending_approval_from_request(
+    *,
+    principal: Principal,
+    request: ReminderCommandRequest,
+    run_id: str,
+    action: str,
+) -> PendingApproval:
+    return PendingApproval(
+        approval_id=_approval_id(principal.tenant_id, principal.principal_id, run_id, action),
+        tenant_id=principal.tenant_id,
+        principal_id=principal.principal_id,
+        action=action,
+        resource=f"{run_id}:calendar",
+        tier=PermissionTier.P3.value,
+        workflow_kind="reminder.create",
+        message_id=request.message_id,
+        conversation_id=request.conversation_id,
+        channel=request.channel,
+        recipient=request.recipient,
+        request_text=request.text,
+        request_now=request.now,
+        timezone=request.timezone,
+        idempotency_key=run_id,
+    )
+
+
+def _workflow_input_from_pending(
+    pending: PendingApproval,
+    *,
+    approval: ApprovalGrant,
+) -> ReminderWorkflowInput:
+    return ReminderWorkflowInput(
+        message_id=pending.message_id,
+        conversation_id=pending.conversation_id,
+        text=pending.request_text,
+        channel=pending.channel,
+        recipient=pending.recipient,
+        now=pending.request_now,
+        timezone=pending.timezone,
+        idempotency_key=pending.idempotency_key,
+        approval=approval,
+    )
 
 
 def _reminder_response(
@@ -225,15 +273,6 @@ def _reminder_response(
         reused=result.reused,
         trace_ids=result.trace_ids,
     )
-
-
-def _assert_same_actor(pending: PendingReminderApproval, principal: Principal) -> None:
-    if pending.tenant_id != principal.tenant_id or pending.principal_id != principal.principal_id:
-        raise AssistantError(
-            ErrorCode.PERMISSION_DENIED,
-            "approval belongs to a different principal or tenant",
-            tenant_id=principal.tenant_id,
-        )
 
 
 def build_runtime_container(settings: AppSettings) -> AppContainer:
@@ -614,7 +653,6 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
     runtime_settings = settings or AppSettings.from_env()
     runtime_container = container or build_runtime_container(runtime_settings)
     runtime_replies = runtime_container.commands.replies
-    pending_approvals: dict[str, PendingReminderApproval] = {}
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -641,7 +679,6 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
 
     app = FastAPI(title="Personal Assistant Runtime", version="0.1.0", lifespan=lifespan)
     app.state.container = runtime_container
-    app.state.pending_approvals = pending_approvals
     app.state.settings = runtime_settings
     app.state.reminder_worker_stop = threading.Event()
     app.state.reminder_worker_thread = None
@@ -944,22 +981,19 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         if result.approval_required:
             response.status_code = 202
             action = "calendar.create_event"
-            approval_id = _approval_id(principal.tenant_id, run_id, action)
-            pending = pending_approvals.get(approval_id)
-            if pending is None:
-                pending = PendingReminderApproval(
-                    approval_id=approval_id,
-                    principal_id=principal.principal_id,
-                    tenant_id=principal.tenant_id,
+            pending = runtime_container.approvals.create(
+                principal,
+                _pending_approval_from_request(
+                    principal=principal,
                     request=request,
-                    idempotency_key=run_id,
+                    run_id=run_id,
                     action=action,
-                    resource=f"{run_id}:calendar",
-                    permission_tier=PermissionTier.P3,
-                    reason=runtime_replies.approval_reason_calendar_create_event(),
-                )
-                pending_approvals[approval_id] = pending
-            approval_view = pending.view()
+                ),
+            )
+            approval_view = _approval_view_from_pending(
+                pending,
+                reason=runtime_replies.approval_reason_calendar_create_event(),
+            )
         return _reminder_response(principal=principal, run_id=run_id, result=result, approval=approval_view)
 
     @app.get(
@@ -971,13 +1005,19 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal: Annotated[Principal, Depends(current_principal)],
         status: Annotated[ApprovalStatus | None, Query()] = None,
     ) -> list[ApprovalView]:
-        approvals = [
-            pending.view()
-            for pending in pending_approvals.values()
-            if pending.tenant_id == principal.tenant_id and pending.principal_id == principal.principal_id
-        ]
+        pending_approvals = runtime_container.approvals.list_for_tenant(principal)
         if status is not None:
-            approvals = [approval for approval in approvals if approval.status == status]
+            expected = _pending_status_from_approval(status)
+            if expected is None:
+                return []
+            pending_approvals = [approval for approval in pending_approvals if approval.status == expected]
+        approvals = [
+            _approval_view_from_pending(
+                approval,
+                reason=runtime_replies.approval_reason_calendar_create_event(),
+            )
+            for approval in pending_approvals
+        ]
         return sorted(approvals, key=lambda approval: approval.created_at)
 
     @app.post(
@@ -990,25 +1030,20 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal: Annotated[Principal, Depends(current_principal)],
         _: ApprovalDecisionRequest | None = None,
     ) -> ApprovalDecisionResponse:
-        pending = pending_approvals.get(approval_id)
+        pending = runtime_container.approvals.get(principal, approval_id)
         if pending is None:
             raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
-        _assert_same_actor(pending, principal)
-        if pending.status == ApprovalStatus.rejected:
+        if pending.status == PendingApprovalStatus.cancelled:
             raise AssistantError(ErrorCode.CONFLICT, "approval was already rejected", tenant_id=principal.tenant_id)
 
-        grant = ApprovalGrant.issue(
-            principal=principal,
-            action=pending.action,
-            resource=pending.resource,
-            tier=pending.permission_tier,
-            approval_id=pending.approval_id,
+        grant = runtime_container.approvals.approve(principal, approval_id)
+        result = runtime_container.reminder_workflow.run(
+            principal,
+            _workflow_input_from_pending(pending, approval=grant),
         )
-        result = runtime_container.reminder_workflow.run(principal, pending.request.to_workflow_input(approval=grant))
-        pending.status = ApprovalStatus.approved
         return ApprovalDecisionResponse(
             approval_id=approval_id,
-            status=pending.status,
+            status=ApprovalStatus.approved,
             result=_reminder_response(principal=principal, run_id=pending.idempotency_key, result=result),
         )
 
@@ -1022,14 +1057,13 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal: Annotated[Principal, Depends(current_principal)],
         _: ApprovalDecisionRequest | None = None,
     ) -> ApprovalDecisionResponse:
-        pending = pending_approvals.get(approval_id)
-        if pending is None:
+        existing = runtime_container.approvals.get(principal, approval_id)
+        if existing is None:
             raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
-        _assert_same_actor(pending, principal)
-        if pending.status == ApprovalStatus.approved:
+        if existing.status == PendingApprovalStatus.approved:
             raise AssistantError(ErrorCode.CONFLICT, "approval was already approved", tenant_id=principal.tenant_id)
-        pending.status = ApprovalStatus.rejected
-        return ApprovalDecisionResponse(approval_id=approval_id, status=pending.status)
+        pending = runtime_container.approvals.reject(principal, approval_id)
+        return ApprovalDecisionResponse(approval_id=approval_id, status=_approval_status_from_pending(pending.status))
 
     @app.get(
         "/v1/runtime/workflows",

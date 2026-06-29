@@ -5,12 +5,17 @@ import json
 import sys
 import unittest
 
-from personal_assistant.application.dto.events import CloudEvent
+from personal_assistant.application.dto.commands import PendingApproval, PendingApprovalStatus
+from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
+from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
+from personal_assistant.application.ports.calendar import CalendarEventRequest, CalendarEventResult
+from personal_assistant.application.ports.scheduler import ScheduledReminder
 from personal_assistant.adapters.persistence import postgres
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import Principal
-from personal_assistant.domain.common.permissions import PermissionTier
+from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
+from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
 
 
 class RecordingConnection:
@@ -68,6 +73,36 @@ class PostgresPersistenceTests(unittest.TestCase):
             permission_tier=PermissionTier.P5,
         )
 
+    def cloud_event(self, principal: Principal, *, event_id: str = "evt-1") -> CloudEvent:
+        return CloudEvent(
+            id=event_id,
+            type="test.created",
+            source="test",
+            tenant_id=principal.tenant_id,
+            time=datetime(2026, 6, 28, 12, tzinfo=UTC),
+            data={"value": "ok"},
+        )
+
+    def pending_approval(self, principal: Principal, *, approval_id: str = "apr-1") -> PendingApproval:
+        return PendingApproval(
+            approval_id=approval_id,
+            tenant_id=principal.tenant_id,
+            principal_id=principal.principal_id,
+            action="calendar.create_event",
+            resource="idem-1:calendar",
+            tier=PermissionTier.P3.value,
+            workflow_kind="reminder.create",
+            message_id="msg-1",
+            conversation_id="chat-1",
+            channel="telegram",
+            recipient="chat-1",
+            request_text="recuerdame pagar arriendo",
+            request_now=datetime(2026, 6, 28, 12, tzinfo=UTC),
+            timezone="America/Bogota",
+            idempotency_key="idem-1",
+            created_at=datetime(2026, 6, 28, 12, tzinfo=UTC),
+        )
+
     def test_importing_postgres_adapter_does_not_import_psycopg(self) -> None:
         if "psycopg" in sys.modules:
             self.skipTest("psycopg was already imported by the test process")
@@ -120,6 +155,205 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertEqual(json.loads(insert_params[-1])["id"], "evt-1")
         self.assertEqual(saved.id, event.id)
         self.assertEqual(saved.tenant_id, principal.tenant_id)
+
+    def test_approval_store_lists_visible_requests_for_principal(self) -> None:
+        principal = self.principal()
+        approval = self.pending_approval(principal)
+        approved = approval.model_copy(
+            update={
+                "approval_id": "apr-2",
+                "idempotency_key": "idem-2",
+                "status": PendingApprovalStatus.approved,
+            }
+        )
+        connection = RecordingConnection(
+            fetchall_results=[
+                [
+                    {"payload": approval.model_dump(mode="json")},
+                    {"payload": approved.model_dump(mode="json")},
+                ]
+            ]
+        )
+        store = postgres.PostgresApprovalStore(connection=connection)
+
+        rows = store.list_for_tenant(principal)
+
+        statement, params = connection.statements[0]
+        normalized_statement = " ".join(statement.split())
+        self.assertIn("WHERE tenant_id = %s AND principal_id = %s", normalized_statement)
+        self.assertIn("ORDER BY created_at, approval_id", normalized_statement)
+        self.assertEqual(params, (principal.tenant_id, principal.principal_id))
+        self.assertEqual([row.approval_id for row in rows], ["apr-1", "apr-2"])
+        self.assertEqual(rows[1].status, PendingApprovalStatus.approved)
+
+    def test_outbox_claim_updates_payload_and_attempts(self) -> None:
+        principal = self.principal()
+        message = OutboxMessage(
+            tenant_id=principal.tenant_id,
+            event=self.cloud_event(principal),
+            idempotency_key="idem-outbox-1",
+            attempts=2,
+        )
+        connection = RecordingConnection(fetchall_results=[[("idem-outbox-1", message.model_dump(mode="json"))]])
+        store = postgres.PostgresOutbox(connection=connection)
+
+        claimed = store.claim(principal, limit=1, owner="worker-1", lease_seconds=30)
+
+        select_sql, select_params = connection.statements[0]
+        update_sql, update_params = connection.statements[1]
+        assert select_params is not None
+        assert update_params is not None
+        self.assertIn("FOR UPDATE SKIP LOCKED", select_sql)
+        self.assertEqual(select_params[0], principal.tenant_id)
+        self.assertEqual(select_params[1], OutboxStatus.published.value)
+        self.assertEqual(select_params[-1], 1)
+        self.assertIn("payload = %s::jsonb", update_sql)
+        self.assertEqual(update_params[0], OutboxStatus.claimed.value)
+        self.assertTrue(str(update_params[1]).startswith("claim_"))
+        self.assertEqual(update_params[2], "worker-1")
+        self.assertEqual(update_params[5], 3)
+        self.assertEqual(update_params[-2:], (principal.tenant_id, "idem-outbox-1"))
+        updated_payload = json.loads(update_params[7])
+        self.assertEqual(updated_payload["dispatch_status"], OutboxStatus.claimed.value)
+        self.assertEqual(updated_payload["claim_owner"], "worker-1")
+        self.assertEqual(updated_payload["attempts"], 3)
+        self.assertEqual(claimed[0].dispatch_status, OutboxStatus.claimed)
+        self.assertEqual(claimed[0].attempts, 3)
+
+    def test_calendar_create_event_writes_request_and_result_payloads(self) -> None:
+        principal = self.principal()
+        request = CalendarEventRequest(
+            title="pagar arriendo",
+            starts_at=datetime(2026, 6, 28, 22, tzinfo=UTC),
+            timezone="America/Bogota",
+            idempotency_key="idem-calendar-1",
+        )
+        result = CalendarEventResult(
+            event_id="cal-1",
+            title=request.title,
+            starts_at=request.starts_at,
+            idempotency_key=request.idempotency_key,
+        )
+        approval = ApprovalGrant.issue(
+            principal=principal,
+            action="calendar.create_event",
+            resource=request.idempotency_key,
+            tier=PermissionTier.P3,
+            approval_id="apr-1",
+        )
+        connection = RecordingConnection(fetchone_results=[{"payload": result.model_dump(mode="json")}])
+        store = postgres.PostgresCalendarStore(connection=connection)
+
+        saved = store.create_event(principal, request, approval=approval)
+
+        insert_sql, insert_params = connection.statements[0]
+        assert insert_params is not None
+        self.assertIn("%s::jsonb", insert_sql)
+        self.assertEqual(insert_params[0], principal.tenant_id)
+        self.assertEqual(insert_params[1], request.idempotency_key)
+        self.assertEqual(insert_params[3], request.title)
+        self.assertEqual(json.loads(insert_params[6])["title"], request.title)
+        self.assertEqual(json.loads(insert_params[7])["title"], request.title)
+        self.assertTrue(json.loads(insert_params[7])["event_id"].startswith("cal_"))
+        self.assertEqual(saved.event_id, "cal-1")
+
+    def test_scheduler_mark_sent_updates_payload(self) -> None:
+        principal = self.principal()
+        reminder = ScheduledReminder(
+            reminder_id="rem-1",
+            tenant_id=principal.tenant_id,
+            calendar_event_id="cal-1",
+            notify_at=datetime(2026, 6, 28, 21, 58, tzinfo=UTC),
+            channel="telegram",
+            recipient="chat-1",
+            body="Recordatorio: pagar arriendo",
+            idempotency_key="idem-reminder-1",
+        )
+        connection = RecordingConnection(fetchone_results=[("idem-reminder-1", reminder.model_dump(mode="json"))])
+        store = postgres.PostgresReminderScheduler(connection=connection)
+
+        saved = store.mark_sent(principal, "rem-1")
+
+        select_sql, select_params = connection.statements[0]
+        update_sql, update_params = connection.statements[1]
+        assert update_params is not None
+        self.assertIn("FOR UPDATE", select_sql)
+        self.assertEqual(select_params, (principal.tenant_id, "rem-1"))
+        self.assertIn("SET sent = true", update_sql)
+        payload = json.loads(update_params[0])
+        self.assertTrue(payload["sent"])
+        self.assertEqual(update_params[1:], (principal.tenant_id, "idem-reminder-1"))
+        self.assertTrue(saved.sent)
+
+    def test_memory_retrieve_scopes_by_tenant_user_kind_confirmed_and_query(self) -> None:
+        principal = self.principal()
+        record = MemoryRecord(
+            tenant_id=principal.tenant_id,
+            user_id=principal.actor_id,
+            kind=MemoryKind.semantic,
+            text="prefiere recordatorios cortos",
+            source="test",
+            confirmed=True,
+        )
+        connection = RecordingConnection(fetchall_results=[[{"payload": record.model_dump(mode="json")}]])
+        store = postgres.PostgresMemoryStore(connection=connection)
+
+        rows = store.retrieve(
+            principal,
+            query="Recordatorios",
+            kind=MemoryKind.semantic,
+            confirmed_only=True,
+            limit=3,
+        )
+
+        statement, params = connection.statements[0]
+        assert params is not None
+        self.assertIn("WHERE tenant_id = %s", statement)
+        self.assertEqual(
+            params,
+            (
+                principal.tenant_id,
+                principal.actor_id,
+                MemoryKind.semantic.value,
+                MemoryKind.semantic.value,
+                True,
+                "recordatorios",
+                "recordatorios",
+                3,
+            ),
+        )
+        self.assertEqual(rows[0].id, record.id)
+
+    def test_trace_recorder_write_and_list_for_run(self) -> None:
+        principal = self.principal()
+        trace = TraceEvent(
+            trace_id="trace-1",
+            run_id="run-1",
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_failed,
+            tenant_id=principal.tenant_id,
+            error={"type": "RuntimeError", "message": "boom"},
+        )
+        write_connection = RecordingConnection(fetchone_results=[{"payload": trace.model_dump(mode="json")}])
+        write_store = postgres.PostgresTraceRecorder(connection=write_connection)
+
+        write_store.write(trace)
+
+        insert_sql, insert_params = write_connection.statements[0]
+        assert insert_params is not None
+        self.assertIn("%s::jsonb", insert_sql)
+        self.assertEqual(insert_params[:5], (trace.tenant_id, trace.trace_id, trace.run_id, trace.agent_id, trace.event_type.value))
+        self.assertEqual(json.loads(insert_params[-1])["trace_id"], "trace-1")
+
+        list_connection = RecordingConnection(fetchall_results=[[{"payload": trace.model_dump(mode="json")}]])
+        list_store = postgres.PostgresTraceRecorder(connection=list_connection)
+
+        rows = list_store.list_for_run(principal, "run-1")
+
+        select_sql, select_params = list_connection.statements[0]
+        self.assertIn("WHERE tenant_id = %s AND run_id = %s", " ".join(select_sql.split()))
+        self.assertEqual(select_params, (principal.tenant_id, "run-1"))
+        self.assertEqual(rows[0].trace_id, "trace-1")
 
     def test_terminal_workflow_state_conflict_is_preserved(self) -> None:
         principal = self.principal()

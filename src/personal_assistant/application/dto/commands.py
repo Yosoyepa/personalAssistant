@@ -51,6 +51,8 @@ class PendingApproval(ApplicationDTO):
     channel: str = Field(min_length=1)
     recipient: str = Field(min_length=1)
     request_text: str = Field(min_length=1)
+    request_now: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    timezone: str = "America/Bogota"
     idempotency_key: str = Field(min_length=1)
     status: PendingApprovalStatus = PendingApprovalStatus.pending
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

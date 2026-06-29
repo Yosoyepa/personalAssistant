@@ -696,6 +696,20 @@ class PostgresApprovalStore(_PostgresStore):
             )
             return [PendingApproval.model_validate(_payload_from_row(row)).model_copy(deep=True) for row in cursor.fetchall()]
 
+    def list_for_tenant(self, principal: Principal) -> list[PendingApproval]:
+        require_trusted_principal(principal)
+        with self._db.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT payload
+                FROM {self._table("approvals")}
+                WHERE tenant_id = %s AND principal_id = %s
+                ORDER BY created_at, approval_id
+                """,
+                (principal.tenant_id, principal.principal_id),
+            )
+            return [PendingApproval.model_validate(_payload_from_row(row)).model_copy(deep=True) for row in cursor.fetchall()]
+
     def mark_approved(self, principal: Principal, approval_id: str) -> PendingApproval:
         approval = self.get(principal, approval_id)
         if approval is None:

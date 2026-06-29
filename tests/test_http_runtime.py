@@ -345,6 +345,20 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(len(self.container.calendar.list_events(principal)), 1)
         self.assertEqual(len(self.container.event_store.list_for_tenant(principal)), 1)
 
+    def test_http_approvals_survive_app_recreation_with_same_container(self) -> None:
+        approval_id = self.request_pending_approval()
+        recreated_client = TestClient(create_app(self.container, settings=AppSettings(tenant_id="tenant-a")))
+
+        approvals = recreated_client.get("/v1/runtime/approvals", headers=self.headers)
+        approved = recreated_client.post(f"/v1/runtime/approvals/{approval_id}/approve", json={}, headers=self.headers)
+        principal = self.principal()
+
+        self.assertEqual(approvals.status_code, 200, approvals.text)
+        self.assertEqual([approval["approval_id"] for approval in approvals.json()], [approval_id])
+        self.assertEqual(approved.status_code, 200, approved.text)
+        self.assertEqual(approved.json()["status"], "approved")
+        self.assertEqual(len(self.container.calendar.list_events(principal)), 1)
+
     def test_runtime_queries_are_tenant_scoped(self) -> None:
         approval_id = self.request_pending_approval()
         approved = self.client.post(f"/v1/runtime/approvals/{approval_id}/approve", json={}, headers=self.headers)

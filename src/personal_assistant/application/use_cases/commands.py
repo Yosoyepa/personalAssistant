@@ -246,6 +246,8 @@ class ConversationCommandService:
                     channel=message.channel.value,
                     recipient=message.conversation_id,
                     request_text=text,
+                    request_now=now,
+                    timezone=timezone,
                     idempotency_key=idempotency_key,
                 ),
             )
