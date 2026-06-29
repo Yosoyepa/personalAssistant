@@ -12,6 +12,7 @@ from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
+from personal_assistant.infrastructure.prompts import build_prompt_catalog
 
 
 class FakeIntentLLMProvider:
@@ -236,6 +237,7 @@ class CommandRouterTests(unittest.TestCase):
 
     def test_llm_intent_routes_free_text_to_reminder(self) -> None:
         container = build_container(llm=FakeIntentLLMProvider())
+        container.commands.prompt_catalog = build_prompt_catalog()
 
         result = container.commands.handle(
             self.principal,
@@ -251,6 +253,7 @@ class CommandRouterTests(unittest.TestCase):
 
     def test_llm_intent_trace_records_rejected_low_confidence(self) -> None:
         container = build_container(llm=LowConfidenceIntentLLMProvider())
+        container.commands.prompt_catalog = build_prompt_catalog()
 
         result = container.commands.handle(
             self.principal,
@@ -273,6 +276,7 @@ class CommandRouterTests(unittest.TestCase):
             reminder_text="dentro de dos minutos revisar mis tareas de la universidad"
         )
         container = build_container(llm=llm)
+        container.commands.prompt_catalog = build_prompt_catalog()
 
         result = container.commands.handle(
             self.principal,

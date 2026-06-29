@@ -1,0 +1,19 @@
+{
+  "prompts": {
+    "conversation_intent": {
+      "version": "v1",
+      "path": "conversation_intent/v1.md",
+      "required_variables": ["allowed_intents", "now", "timezone", "text"]
+    },
+    "reminder_extraction": {
+      "version": "v1",
+      "path": "reminder_extraction/v1.md",
+      "required_variables": ["now", "timezone", "text"]
+    },
+    "telegram_voice_transcription": {
+      "version": "v1",
+      "path": "transcription/telegram_voice_es/v1.txt",
+      "required_variables": []
+    }
+  }
+}

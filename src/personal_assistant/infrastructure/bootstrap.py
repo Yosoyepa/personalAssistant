@@ -10,6 +10,7 @@ from personal_assistant.adapters.outbound.llm.minimax import MiniMaxLLMProvider
 from personal_assistant.adapters.outbound.transcription.openai_compatible import OpenAICompatibleTranscriptionProvider
 from personal_assistant.adapters.outbound.tts.minimax import MiniMaxTTSProvider
 from personal_assistant.application.ports.notifications import NotificationPort
+from personal_assistant.application.ports.prompts import PromptCatalogPort
 from personal_assistant.application.ports.services import AudioSynthesisProvider, AudioTranscriptionProvider, LLMProvider
 from personal_assistant.application.use_cases.commands import ConversationCommandService
 from personal_assistant.application.use_cases.documents import DocumentService
@@ -26,6 +27,7 @@ from personal_assistant.adapters.persistence.memory import TenantMemoryStore
 from personal_assistant.adapters.outbound.notifications.local import LocalNotificationTool
 from personal_assistant.adapters.outbound.scheduler.local import ReminderScheduler
 from personal_assistant.infrastructure.config import AppSettings
+from personal_assistant.infrastructure.prompts import build_prompt_catalog
 from personal_assistant.infrastructure.worker import ReminderWorker, RuntimeNotificationApprovalPolicy
 
 
@@ -40,6 +42,7 @@ class AppContainer:
     memory: TenantMemoryStore
     notifications: NotificationPort
     outbox: InMemoryOutbox
+    prompt_catalog: PromptCatalogPort
     reminder_notifications: DispatchDueReminders
     reminder_worker: ReminderWorker
     reminder_workflow: ReminderWorkflow
@@ -106,11 +109,13 @@ def build_container(
     notifications: NotificationPort | None = None,
     transcription: AudioTranscriptionProvider | None = None,
     tts: AudioSynthesisProvider | None = None,
+    prompt_catalog: PromptCatalogPort | None = None,
     approve_reminder_notifications: bool = False,
     reminder_minutes_before: int = 30,
 ) -> AppContainer:
     """Build in-memory adapters for local development and tests."""
     notification_adapter = notifications or LocalNotificationTool()
+    prompts = prompt_catalog or build_prompt_catalog()
     approvals = InMemoryApprovalStore()
     calendar = LocalCalendarTool()
     event_store = InMemoryEventStore()
@@ -127,6 +132,7 @@ def build_container(
         states=states,
         traces=traces,
         llm=llm,
+        prompt_catalog=prompts,
         reminder_minutes_before=reminder_minutes_before,
     )
     commands = ConversationCommandService(
@@ -137,6 +143,7 @@ def build_container(
         event_store=event_store,
         outbox=outbox,
         llm=llm,
+        prompt_catalog=prompts,
         traces=traces,
     )
     return AppContainer(
@@ -149,6 +156,7 @@ def build_container(
         memory=TenantMemoryStore(),
         notifications=notification_adapter,
         outbox=outbox,
+        prompt_catalog=prompts,
         reminder_notifications=reminder_notifications,
         reminder_worker=ReminderWorker(
             dispatcher=reminder_notifications,

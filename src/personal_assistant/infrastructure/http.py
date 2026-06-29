@@ -463,7 +463,7 @@ def _transcribe_telegram_media(
                 content_type=message.media_mime_type or "audio/ogg",
                 data=audio,
                 language="es",
-                prompt="Transcribe mensajes de voz en español para crear recordatorios o citas.",
+                prompt=container.prompt_catalog.render("telegram_voice_transcription", {}).text,
             ),
             budget=TokenBudget(limit=4_000),
         )

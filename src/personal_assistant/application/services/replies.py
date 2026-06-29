@@ -1,115 +1,186 @@
-"""Centralized user-facing Spanish replies for application workflows."""
+"""Build user-facing replies from locale catalogs."""
 
 from __future__ import annotations
 
 from collections.abc import Iterable
 from datetime import datetime
+import json
+from pathlib import Path
+from typing import Any
+
+
+CatalogValue = str | list[str]
+
+_DEFAULT_LOCALE = "es"
+_CATALOG_CACHE: dict[str, dict[str, CatalogValue]] = {}
 
 
 class AssistantReplies:
     """Build user-facing copy without mixing it into business decisions."""
 
+    def __init__(self, locale: str = _DEFAULT_LOCALE, *, catalog: dict[str, CatalogValue] | None = None) -> None:
+        self._catalog = dict(catalog) if catalog is not None else _load_catalog(locale)
+
+    @classmethod
+    def from_catalog(cls, catalog: dict[str, CatalogValue]) -> "AssistantReplies":
+        return cls(catalog=catalog)
+
     def start(self) -> str:
-        return "Asistente personal activo. Usa /help para ver comandos."
+        return self._text("start")
 
     def help(self) -> str:
-        return "\n".join(
-            [
-                "Comandos disponibles:",
-                "/start - inicia la conversación.",
-                "/help - muestra esta ayuda.",
-                "/recordar <texto> - crea un recordatorio con aprobación.",
-                "/agenda - lista eventos locales.",
-                "/pendientes - muestra aprobaciones pendientes.",
-                "/aprobar <id> - aprueba una acción pendiente.",
-                "/cancelar <id> - cancela una aprobación pendiente.",
-                "/status - muestra el estado local del asistente.",
-            ]
-        )
+        return "\n".join(self._lines("help"))
 
     def unsupported(self) -> str:
-        return "No reconocí ese comando. Usa /help para ver opciones."
+        return self._text("unsupported")
 
     def status(self, *, pending_count: int, state_count: int, event_count: int, outbox_count: int) -> str:
-        return (
-            "Estado local: activo. "
-            f"Pendientes: {pending_count}. Workflows: {state_count}. Eventos: {event_count}. Outbox: {outbox_count}."
+        return self._format(
+            "status",
+            pending_count=pending_count,
+            state_count=state_count,
+            event_count=event_count,
+            outbox_count=outbox_count,
         )
 
     def agenda_empty(self) -> str:
-        return "No hay eventos locales registrados."
+        return self._text("agenda_empty")
 
     def agenda(self, rows: Iterable[tuple[datetime, str, str]]) -> str:
-        lines = ["Agenda local:"]
+        lines = [self._text("agenda_header")]
         for starts_at, title, event_id in rows:
-            lines.append(f"- {starts_at.isoformat()} | {title} ({event_id})")
+            lines.append(
+                self._format(
+                    "agenda_row",
+                    starts_at=starts_at.isoformat(),
+                    title=title,
+                    event_id=event_id,
+                )
+            )
         return "\n".join(lines)
 
     def pending_empty(self) -> str:
-        return "No tienes aprobaciones pendientes."
+        return self._text("pending_empty")
 
     def pending_approvals(self, rows: Iterable[tuple[str, str, str]]) -> str:
-        lines = ["Aprobaciones pendientes:"]
+        lines = [self._text("pending_header")]
         for approval_id, action, request_text in rows:
-            lines.append(f"- {approval_id}: {action} para '{request_text}'")
-        lines.append("Usa /aprobar <id> o /cancelar <id>.")
+            lines.append(
+                self._format(
+                    "pending_row",
+                    approval_id=approval_id,
+                    action=action,
+                    request_text=request_text,
+                )
+            )
+        lines.append(self._text("pending_footer"))
         return "\n".join(lines)
 
     def reminder_missing_text(self) -> str:
-        return "Indica qué quieres recordar: /recordar <texto>"
+        return self._text("reminder_missing_text")
 
     def reminder_duplicate(self) -> str:
-        return "Ya tenía ese recordatorio registrado."
+        return self._text("reminder_duplicate")
 
     def reminder_needs_datetime(self) -> str:
-        return "Necesito una fecha y hora claras para crear el recordatorio."
+        return self._text("reminder_needs_datetime")
 
     def reminder_needs_approval(self, title: str) -> str:
-        return f"Puedo crear '{title}', pero necesito aprobación para escribir en calendario."
+        return self._format("reminder_needs_approval", title=title)
 
     def reminder_created(self, *, title: str, minutes_before: int, direct_notice: bool = False) -> str:
         if direct_notice:
-            return f"Listo. Te recordaré {title} en el momento indicado."
-        return f"Listo. Te recordaré {title} {self._minutes_label(minutes_before)} antes."
-
-    def approve_missing_id(self) -> str:
-        return "Indica el id: /aprobar <id>"
-
-    def approval_not_found(self) -> str:
-        return "No encontré esa aprobación."
-
-    def approval_type_unsupported(self) -> str:
-        return "Ese tipo de aprobación todavía no está soportado."
-
-    def cancel_missing_id(self) -> str:
-        return "Indica el id: /cancelar <id>"
-
-    def approval_cancelled(self) -> str:
-        return "Aprobación cancelada."
-
-    def telegram_audio_missing_file_id(self) -> str:
-        return "Recibí un audio, pero Telegram no envió un file_id utilizable."
-
-    def telegram_transcription_not_configured(self) -> str:
-        return (
-            "Recibí tu audio, pero falta configurar transcripción. "
-            "Activa TRANSCRIPTION_PROVIDER y TRANSCRIPTION_API_KEY en el backend."
+            return self._format("reminder_created_direct", title=title)
+        return self._format(
+            "reminder_created_with_notice",
+            title=title,
+            minutes_label=self._minutes_label(minutes_before),
         )
 
+    def approve_missing_id(self) -> str:
+        return self._text("approve_missing_id")
+
+    def approval_not_found(self) -> str:
+        return self._text("approval_not_found")
+
+    def approval_type_unsupported(self) -> str:
+        return self._text("approval_type_unsupported")
+
+    def cancel_missing_id(self) -> str:
+        return self._text("cancel_missing_id")
+
+    def approval_cancelled(self) -> str:
+        return self._text("approval_cancelled")
+
+    def telegram_audio_missing_file_id(self) -> str:
+        return self._text("telegram_audio_missing_file_id")
+
+    def telegram_transcription_not_configured(self) -> str:
+        return self._text("telegram_transcription_not_configured")
+
     def telegram_token_missing_for_audio(self) -> str:
-        return "Recibí tu audio, pero falta TELEGRAM_BOT_TOKEN para descargarlo desde Telegram."
+        return self._text("telegram_token_missing_for_audio")
 
     def telegram_audio_too_large(self) -> str:
-        return "El audio supera el límite local de 20MB."
+        return self._text("telegram_audio_too_large")
 
     def telegram_audio_download_too_large(self) -> str:
-        return "El audio descargado supera el límite local de 20MB."
+        return self._text("telegram_audio_download_too_large")
 
     def telegram_file_path_missing(self) -> str:
-        return "No pude resolver el archivo de audio en Telegram."
+        return self._text("telegram_file_path_missing")
 
     def telegram_transcription_failed(self) -> str:
-        return "No pude transcribir ese audio. Intenta reenviarlo o escribe el recordatorio en texto."
+        return self._text("telegram_transcription_failed")
 
     def _minutes_label(self, minutes: int) -> str:
-        return "1 minuto" if minutes == 1 else f"{minutes} minutos"
+        if minutes == 1:
+            return self._text("minutes_singular")
+        return self._format("minutes_plural", minutes=minutes)
+
+    def _text(self, key: str) -> str:
+        value = self._catalog[key]
+        if not isinstance(value, str):
+            raise TypeError(f"Reply copy key {key!r} must be a string.")
+        return value
+
+    def _lines(self, key: str) -> list[str]:
+        value = self._catalog[key]
+        if isinstance(value, str):
+            return [value]
+        if not isinstance(value, list) or not all(isinstance(line, str) for line in value):
+            raise TypeError(f"Reply copy key {key!r} must be a list of strings.")
+        return value
+
+    def _format(self, key: str, **values: object) -> str:
+        return self._text(key).format(**values)
+
+
+def _load_catalog(locale: str) -> dict[str, CatalogValue]:
+    if locale not in _CATALOG_CACHE:
+        catalog_path = _catalog_path(locale)
+        raw_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        if not isinstance(raw_catalog, dict):
+            raise TypeError(f"Reply catalog {catalog_path} must contain a JSON object.")
+        _CATALOG_CACHE[locale] = {str(key): _catalog_value(value) for key, value in raw_catalog.items()}
+    return _CATALOG_CACHE[locale]
+
+
+def _catalog_value(value: Any) -> CatalogValue:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return value
+    raise TypeError("Reply catalog values must be strings or lists of strings.")
+
+
+def _catalog_path(locale: str) -> Path:
+    filename = f"{locale}.json"
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "locales" / filename
+        if candidate.is_file():
+            return candidate
+    candidate = Path.cwd() / "locales" / filename
+    if candidate.is_file():
+        return candidate
+    raise FileNotFoundError(f"Reply catalog not found: locales/{filename}")

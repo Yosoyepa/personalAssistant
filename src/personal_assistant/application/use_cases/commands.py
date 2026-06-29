@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from dataclasses import dataclass, field
 from datetime import datetime
 
@@ -22,8 +21,13 @@ from personal_assistant.application.ports.observability import TraceRecorderPort
 from personal_assistant.application.ports.approvals import ApprovalStorePort
 from personal_assistant.application.ports.calendar import CalendarReadPort
 from personal_assistant.application.ports.events import EventStorePort, OutboxPort
+from personal_assistant.application.ports.prompts import PromptCatalogPort, RenderedPrompt
 from personal_assistant.application.ports.services import LLMProvider
 from personal_assistant.application.ports.workflow_state import WorkflowStateStorePort
+from personal_assistant.application.services.prompts import (
+    CONVERSATION_INTENT_PROMPT_ID,
+    DefaultPromptCatalog,
+)
 from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.use_cases.reminders import ReminderWorkflow, reminder_idempotency_key
 from personal_assistant.domain.common.exceptions import AssistantError
@@ -93,6 +97,7 @@ class ConversationCommandService:
     event_store: EventStorePort
     outbox: OutboxPort
     llm: LLMProvider | None = None
+    prompt_catalog: PromptCatalogPort = field(default_factory=DefaultPromptCatalog)
     traces: TraceRecorderPort | None = None
     replies: AssistantReplies = field(default_factory=AssistantReplies)
 
@@ -321,13 +326,20 @@ class ConversationCommandService:
         if self.llm is None:
             return None
         run_id = f"command:{message.channel.value}:{message.conversation_id}:{message.message_id}:intent"
+        rendered_prompt: RenderedPrompt | None = None
         try:
+            rendered_prompt = _render_intent_prompt(
+                text=text,
+                now=now,
+                timezone=timezone,
+                prompt_catalog=self.prompt_catalog,
+            )
             result = self.llm.complete(
                 LLMRequest(
                     schema_name="conversation_intent",
                     max_tokens=256,
                     temperature=0.0,
-                    prompt=_intent_prompt(text=text, now=now, timezone=timezone),
+                    prompt=rendered_prompt.text,
                 ),
                 budget=TokenBudget(limit=1_000),
             )
@@ -339,7 +351,11 @@ class ConversationCommandService:
                     agent_id="personal_assistant",
                     event_type=TraceEventType.agent_failed,
                     tenant_id=principal.tenant_id,
-                    input_summary={"text": text[:500], "source": message.channel.value},
+                    input_summary={
+                        "text": text[:500],
+                        "source": message.channel.value,
+                        **_prompt_trace_summary(rendered_prompt),
+                    },
                     error={"type": exc.__class__.__name__, "message": str(exc)[:500]},
                 )
             )
@@ -351,7 +367,11 @@ class ConversationCommandService:
                 agent_id="personal_assistant",
                 event_type=TraceEventType.llm_called,
                 tenant_id=principal.tenant_id,
-                input_summary={"text": text[:500], "source": message.channel.value},
+                input_summary={
+                    "text": text[:500],
+                    "source": message.channel.value,
+                    **_prompt_trace_summary(rendered_prompt),
+                },
                 model=result.model,
                 output_summary={
                     "kind": inferred.kind.value,
@@ -403,29 +423,45 @@ class ConversationCommandService:
         )
 
 
-def _intent_prompt(*, text: str, now: datetime, timezone: str) -> str:
-    allowed_intents = [
-        CommandKind.reminder_create.value,
-        CommandKind.agenda.value,
-        CommandKind.pending_approvals.value,
-        CommandKind.status.value,
-        CommandKind.help.value,
-        CommandKind.unsupported.value,
-    ]
-    return "\n".join(
-        [
-            "Clasifica el mensaje de un usuario para un asistente personal local.",
-            "No ejecutes acciones. Devuelve solo JSON válido con esta forma:",
-            '{"kind": "reminder.create", "confidence": 0.0, "reminder_text": "texto normalizado o null"}',
-            f"Allowed kind values: {json.dumps(allowed_intents, ensure_ascii=False)}",
-            "Reglas:",
-            "- Usa reminder.create si el usuario pide recordar, agendar, citar o avisar algo.",
-            "- Para reminder.create conserva tarea y tiempo en reminder_text.",
-            "- Si el usuario da tiempos relativos como 'en 2 minutos', conserva esa frase.",
-            "- Si solo hay una fecha/hora sin tarea clara, usa unsupported.",
-            "- No clasifiques aprobar/cancelar desde texto libre; esos requieren comando explícito.",
-            f"now={now.isoformat()}",
-            f"timezone={timezone}",
-            f"text={text!r}",
-        ]
+def _allowed_free_text_intents() -> tuple[CommandKind, ...]:
+    return (
+        CommandKind.reminder_create,
+        CommandKind.agenda,
+        CommandKind.pending_approvals,
+        CommandKind.status,
+        CommandKind.help,
+        CommandKind.unsupported,
     )
+
+
+def _render_intent_prompt(
+    *,
+    text: str,
+    now: datetime,
+    timezone: str,
+    prompt_catalog: PromptCatalogPort,
+) -> RenderedPrompt:
+    return prompt_catalog.render(
+        CONVERSATION_INTENT_PROMPT_ID,
+        {
+            "allowed_intents": [kind.value for kind in _allowed_free_text_intents()],
+            "now": now.isoformat(),
+            "timezone": timezone,
+            "text": repr(text),
+        },
+    )
+
+
+def _intent_prompt(*, text: str, now: datetime, timezone: str) -> str:
+    return _render_intent_prompt(
+        text=text,
+        now=now,
+        timezone=timezone,
+        prompt_catalog=DefaultPromptCatalog(),
+    ).text
+
+
+def _prompt_trace_summary(prompt: RenderedPrompt | None) -> dict[str, str]:
+    if prompt is None:
+        return {}
+    return {"prompt_id": prompt.prompt_id, "prompt_version": prompt.version}

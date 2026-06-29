@@ -13,9 +13,11 @@ from personal_assistant.application.dto.runtime import AgentStatus, LLMRequest, 
 from personal_assistant.application.ports.calendar import CalendarEventRequest, CalendarPort
 from personal_assistant.application.ports.events import EventStorePort, OutboxPort
 from personal_assistant.application.ports.observability import TraceRecorderPort
+from personal_assistant.application.ports.prompts import PromptCatalogPort, RenderedPrompt
 from personal_assistant.application.ports.scheduler import ReminderSchedulerPort
 from personal_assistant.application.ports.services import LLMProvider
 from personal_assistant.application.ports.workflow_state import WorkflowStateStorePort
+from personal_assistant.application.services.prompts import REMINDER_EXTRACTION_PROMPT_ID, DefaultPromptCatalog
 from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
 from personal_assistant.application.dto.events import CloudEvent
@@ -43,6 +45,7 @@ class ReminderWorkflow:
     traces: TraceRecorderPort
     llm: LLMProvider | None = None
     reminder_minutes_before: int = 30
+    prompt_catalog: PromptCatalogPort = field(default_factory=DefaultPromptCatalog)
     replies: AssistantReplies = field(default_factory=AssistantReplies)
 
     def __post_init__(self) -> None:
@@ -264,13 +267,15 @@ class ReminderWorkflow:
         run_id: str,
         parent_event_id: str,
     ) -> tuple[ReminderExtraction | None, str]:
+        rendered_prompt: RenderedPrompt | None = None
         try:
+            rendered_prompt = _render_reminder_extraction_prompt(request, prompt_catalog=self.prompt_catalog)
             llm_result = self.llm.complete(  # type: ignore[union-attr]
                 LLMRequest(
                     schema_name="reminder_extraction",
                     max_tokens=384,
                     temperature=0.0,
-                    prompt=_reminder_extraction_prompt(request),
+                    prompt=rendered_prompt.text,
                 ),
                 budget=TokenBudget(limit=1_500),
             )
@@ -281,6 +286,7 @@ class ReminderWorkflow:
                 parent_event_id=parent_event_id,
                 llm_result=llm_result,
                 extraction=extraction,
+                prompt=rendered_prompt,
             )
         except Exception as exc:
             trace = TraceEvent(
@@ -289,6 +295,7 @@ class ReminderWorkflow:
                 event_type=TraceEventType.llm_called,
                 tenant_id=principal.tenant_id,
                 model="configured",
+                input_summary={"schema": "reminder_extraction", **_prompt_trace_summary(rendered_prompt)},
                 error={"type": exc.__class__.__name__, "message": str(exc)[:240]},
                 parent_event_id=parent_event_id,
             )
@@ -297,27 +304,23 @@ class ReminderWorkflow:
         return extraction, trace.trace_id
 
 
-def _reminder_extraction_prompt(request: ReminderWorkflowInput) -> str:
-    return "\n".join(
-        [
-            "Extrae un recordatorio/calendario desde el texto del usuario.",
-            "Devuelve solo JSON con esta forma:",
-            (
-                '{"is_reminder": true, "title": "texto corto", '
-                '"starts_at": "ISO-8601 con timezone", "notify_at": "ISO-8601 opcional o null", '
-                '"confidence": 0.0}'
-            ),
-            "Reglas:",
-            "- Si no hay intención de recordatorio, is_reminder=false.",
-            "- Si falta hora o fecha suficientemente clara, is_reminder=false.",
-            "- Si el usuario da solo una hora, usa hoy si todavía no pasó; si ya pasó, usa mañana.",
-            "- Si pide un aviso relativo como 'en dos minutos', starts_at y notify_at deben ser ese momento.",
-            "- Conserva el timezone/offset de now cuando construyas starts_at.",
-            f"now={request.now.isoformat()}",
-            f"timezone={request.timezone}",
-            f"text={request.text!r}",
-        ]
+def _render_reminder_extraction_prompt(
+    request: ReminderWorkflowInput,
+    *,
+    prompt_catalog: PromptCatalogPort,
+) -> RenderedPrompt:
+    return prompt_catalog.render(
+        REMINDER_EXTRACTION_PROMPT_ID,
+        {
+            "now": request.now.isoformat(),
+            "timezone": request.timezone,
+            "text": repr(request.text),
+        },
     )
+
+
+def _reminder_extraction_prompt(request: ReminderWorkflowInput) -> str:
+    return _render_reminder_extraction_prompt(request, prompt_catalog=DefaultPromptCatalog()).text
 
 
 def _reminder_extraction_from_llm(data: dict[str, Any], *, default_now: datetime) -> ReminderExtraction | None:
@@ -356,6 +359,7 @@ def _llm_trace(
     parent_event_id: str,
     llm_result: LLMResult,
     extraction: ReminderExtraction | None,
+    prompt: RenderedPrompt,
 ) -> TraceEvent:
     return TraceEvent(
         run_id=run_id,
@@ -363,7 +367,11 @@ def _llm_trace(
         event_type=TraceEventType.llm_called,
         tenant_id=principal.tenant_id,
         model=llm_result.model,
-        input_summary={"schema": "reminder_extraction", "provider": llm_result.provider},
+        input_summary={
+            "schema": "reminder_extraction",
+            "provider": llm_result.provider,
+            **_prompt_trace_summary(prompt),
+        },
         output_summary={
             "matched": extraction is not None,
             "input_tokens": llm_result.input_tokens,
@@ -371,3 +379,9 @@ def _llm_trace(
         },
         parent_event_id=parent_event_id,
     )
+
+
+def _prompt_trace_summary(prompt: RenderedPrompt | None) -> dict[str, str]:
+    if prompt is None:
+        return {}
+    return {"prompt_id": prompt.prompt_id, "prompt_version": prompt.version}

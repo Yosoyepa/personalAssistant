@@ -253,7 +253,7 @@ shells and are not yet enforced by every runtime surface.
 | `REMINDER_MINUTES_BEFORE=30` | Event reminder scheduling | No | Minutes before a calendar event when the bot should notify. Relative reminders like `recuérdame en 2 minutos...` notify at the requested time instead. |
 | `LLM_PROVIDER` | Bounded LLM extraction | No | Use `minimax` for MiniMax Token Plan, `anthropic_compatible` for AeroLink/Claude-compatible gateways, or `disabled` for deterministic-only behavior. |
 | `MINIMAX_API_KEY` | MiniMax Token Plan LLM extraction | Yes | MiniMax subscription key. This is distinct from MiniMax pay-as-you-go API keys. |
-| `MINIMAX_BASE_URL` | MiniMax Token Plan LLM extraction | No | Defaults to `https://api.minimaxi.com/anthropic` for Anthropic-compatible Messages API. |
+| `MINIMAX_BASE_URL` | MiniMax Token Plan LLM extraction | No | Defaults to `https://api.minimax.io/anthropic` for Anthropic-compatible Messages API. |
 | `MINIMAX_MODEL` | MiniMax Token Plan LLM extraction | No | Defaults to `MiniMax-M3`. |
 | `LLM_API_KEY` | Generic bounded LLM extraction | Yes | Provider key. `MINIMAX_API_KEY`, `AEROLINK_API_KEY`, `ANTHROPIC_API_KEY`, and `ANTHROPIC_AUTH_TOKEN` are also read as fallbacks. |
 | `LLM_BASE_URL` | Generic bounded LLM extraction | No | Provider base URL. `MINIMAX_BASE_URL`, `AEROLINK_BASE_URL`, and `ANTHROPIC_BASE_URL` are also accepted. |
@@ -265,7 +265,7 @@ shells and are not yet enforced by every runtime surface.
 | `TRANSCRIPTION_MODEL` | Telegram voice messages | No | Speech-to-text model id, required when transcription is enabled. |
 | `TTS_PROVIDER` | Telegram audio replies | No | Use `minimax` to synthesize Telegram reply audio from MiniMax T2A; leave `disabled` for text-only replies. |
 | `TTS_API_KEY` | Telegram audio replies | Yes | TTS provider key. `MINIMAX_API_KEY` is read as a fallback for MiniMax Token Plan. |
-| `TTS_BASE_URL` | Telegram audio replies | No | Defaults to `https://api.minimaxi.com`. |
+| `TTS_BASE_URL` | Telegram audio replies | No | Defaults to `https://api.minimax.io`. |
 | `TTS_MODEL` | Telegram audio replies | No | Defaults to `speech-2.8-turbo`. |
 | `TTS_VOICE_ID` | Telegram audio replies | No | Defaults to `male-qn-qingse`; choose another MiniMax system voice if preferred. |
 | `TTS_AUDIO_FORMAT` | Telegram audio replies | No | `mp3`, `wav`, or `flac`. Telegram replies use `sendAudio`; default `mp3`. |
@@ -275,6 +275,15 @@ shells and are not yet enforced by every runtime surface.
 
 Local `.env` files are ignored by git. Do not add a committed example with real
 tokens or tenant/customer data.
+
+MiniMax Token Plan defaults above are based on the official international
+MiniMax docs for Token Plan Quick Start, Token Plan Other Tools, Anthropic API,
+OpenAI-compatible API, and T2A HTTP API:
+<https://platform.minimax.io/docs/token-plan/quickstart>,
+<https://platform.minimax.io/docs/token-plan/other-tools>,
+<https://platform.minimax.io/docs/api-reference/text-chat-anthropic>,
+<https://platform.minimax.io/docs/api-reference/text-openai-api>, and
+<https://platform.minimax.io/docs/api-reference/speech-t2a-http>.
 
 ## BotFather Setup
 

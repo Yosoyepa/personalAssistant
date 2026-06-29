@@ -18,7 +18,7 @@ Use a local ignored `.env` file:
 ```bash
 LLM_PROVIDER="minimax"
 MINIMAX_API_KEY="<your-token-plan-subscription-key>"
-MINIMAX_BASE_URL="https://api.minimaxi.com/anthropic"
+MINIMAX_BASE_URL="https://api.minimax.io/anthropic"
 MINIMAX_MODEL="MiniMax-M3"
 ```
 
@@ -30,7 +30,7 @@ Optional Telegram audio replies:
 ```bash
 TTS_PROVIDER="minimax"
 TTS_API_KEY="<your-token-plan-subscription-key>"
-TTS_BASE_URL="https://api.minimaxi.com"
+TTS_BASE_URL="https://api.minimax.io"
 TTS_MODEL="speech-2.8-turbo"
 TTS_VOICE_ID="male-qn-qingse"
 TTS_AUDIO_FORMAT="mp3"
@@ -44,6 +44,12 @@ runtime reads the MiniMax key as a fallback.
 
 ## Source Notes
 
+- Official MiniMax sources used for this runbook:
+  <https://platform.minimax.io/docs/token-plan/quickstart>,
+  <https://platform.minimax.io/docs/token-plan/other-tools>,
+  <https://platform.minimax.io/docs/api-reference/text-chat-anthropic>,
+  <https://platform.minimax.io/docs/api-reference/text-openai-api>, and
+  <https://platform.minimax.io/docs/api-reference/speech-t2a-http>.
 - MiniMax Token Plan subscription keys are distinct from pay-as-you-go API keys.
   They share quota across supported Token Plan resources and can be rate-limited
   by rolling windows.
@@ -51,12 +57,12 @@ runtime reads the MiniMax key as a fallback.
   usage allowance. For a personal assistant, keep `TELEGRAM_AUDIO_REPLY_MODE` at
   `voice_only` and cap `TTS_MAX_REPLY_CHARACTERS` so voice replies do not
   consume quota for routine text chats.
-- MiniMax recommends the Anthropic-compatible protocol for Claude-style tools.
-  The documented base URL is `https://api.minimaxi.com/anthropic`.
-- MiniMax also exposes an OpenAI-compatible API at `https://api.minimaxi.com/v1`.
+- MiniMax documents `https://api.minimax.io/anthropic` as the international
+  Token Plan Anthropic-compatible base URL for Claude-style tools.
+- MiniMax also exposes an OpenAI-compatible API at `https://api.minimax.io/v1`.
   This project uses the Anthropic-compatible path to match the existing
   `LLMProvider` adapter shape and prompt-cache-friendly protocol.
-- MiniMax synchronous TTS uses `POST https://api.minimaxi.com/v1/t2a_v2`.
+- MiniMax synchronous TTS uses `POST https://api.minimax.io/v1/t2a_v2`.
   Non-streaming calls can return hex-encoded audio; the Telegram adapter sends
   the decoded MP3 with `sendAudio`.
 - The public API docs list MiniMax speech capabilities as text-to-audio,
