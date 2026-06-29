@@ -197,9 +197,19 @@ curl -sS http://127.0.0.1:8000/v1/runtime/traces \
 
 ## Current Local Admin Dashboard
 
-The admin app is local-only and rejects non-loopback clients.
+The dashboard/admin surface is documented in
+`docs/runbook/admin-dashboard.md`. The admin app is local-only, rejects
+non-loopback clients, and is read-only. When `ADMIN_TOKEN` is configured, admin
+routes require a matching Bearer token or `X-Admin-Token` header; do not expose
+these routes outside loopback.
 
 ```bash
+export ADMIN_TOKEN="$(python3 - <<'PY'
+import secrets
+print(secrets.token_urlsafe(32))
+PY
+)"
+
 PYTHONPATH=src python3 -m uvicorn personal_assistant.infrastructure.http:app \
   --host 127.0.0.1 \
   --port 8000
@@ -216,22 +226,31 @@ Useful JSON endpoints:
 ```text
 http://127.0.0.1:8000/admin/snapshot?tenant_id=tenant-local&principal_id=user-local
 http://127.0.0.1:8000/admin/health?tenant_id=tenant-local&principal_id=user-local
+http://127.0.0.1:8000/admin/approvals?tenant_id=tenant-local&principal_id=user-local
 http://127.0.0.1:8000/admin/traces?tenant_id=tenant-local&principal_id=user-local
 http://127.0.0.1:8000/admin/outbox?tenant_id=tenant-local&principal_id=user-local
+http://127.0.0.1:8000/admin/scheduler?tenant_id=tenant-local&principal_id=user-local
+http://127.0.0.1:8000/admin/agenda?tenant_id=tenant-local&principal_id=user-local
+http://127.0.0.1:8000/admin/reminders?tenant_id=tenant-local&principal_id=user-local
+http://127.0.0.1:8000/admin/errors?tenant_id=tenant-local&principal_id=user-local
+http://127.0.0.1:8000/admin/events?tenant_id=tenant-local&principal_id=user-local
+http://127.0.0.1:8000/admin/states?tenant_id=tenant-local&principal_id=user-local
+http://127.0.0.1:8000/admin/memory?tenant_id=tenant-local&principal_id=user-local
 ```
 
 Dashboard criteria:
 
 - Pending approval runs show `health.status = needs_attention`.
-- Completed runs surface traces, states, events, outbox, scheduler, and memory
-  for the requested tenant only.
+- Completed runs surface traces, states, events, outbox, scheduler, agenda,
+  reminders, and memory for the requested tenant only.
+- Errors surface through `/admin/errors`, `agent.failed` traces, failed outbox
+  counts, and failed workflow counts.
 - Cross-tenant canary text is not visible in another tenant snapshot.
 
 ## Environment Variables
 
 `AppSettings.from_env()` currently reads the `ASSISTANT_*`, Telegram, admin, and
-worker variables below. Some are reserved for the Telegram bridge or deployment
-shells and are not yet enforced by every runtime surface.
+worker variables below.
 
 | Variable | Required When | Secret | Purpose |
 |---|---|---:|---|
@@ -247,7 +266,7 @@ shells and are not yet enforced by every runtime surface.
 | `TELEGRAM_WEBHOOK_URL` | Local shell convenience | No | Public HTTPS URL plus webhook path for `setWebhook`. |
 | `TELEGRAM_ALLOWED_USER_IDS` | Future Telegram auth mapping | No | Comma-separated Telegram user IDs allowed in local/dev. |
 | `NGROK_AUTHTOKEN` | Configuring ngrok agent | Yes | Used by `ngrok config add-authtoken`; do not commit. |
-| `ADMIN_TOKEN` | Future/non-local admin hardening | Yes | Reserved by settings; current admin app is loopback-only. |
+| `ADMIN_TOKEN` | Local admin hardening | Yes | Optional. When configured, admin routes require a matching Bearer token or `X-Admin-Token` header in addition to loopback access. |
 | `REMINDER_WORKER_ENABLED=true` | Reminder notification dispatch | No | Starts the FastAPI background worker that sends due reminder notifications. |
 | `REMINDER_WORKER_INTERVAL_SECONDS=15` | Worker loop config | No | Minimum interval is clamped to 1 second. |
 | `REMINDER_MINUTES_BEFORE=30` | Event reminder scheduling | No | Minutes before a calendar event when the bot should notify. Relative reminders like `recuérdame en 2 minutos...` notify at the requested time instead. |

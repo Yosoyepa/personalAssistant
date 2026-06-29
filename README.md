@@ -15,11 +15,12 @@ API, a local-only admin dashboard, a reminder notification worker,
 Anthropic-compatible LLM fallback extraction, optional voice transcription, and
 deterministic tests.
 
-Runtime configuration is read from process environment by
-`src/personal_assistant/infrastructure/config.py`; `.env` files are not loaded
-automatically. Telegram tokens, ngrok authtokens, webhook secrets, MiniMax keys,
-OAuth tokens, and any other credentials must stay outside git. `.gitignore`
-excludes `.env` and `.env.*` by default.
+Runtime configuration is read by
+`src/personal_assistant/infrastructure/config.py` from process environment and,
+by default, an optional local `.env` file. Set `APP_ENV_FILE=disabled` for
+hermetic runs. Telegram tokens, ngrok authtokens, webhook secrets, MiniMax keys,
+admin tokens, OAuth tokens, and any other credentials must stay outside git.
+`.gitignore` excludes `.env` and `.env.*` by default.
 
 ## Architecture
 
@@ -107,6 +108,15 @@ Verification criteria:
 ## Telegram Runbook
 
 The local Telegram operational guide is in `docs/runbook/telegram.md`.
+
+## Admin Dashboard Runbook
+
+The local dashboard/admin guide is in `docs/runbook/admin-dashboard.md`. It
+documents `/admin`, the JSON admin endpoints, visible signals for agenda,
+reminders, approvals, outbox, errors, and traces, local startup with
+`ADMIN_TOKEN`, and the current security limits. The current admin boundary is
+loopback-only, read-only, tenant-scoped, and validates `ADMIN_TOKEN` when it is
+configured.
 
 ## Persistence Runbook
 

@@ -525,17 +525,71 @@ class HttpRuntimeTests(unittest.TestCase):
     def test_admin_endpoints_use_default_settings_tenant(self) -> None:
         settings = AppSettings(tenant_id="tenant-a")
         client = TestClient(create_app(self.container, settings=settings), client=("127.0.0.1", 50000))
+        reminder_response = client.post("/v1/runtime/reminders", json=self.payload(), headers=self.headers)
+        self.assertEqual(reminder_response.status_code, 202, reminder_response.text)
+        approval_id = reminder_response.json()["approval"]["approval_id"]
+        approved = client.post(f"/v1/runtime/approvals/{approval_id}/approve", json={}, headers=self.headers)
+        self.assertEqual(approved.status_code, 200, approved.text)
 
         page = client.get("/admin")
+        snapshot = client.get("/admin/snapshot")
         health = client.get("/admin/health")
-        traces = client.get("/admin/traces")
+        admin_paths = {
+            route.path
+            for route in client.app.routes
+            if route.path.startswith("/admin") and "{" not in route.path and "GET" in getattr(route, "methods", set())
+        }
+        expected_paths = {
+            "/admin",
+            "/admin/snapshot",
+            "/admin/health",
+            "/admin/approvals",
+            "/admin/traces",
+            "/admin/outbox",
+            "/admin/scheduler",
+            "/admin/agenda",
+            "/admin/reminders",
+            "/admin/errors",
+            "/admin/events",
+            "/admin/states",
+            "/admin/memory",
+        }
 
+        self.assertTrue(expected_paths.issubset(admin_paths))
         self.assertEqual(page.status_code, 200, page.text)
         self.assertIn("Personal Assistant Admin", page.text)
+        self.assertEqual(snapshot.status_code, 200, snapshot.text)
+        snapshot_body = snapshot.json()
+        self.assertEqual(snapshot_body["meta"]["tenant_id"], "tenant-a")
+        self.assertEqual(snapshot_body["events"]["counts"]["reminder.created"], 1)
+        self.assertEqual(snapshot_body["outbox"]["counts"]["pending"], 1)
+        self.assertEqual(snapshot_body["scheduler"]["counts"]["scheduled"], 1)
+        self.assertEqual(snapshot_body["agenda"]["total"], 1)
+        self.assertEqual(snapshot_body["reminders"]["counts"]["scheduled"], 1)
+        self.assertEqual(snapshot_body["errors"]["total"], 0)
+        self.assertEqual(snapshot_body["states"]["counts"]["completed"], 1)
+        self.assertGreaterEqual(snapshot_body["traces"]["total"], 1)
         self.assertEqual(health.status_code, 200, health.text)
         self.assertEqual(health.json()["components"]["traces"]["status"], "ok")
-        self.assertEqual(traces.status_code, 200, traces.text)
-        self.assertIn("items", traces.json())
+        for path in sorted(admin_paths - {"/admin", "/admin/snapshot", "/admin/health"}):
+            response = client.get(path)
+            self.assertEqual(response.status_code, 200, response.text)
+            section = path.rsplit("/", 1)[-1]
+            self.assertEqual(response.json(), snapshot_body[section])
+
+    def test_admin_token_is_required_when_configured(self) -> None:
+        settings = AppSettings(tenant_id="tenant-a", admin_token="admin-secret")
+        client = TestClient(create_app(self.container, settings=settings), client=("127.0.0.1", 50000))
+
+        missing = client.get("/admin/health")
+        bearer = client.get("/admin/health", headers={"Authorization": "Bearer admin-secret"})
+        custom_header = client.get("/admin/health", headers={"X-Admin-Token": "admin-secret"})
+        wrong = client.get("/admin/health", headers={"X-Admin-Token": "wrong"})
+
+        self.assertEqual(missing.status_code, 403, missing.text)
+        self.assertEqual(wrong.status_code, 403, wrong.text)
+        self.assertEqual(bearer.status_code, 200, bearer.text)
+        self.assertEqual(custom_header.status_code, 200, custom_header.text)
 
 
 if __name__ == "__main__":

@@ -525,10 +525,26 @@ def _admin_principal(settings: AppSettings, tenant_id: str | None, principal_id:
     )
 
 
-def _require_local_admin(request: Request) -> None:
+def _require_local_admin(request: Request, settings: AppSettings) -> None:
     client_host = request.client.host if request.client is not None else None
     if not is_local_client(client_host):
         raise AssistantError(ErrorCode.PERMISSION_DENIED, "admin API is local-only")
+    if settings.admin_token is None:
+        return
+    supplied_token = _admin_request_token(request)
+    if supplied_token != settings.admin_token:
+        raise AssistantError(ErrorCode.PERMISSION_DENIED, "admin token is required")
+
+
+def _admin_request_token(request: Request) -> str | None:
+    header_token = request.headers.get("x-admin-token")
+    if header_token:
+        return header_token.strip()
+    authorization = request.headers.get("authorization", "").strip()
+    scheme, _, value = authorization.partition(" ")
+    if scheme.lower() == "bearer" and value.strip():
+        return value.strip()
+    return None
 
 
 def create_app(container: AppContainer | None = None, settings: AppSettings | None = None) -> FastAPI:
@@ -696,7 +712,7 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> HTMLResponse:
-        _require_local_admin(request)
+        _require_local_admin(request, runtime_settings)
         principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return HTMLResponse(dashboard.render_html(principal, limit=clamp_limit(limit)))
 
@@ -707,7 +723,7 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request)
+        _require_local_admin(request, runtime_settings)
         principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.snapshot(principal, limit=clamp_limit(limit))
 
@@ -718,7 +734,7 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request)
+        _require_local_admin(request, runtime_settings)
         principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.snapshot(principal, limit=clamp_limit(limit))["health"]
 
@@ -729,7 +745,7 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request)
+        _require_local_admin(request, runtime_settings)
         principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.approvals(principal, limit=clamp_limit(limit))
 
@@ -740,7 +756,7 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request)
+        _require_local_admin(request, runtime_settings)
         principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.traces(principal, limit=clamp_limit(limit))
 
@@ -751,7 +767,7 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request)
+        _require_local_admin(request, runtime_settings)
         principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.outbox(principal, limit=clamp_limit(limit))
 
@@ -762,9 +778,53 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request)
+        _require_local_admin(request, runtime_settings)
         principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.scheduler(principal, limit=clamp_limit(limit))
+
+    @app.get("/admin/agenda", tags=["admin"])
+    def admin_agenda(
+        request: Request,
+        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
+        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    ) -> dict[str, Any]:
+        _require_local_admin(request, runtime_settings)
+        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
+        return dashboard.agenda(principal, limit=clamp_limit(limit))
+
+    @app.get("/admin/reminders", tags=["admin"])
+    def admin_reminders(
+        request: Request,
+        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
+        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    ) -> dict[str, Any]:
+        _require_local_admin(request, runtime_settings)
+        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
+        return dashboard.reminders(principal, limit=clamp_limit(limit))
+
+    @app.get("/admin/errors", tags=["admin"])
+    def admin_errors(
+        request: Request,
+        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
+        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        limit: Annotated[int, Query(ge=1, le=200)] = 50,
+        category: Annotated[str | None, Query(min_length=1)] = None,
+        run_id: Annotated[str | None, Query(min_length=1)] = None,
+        event_type: Annotated[str | None, Query(min_length=1)] = None,
+        source: Annotated[str | None, Query(min_length=1)] = None,
+    ) -> dict[str, Any]:
+        _require_local_admin(request, runtime_settings)
+        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
+        return dashboard.errors(
+            principal,
+            category=category,
+            run_id=run_id,
+            event_type=event_type,
+            source=source,
+            limit=clamp_limit(limit),
+        )
 
     @app.get("/admin/events", tags=["admin"])
     def admin_events(
@@ -773,7 +833,7 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request)
+        _require_local_admin(request, runtime_settings)
         principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.events(principal, limit=clamp_limit(limit))
 
@@ -784,7 +844,7 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request)
+        _require_local_admin(request, runtime_settings)
         principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.states(principal, limit=clamp_limit(limit))
 
@@ -795,7 +855,7 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request)
+        _require_local_admin(request, runtime_settings)
         principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.memory(principal, limit=clamp_limit(limit))
 
