@@ -45,13 +45,13 @@ from personal_assistant.infrastructure.bootstrap import (
     build_tts_provider,
 )
 from personal_assistant.infrastructure.config import AppSettings
+from personal_assistant.infrastructure.prompts import build_prompt_catalog
 
 
 MAX_TELEGRAM_AUDIO_BYTES = 20 * 1024 * 1024
 SUPPORTED_TRANSCRIPTION_EXTENSIONS = frozenset(
     {"flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "opus", "wav", "webm"}
 )
-REPLIES = AssistantReplies()
 
 
 class HealthResponse(BaseModel):
@@ -237,7 +237,8 @@ def _assert_same_actor(pending: PendingReminderApproval, principal: Principal) -
 
 
 def build_runtime_container(settings: AppSettings) -> AppContainer:
-    llm = build_llm_provider(settings)
+    prompts = build_prompt_catalog()
+    llm = build_llm_provider(settings, prompt_catalog=prompts)
     transcription = build_transcription_provider(settings)
     tts = build_tts_provider(settings)
     if settings.telegram_bot_token:
@@ -250,6 +251,7 @@ def build_runtime_container(settings: AppSettings) -> AppContainer:
             notifications=telegram_notifications,
             transcription=transcription,
             tts=tts,
+            prompt_catalog=prompts,
             approve_reminder_notifications=True,
             reminder_minutes_before=settings.reminder_minutes_before,
         )
@@ -258,6 +260,7 @@ def build_runtime_container(settings: AppSettings) -> AppContainer:
         llm=llm,
         transcription=transcription,
         tts=tts,
+        prompt_catalog=prompts,
         reminder_minutes_before=settings.reminder_minutes_before,
     )
 
@@ -435,15 +438,16 @@ def _transcribe_telegram_media(
     container: AppContainer,
     settings: AppSettings,
     message: NormalizedMessage,
+    replies: AssistantReplies,
 ) -> tuple[NormalizedMessage | None, str | None]:
     if not message.media_file_id:
-        return None, REPLIES.telegram_audio_missing_file_id()
+        return None, replies.telegram_audio_missing_file_id()
     if container.transcription is None:
-        return None, REPLIES.telegram_transcription_not_configured()
+        return None, replies.telegram_transcription_not_configured()
     if not settings.telegram_bot_token:
-        return None, REPLIES.telegram_token_missing_for_audio()
+        return None, replies.telegram_token_missing_for_audio()
     if message.media_file_size is not None and message.media_file_size > MAX_TELEGRAM_AUDIO_BYTES:
-        return None, REPLIES.telegram_audio_too_large()
+        return None, replies.telegram_audio_too_large()
 
     transcription_filename: str | None = None
     telegram_file_extension: str | None = None
@@ -452,10 +456,10 @@ def _transcribe_telegram_media(
         file_info = client.get_file(file_id=message.media_file_id)
         file_path = str(file_info.get("file_path") or "")
         if not file_path:
-            return None, REPLIES.telegram_file_path_missing()
+            return None, replies.telegram_file_path_missing()
         audio = client.download_file(file_path=file_path)
         if len(audio) > MAX_TELEGRAM_AUDIO_BYTES:
-            return None, REPLIES.telegram_audio_download_too_large()
+            return None, replies.telegram_audio_download_too_large()
 
         telegram_file_extension = file_path.rsplit(".", 1)[-1].lower() if "." in file_path else None
         transcription_filename = _transcription_filename(message, file_path)
@@ -504,7 +508,7 @@ def _transcribe_telegram_media(
                 error={"type": exc.__class__.__name__, "message": str(exc)[:500]},
             )
         )
-        return None, REPLIES.telegram_transcription_failed()
+        return None, replies.telegram_transcription_failed()
     return (
         message.model_copy(
             update={
@@ -550,6 +554,7 @@ def _admin_request_token(request: Request) -> str | None:
 def create_app(container: AppContainer | None = None, settings: AppSettings | None = None) -> FastAPI:
     runtime_settings = settings or AppSettings.from_env()
     runtime_container = container or build_runtime_container(runtime_settings)
+    runtime_replies = runtime_container.commands.replies
     pending_approvals: dict[str, PendingReminderApproval] = {}
 
     @asynccontextmanager
@@ -648,7 +653,12 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         message = normalize_telegram_webhook(payload, tenant_id=runtime_settings.tenant_id)
         principal = telegram_principal(runtime_settings, message.actor_id)
         if message.media_kind in {"voice", "audio"}:
-            transcribed, transcription_error = _transcribe_telegram_media(runtime_container, runtime_settings, message)
+            transcribed, transcription_error = _transcribe_telegram_media(
+                runtime_container,
+                runtime_settings,
+                message,
+                runtime_replies,
+            )
             if transcription_error is not None:
                 sent = False
                 if runtime_settings.telegram_bot_token:
@@ -887,7 +897,7 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
                     action=action,
                     resource=f"{run_id}:calendar",
                     permission_tier=PermissionTier.P3,
-                    reason="Crear evento externo de calendario para el recordatorio.",
+                    reason=runtime_replies.approval_reason_calendar_create_event(),
                 )
                 pending_approvals[approval_id] = pending
             approval_view = pending.view()

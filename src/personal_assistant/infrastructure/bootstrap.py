@@ -28,6 +28,7 @@ from personal_assistant.application.ports.services import (
     MemoryPort,
 )
 from personal_assistant.application.ports.workflow_state import WorkflowStateStorePort
+from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.use_cases.commands import ConversationCommandService
 from personal_assistant.application.use_cases.documents import DocumentService
 from personal_assistant.application.use_cases.reminder_notifications import DispatchDueReminders
@@ -172,14 +173,20 @@ def _persistence_member(candidate: Any, name: str) -> Any:
     raise RuntimeError(f"Postgres persistence adapter is missing {name!r}")
 
 
-def build_llm_provider(settings: AppSettings) -> LLMProvider | None:
+def build_llm_provider(
+    settings: AppSettings,
+    *,
+    prompt_catalog: PromptCatalogPort | None = None,
+) -> LLMProvider | None:
     if settings.llm_provider in {"", "disabled", "none"}:
         return None
+    prompts = prompt_catalog or build_prompt_catalog()
     if settings.llm_provider in {"minimax", "minimax_anthropic", "minimax-anthropic"}:
         return MiniMaxLLMProvider(
             api_key=settings.llm_api_key or "",
-            base_url=settings.llm_base_url or "https://api.minimax.io/anthropic",
-            model=settings.llm_model or "MiniMax-M3",
+            prompt_catalog=prompts,
+            base_url=settings.llm_base_url or "",
+            model=settings.llm_model or "",
             timeout_seconds=settings.llm_timeout_seconds,
         )
     if settings.llm_provider not in {"anthropic_compatible", "anthropic-compatible", "aerolink"}:
@@ -188,6 +195,7 @@ def build_llm_provider(settings: AppSettings) -> LLMProvider | None:
         api_key=settings.llm_api_key or "",
         base_url=settings.llm_base_url or "",
         model=settings.llm_model or "",
+        prompt_catalog=prompts,
         anthropic_version=settings.llm_anthropic_version,
         auth_header=settings.llm_auth_header,
         timeout_seconds=settings.llm_timeout_seconds,
@@ -214,8 +222,8 @@ def build_tts_provider(settings: AppSettings) -> AudioSynthesisProvider | None:
         raise ValueError(f"unsupported TTS_PROVIDER: {settings.tts_provider}")
     return MiniMaxTTSProvider(
         api_key=settings.tts_api_key or "",
-        base_url=settings.tts_base_url or "https://api.minimax.io",
-        model=settings.tts_model or "speech-2.8-turbo",
+        base_url=settings.tts_base_url or "",
+        model=settings.tts_model or "",
         voice_id=settings.tts_voice_id,
         audio_format=settings.tts_audio_format,
         timeout_seconds=settings.tts_timeout_seconds,
@@ -238,6 +246,7 @@ def build_container(
     """Build application adapters for local development, tests, and runtime startup."""
     notification_adapter = notifications or LocalNotificationTool()
     prompts = prompt_catalog or build_prompt_catalog()
+    replies = AssistantReplies(locale=settings.reply_locale) if settings is not None else AssistantReplies()
     persistence = build_persistence_adapters(
         settings=settings,
         persistence_backend=persistence_backend or ("memory" if settings is None else None),
@@ -260,6 +269,7 @@ def build_container(
         traces=traces,
         llm=llm,
         prompt_catalog=prompts,
+        replies=replies,
         reminder_minutes_before=reminder_minutes_before,
     )
     commands = ConversationCommandService(
@@ -272,6 +282,7 @@ def build_container(
         llm=llm,
         prompt_catalog=prompts,
         traces=traces,
+        replies=replies,
     )
     return AppContainer(
         approvals=approvals,

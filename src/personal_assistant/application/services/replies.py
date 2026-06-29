@@ -43,6 +43,9 @@ class AssistantReplies:
             outbox_count=outbox_count,
         )
 
+    def runtime_request_received(self) -> str:
+        return self._text("runtime_request_received")
+
     def agenda_empty(self) -> str:
         return self._text("agenda_empty")
 
@@ -87,6 +90,12 @@ class AssistantReplies:
 
     def reminder_needs_approval(self, title: str) -> str:
         return self._format("reminder_needs_approval", title=title)
+
+    def approval_command_hint(self, approval_id: str) -> str:
+        return self._format("approval_command_hint", approval_id=approval_id)
+
+    def approval_reason_calendar_create_event(self) -> str:
+        return self._text("approval_reason_calendar_create_event")
 
     def reminder_created(self, *, title: str, minutes_before: int, direct_notice: bool = False) -> str:
         if direct_notice:

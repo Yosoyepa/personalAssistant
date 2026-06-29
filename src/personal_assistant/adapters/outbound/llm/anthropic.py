@@ -15,6 +15,8 @@ from urllib import request as urllib_request
 
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import LLMRequest, LLMResult
+from personal_assistant.application.ports.prompts import PromptCatalogPort
+from personal_assistant.application.services.prompts import LLM_JSON_SYSTEM_PROMPT_ID
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 
 
@@ -60,6 +62,7 @@ class AnthropicCompatibleLLMProvider:
         api_key: str,
         base_url: str,
         model: str,
+        prompt_catalog: PromptCatalogPort,
         anthropic_version: str = "2023-06-01",
         auth_header: str = "x-api-key",
         timeout_seconds: float = 30.0,
@@ -74,6 +77,7 @@ class AnthropicCompatibleLLMProvider:
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self._model = model
+        self._prompt_catalog = prompt_catalog
         self._anthropic_version = anthropic_version
         self._auth_header = auth_header.lower().strip() or "x-api-key"
         self._timeout_seconds = timeout_seconds
@@ -82,14 +86,15 @@ class AnthropicCompatibleLLMProvider:
     def complete(self, request: LLMRequest, *, budget: TokenBudget) -> LLMResult:
         if not budget.can_spend(request.max_tokens):
             raise AssistantError(ErrorCode.TOKEN_BUDGET_EXCEEDED, "LLM token budget exceeded")
+        system_prompt = self._prompt_catalog.render(
+            LLM_JSON_SYSTEM_PROMPT_ID,
+            {"schema_name": request.schema_name},
+        )
         body = {
             "model": self._model,
             "max_tokens": request.max_tokens,
             "temperature": request.temperature,
-            "system": (
-                "You are a strict JSON API. Return only one valid JSON object "
-                f"matching schema_name={request.schema_name}. No markdown."
-            ),
+            "system": system_prompt.text,
             "messages": [{"role": "user", "content": request.prompt}],
         }
         headers = {

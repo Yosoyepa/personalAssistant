@@ -7,6 +7,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+DEFAULT_MINIMAX_BASE_URL = "https://api.minimax.io/anthropic"
+DEFAULT_MINIMAX_MODEL = "MiniMax-M3"
+DEFAULT_MINIMAX_TTS_BASE_URL = "https://api.minimax.io"
+DEFAULT_MINIMAX_TTS_MODEL = "speech-2.8-turbo"
+
+
 def _load_env_file() -> dict[str, str]:
     configured = os.getenv("APP_ENV_FILE")
     if configured is not None:
@@ -69,9 +75,10 @@ def load_persistence_settings_from_env() -> tuple[str, str | None]:
 class AppSettings:
     tenant_id: str = "personal"
     timezone: str = "America/Bogota"
+    reply_locale: str = "es"
     persistence_backend: str = "memory"
     database_url: str | None = None
-    telegram_webhook_secret: str = "local-dev-secret"
+    telegram_webhook_secret: str = ""
     telegram_bot_token: str | None = None
     telegram_allowed_user_ids: frozenset[str] = frozenset()
     llm_provider: str = "disabled"
@@ -106,6 +113,8 @@ class AppSettings:
     @classmethod
     def from_env(cls) -> "AppSettings":
         file_values = _load_env_file()
+        llm_provider = _env("LLM_PROVIDER", file_values, "disabled").strip().lower() or "disabled"
+        tts_provider = _env("TTS_PROVIDER", file_values, "disabled").strip().lower() or "disabled"
         interval = _env("REMINDER_WORKER_INTERVAL_SECONDS", file_values, "15")
         reminder_minutes_before = _env("REMINDER_MINUTES_BEFORE", file_values, "30")
         llm_timeout = _env("LLM_TIMEOUT_SECONDS", file_values, "30")
@@ -116,13 +125,13 @@ class AppSettings:
         return cls(
             tenant_id=_env("ASSISTANT_TENANT_ID", file_values, "personal").strip() or "personal",
             timezone=_env("ASSISTANT_TIMEZONE", file_values, "America/Bogota").strip() or "America/Bogota",
+            reply_locale=_env("ASSISTANT_REPLY_LOCALE", file_values, "es").strip() or "es",
             persistence_backend=_env("PERSISTENCE_BACKEND", file_values, "memory").strip().lower() or "memory",
             database_url=_optional_env("DATABASE_URL", file_values),
-            telegram_webhook_secret=_env("TELEGRAM_WEBHOOK_SECRET", file_values, "local-dev-secret").strip()
-            or "local-dev-secret",
+            telegram_webhook_secret=_env("TELEGRAM_WEBHOOK_SECRET", file_values).strip(),
             telegram_bot_token=_optional_env("TELEGRAM_BOT_TOKEN", file_values),
             telegram_allowed_user_ids=_parse_csv(_env("TELEGRAM_ALLOWED_USER_IDS", file_values)),
-            llm_provider=_env("LLM_PROVIDER", file_values, "disabled").strip().lower() or "disabled",
+            llm_provider=llm_provider,
             llm_api_key=(
                 _optional_env("LLM_API_KEY", file_values)
                 or _optional_env("MINIMAX_API_KEY", file_values)
@@ -135,12 +144,14 @@ class AppSettings:
                 or _optional_env("MINIMAX_BASE_URL", file_values)
                 or _optional_env("AEROLINK_BASE_URL", file_values)
                 or _optional_env("ANTHROPIC_BASE_URL", file_values)
+                or (DEFAULT_MINIMAX_BASE_URL if llm_provider in {"minimax", "minimax_anthropic", "minimax-anthropic"} else None)
             ),
             llm_model=(
                 _optional_env("LLM_MODEL", file_values)
                 or _optional_env("MINIMAX_MODEL", file_values)
                 or _optional_env("AEROLINK_MODEL", file_values)
                 or _optional_env("ANTHROPIC_MODEL", file_values)
+                or (DEFAULT_MINIMAX_MODEL if llm_provider in {"minimax", "minimax_anthropic", "minimax-anthropic"} else None)
             ),
             llm_auth_header=_env("LLM_AUTH_HEADER", file_values, "x-api-key").strip() or "x-api-key",
             llm_anthropic_version=_env("LLM_ANTHROPIC_VERSION", file_values, "2023-06-01").strip()
@@ -158,10 +169,18 @@ class AppSettings:
             or _optional_env("AEROLINK_BASE_URL", file_values),
             transcription_model=_optional_env("TRANSCRIPTION_MODEL", file_values),
             transcription_timeout_seconds=max(float(transcription_timeout), 1.0),
-            tts_provider=_env("TTS_PROVIDER", file_values, "disabled").strip().lower() or "disabled",
+            tts_provider=tts_provider,
             tts_api_key=_optional_env("TTS_API_KEY", file_values) or _optional_env("MINIMAX_API_KEY", file_values),
-            tts_base_url=_optional_env("TTS_BASE_URL", file_values) or _optional_env("MINIMAX_TTS_BASE_URL", file_values),
-            tts_model=_optional_env("TTS_MODEL", file_values) or _optional_env("MINIMAX_TTS_MODEL", file_values),
+            tts_base_url=(
+                _optional_env("TTS_BASE_URL", file_values)
+                or _optional_env("MINIMAX_TTS_BASE_URL", file_values)
+                or (DEFAULT_MINIMAX_TTS_BASE_URL if tts_provider in {"minimax", "minimax_tts", "minimax-tts"} else None)
+            ),
+            tts_model=(
+                _optional_env("TTS_MODEL", file_values)
+                or _optional_env("MINIMAX_TTS_MODEL", file_values)
+                or (DEFAULT_MINIMAX_TTS_MODEL if tts_provider in {"minimax", "minimax_tts", "minimax-tts"} else None)
+            ),
             tts_voice_id=_env("TTS_VOICE_ID", file_values, "male-qn-qingse").strip() or "male-qn-qingse",
             tts_audio_format=_env("TTS_AUDIO_FORMAT", file_values, "mp3").strip().lower() or "mp3",
             tts_language_boost=_optional_env("TTS_LANGUAGE_BOOST", file_values) or "Spanish",

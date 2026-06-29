@@ -252,7 +252,7 @@ class ConversationCommandService:
             return CommandResult(
                 status=AgentStatus.escalated,
                 kind=CommandKind.reminder_create,
-                reply=f"{result.reply}\nAprueba con /aprobar {approval.approval_id}",
+                reply=f"{result.reply}\n{self.replies.approval_command_hint(approval.approval_id)}",
                 approval_id=approval.approval_id,
                 metadata={"approval_required": True},
             )

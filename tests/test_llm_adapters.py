@@ -11,7 +11,21 @@ from personal_assistant.adapters.outbound.transcription.openai_compatible import
 from personal_assistant.adapters.outbound.tts.minimax import MiniMaxTTSProvider
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import AudioSynthesisRequest, AudioTranscriptionRequest, LLMRequest
+from personal_assistant.application.services.prompts import PromptTemplate, StaticPromptCatalog
 from personal_assistant.domain.common.exceptions import AssistantError
+
+
+def _prompt_catalog() -> StaticPromptCatalog:
+    return StaticPromptCatalog(
+        {
+            "llm_json_system": PromptTemplate(
+                prompt_id="llm_json_system",
+                version="test",
+                template="JSON_SYSTEM schema=$schema_name",
+                required_variables=("schema_name",),
+            )
+        }
+    )
 
 
 class FakeResponse:
@@ -53,6 +67,7 @@ class LLMAdapterTests(unittest.TestCase):
             api_key="key",
             base_url="https://aerolink.example",
             model="claude-test",
+            prompt_catalog=_prompt_catalog(),
             urlopen=fake_urlopen,
         )
 
@@ -62,6 +77,9 @@ class LLMAdapterTests(unittest.TestCase):
         )
 
         self.assertEqual(captured["url"], "https://aerolink.example/v1/messages")
+        body = captured["body"]
+        self.assertIsInstance(body, dict)
+        self.assertEqual(body["system"], "JSON_SYSTEM schema=reminder_extraction")
         self.assertEqual(result.data["title"], "comer")
         self.assertEqual(result.input_tokens, 12)
         self.assertEqual(result.output_tokens, 8)
@@ -86,7 +104,13 @@ class LLMAdapterTests(unittest.TestCase):
                 }
             )
 
-        provider = MiniMaxLLMProvider(api_key="sk-cp-test", urlopen=fake_urlopen)
+        provider = MiniMaxLLMProvider(
+            api_key="sk-cp-test",
+            prompt_catalog=_prompt_catalog(),
+            base_url="https://api.minimax.io/anthropic",
+            model="MiniMax-M3",
+            urlopen=fake_urlopen,
+        )
         result = provider.complete(
             LLMRequest(prompt="extrae", schema_name="reminder_extraction"),
             budget=TokenBudget(limit=1000),
@@ -99,6 +123,7 @@ class LLMAdapterTests(unittest.TestCase):
         body = captured["body"]
         self.assertIsInstance(body, dict)
         self.assertEqual(body["model"], "MiniMax-M3")
+        self.assertEqual(body["system"], "JSON_SYSTEM schema=reminder_extraction")
         self.assertEqual(result.provider, "minimax")
         self.assertEqual(result.data["title"], "comer")
 
@@ -116,6 +141,7 @@ class LLMAdapterTests(unittest.TestCase):
             api_key="bad-key",
             base_url="https://aerolink.example",
             model="claude-test",
+            prompt_catalog=_prompt_catalog(),
             urlopen=fake_urlopen,
         )
 
@@ -206,7 +232,12 @@ class LLMAdapterTests(unittest.TestCase):
                 }
             )
 
-        provider = MiniMaxTTSProvider(api_key="sk-cp-test", urlopen=fake_urlopen)
+        provider = MiniMaxTTSProvider(
+            api_key="sk-cp-test",
+            base_url="https://api.minimax.io",
+            model="speech-2.8-turbo",
+            urlopen=fake_urlopen,
+        )
         result = provider.synthesize(
             AudioSynthesisRequest(text="hola", voice_id="male-qn-qingse"),
             budget=TokenBudget(limit=100),

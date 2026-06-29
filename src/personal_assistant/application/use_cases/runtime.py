@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import AgentResult, AgentStatus
 from personal_assistant.application.ports.observability import TraceRecorderPort
+from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.domain.common.guardrails import assert_prompt_safe
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
@@ -23,6 +24,7 @@ class NullTraceRecorder:
 class LocalAgentRuntime:
     agent_id: str = "personal_assistant"
     traces: TraceRecorderPort | None = None
+    replies: AssistantReplies = field(default_factory=AssistantReplies)
 
     def run(self, task: str, *, principal: Principal, budget: TokenBudget) -> AgentResult:
         recorder = self.traces or NullTraceRecorder()
@@ -47,6 +49,6 @@ class LocalAgentRuntime:
             agent_id=self.agent_id,
             status=AgentStatus.completed,
             tenant_id=principal.tenant_id,
-            reply="Solicitud recibida.",
+            reply=self.replies.runtime_request_received(),
             trace_ids=[started.trace_id, completed.trace_id],
         )

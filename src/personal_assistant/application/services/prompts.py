@@ -12,6 +12,7 @@ from personal_assistant.application.ports.prompts import RenderedPrompt
 
 
 CONVERSATION_INTENT_PROMPT_ID = "conversation_intent"
+LLM_JSON_SYSTEM_PROMPT_ID = "llm_json_system"
 REMINDER_EXTRACTION_PROMPT_ID = "reminder_extraction"
 DEFAULT_PROMPT_ROOT = Path(__file__).resolve().parents[4] / "prompts"
 

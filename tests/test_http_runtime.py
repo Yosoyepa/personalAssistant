@@ -11,6 +11,7 @@ from unittest.mock import patch
 from personal_assistant.application.dto.channels import ChannelName, NormalizedMessage
 from personal_assistant.application.dto.runtime import AudioTranscriptionResult
 from personal_assistant.application.dto.tracing import TraceEventType
+from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
@@ -133,6 +134,36 @@ class AppSettingsTests(unittest.TestCase):
         self.assertEqual(settings.llm_api_key, "sk-cp-test")
         self.assertEqual(settings.llm_base_url, "https://api.minimax.io/anthropic")
         self.assertEqual(settings.llm_model, "MiniMax-M3")
+
+    def test_minimax_settings_use_provider_defaults_when_aliases_are_absent(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "APP_ENV_FILE": "",
+                "LLM_PROVIDER": "minimax",
+                "MINIMAX_API_KEY": "sk-cp-test",
+                "TTS_PROVIDER": "minimax",
+            },
+            clear=True,
+        ):
+            settings = AppSettings.from_env()
+
+        self.assertEqual(settings.llm_base_url, "https://api.minimax.io/anthropic")
+        self.assertEqual(settings.llm_model, "MiniMax-M3")
+        self.assertEqual(settings.tts_base_url, "https://api.minimax.io")
+        self.assertEqual(settings.tts_model, "speech-2.8-turbo")
+
+    def test_webhook_secret_has_no_dev_default(self) -> None:
+        with patch.dict(os.environ, {"APP_ENV_FILE": ""}, clear=True):
+            settings = AppSettings.from_env()
+
+        self.assertEqual(settings.telegram_webhook_secret, "")
+
+    def test_reply_locale_is_configurable(self) -> None:
+        with patch.dict(os.environ, {"APP_ENV_FILE": "", "ASSISTANT_REPLY_LOCALE": "es"}, clear=True):
+            settings = AppSettings.from_env()
+
+        self.assertEqual(settings.reply_locale, "es")
 
     def test_audio_settings_accept_groq_and_minimax_tts_aliases(self) -> None:
         with patch.dict(
@@ -433,7 +464,7 @@ class HttpRuntimeTests(unittest.TestCase):
         )
 
         with patch("personal_assistant.infrastructure.http.TelegramBotApiClient", FailingTelegramClient):
-            transcribed, error = _transcribe_telegram_media(container, settings, message)
+            transcribed, error = _transcribe_telegram_media(container, settings, message, AssistantReplies())
 
         self.assertIsNone(transcribed)
         self.assertIsNotNone(error)
@@ -469,7 +500,7 @@ class HttpRuntimeTests(unittest.TestCase):
         )
 
         with patch("personal_assistant.infrastructure.http.TelegramBotApiClient", TelegramOgaClient):
-            transcribed, error = _transcribe_telegram_media(container, settings, message)
+            transcribed, error = _transcribe_telegram_media(container, settings, message, AssistantReplies())
 
         self.assertIsNone(error)
         self.assertIsNotNone(transcribed)

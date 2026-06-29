@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from personal_assistant.adapters.outbound.llm.anthropic import AnthropicCompatibleLLMProvider, UrlOpen
+from personal_assistant.application.ports.prompts import PromptCatalogPort
 
 
 class MiniMaxLLMProvider(AnthropicCompatibleLLMProvider):
@@ -14,8 +15,9 @@ class MiniMaxLLMProvider(AnthropicCompatibleLLMProvider):
         self,
         *,
         api_key: str,
-        base_url: str = "https://api.minimax.io/anthropic",
-        model: str = "MiniMax-M3",
+        prompt_catalog: PromptCatalogPort,
+        base_url: str,
+        model: str,
         timeout_seconds: float = 30.0,
         urlopen: UrlOpen | None = None,
     ) -> None:
@@ -23,6 +25,7 @@ class MiniMaxLLMProvider(AnthropicCompatibleLLMProvider):
             "api_key": api_key,
             "base_url": base_url,
             "model": model,
+            "prompt_catalog": prompt_catalog,
             "auth_header": "authorization",
             "timeout_seconds": timeout_seconds,
         }

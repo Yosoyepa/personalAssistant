@@ -12,7 +12,8 @@ from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
 from personal_assistant.application.dto.runtime import LLMResult
 from personal_assistant.application.services.replies import AssistantReplies
-from personal_assistant.application.services.prompts import PromptTemplate, StaticPromptCatalog
+from personal_assistant.application.services.prompts import LLM_JSON_SYSTEM_PROMPT_ID, PromptTemplate, StaticPromptCatalog
+from personal_assistant.application.use_cases.runtime import LocalAgentRuntime
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
@@ -144,6 +145,7 @@ def test_repository_prompt_registry_covers_runtime_llm_prompts() -> None:
         },
     )
     transcription = catalog.render("telegram_voice_transcription", {})
+    json_system = catalog.render(LLM_JSON_SYSTEM_PROMPT_ID, {"schema_name": "reminder_extraction"})
 
     assert intent.version == "v1"
     assert "recordame pagar" in intent.text
@@ -151,6 +153,8 @@ def test_repository_prompt_registry_covers_runtime_llm_prompts() -> None:
     assert "recordame en 2 minutos pagar" in reminder.text
     assert transcription.version == "v1"
     assert "Transcribe mensajes de voz" in transcription.text
+    assert json_system.version == "v1"
+    assert "schema_name=reminder_extraction" in json_system.text
 
 
 def test_repository_reply_catalog_loads_user_facing_copy_from_locale_file() -> None:
@@ -164,6 +168,9 @@ def test_repository_reply_catalog_loads_user_facing_copy_from_locale_file() -> N
         "status"
     ].format(pending_count=1, state_count=2, event_count=3, outbox_count=4)
     assert replies.reminder_needs_approval("clase") == raw_catalog["reminder_needs_approval"].format(title="clase")
+    assert replies.runtime_request_received() == raw_catalog["runtime_request_received"]
+    assert replies.approval_command_hint("apr-1") == raw_catalog["approval_command_hint"].format(approval_id="apr-1")
+    assert replies.approval_reason_calendar_create_event() == raw_catalog["approval_reason_calendar_create_event"]
 
 
 class CommandReplyDefaults(AssistantReplies):
@@ -172,6 +179,9 @@ class CommandReplyDefaults(AssistantReplies):
 
     def unsupported(self) -> str:
         return "UNSUPPORTED_FROM_INJECTED_REPLY_DEFAULTS"
+
+    def approval_command_hint(self, approval_id: str) -> str:
+        return f"APPROVAL_HINT_FROM_INJECTED_REPLY_DEFAULTS:{approval_id}"
 
 
 def test_command_router_uses_injected_reply_defaults() -> None:
@@ -194,6 +204,35 @@ def test_command_router_uses_injected_reply_defaults() -> None:
 
     assert help_result.reply == "HELP_FROM_INJECTED_REPLY_DEFAULTS"
     assert unsupported_result.reply == "UNSUPPORTED_FROM_INJECTED_REPLY_DEFAULTS"
+
+
+def test_command_router_uses_injected_approval_hint() -> None:
+    container = build_container()
+    container.commands.replies = CommandReplyDefaults()
+
+    result = container.commands.handle(
+        _principal(),
+        _message("recuérdame clase el martes a las 5"),
+        now=NOW,
+        timezone="America/Bogota",
+    )
+
+    assert result.approval_id is not None
+    assert f"APPROVAL_HINT_FROM_INJECTED_REPLY_DEFAULTS:{result.approval_id}" in result.reply
+
+
+def test_local_agent_runtime_uses_injected_reply_defaults() -> None:
+    class RuntimeReplies(AssistantReplies):
+        def runtime_request_received(self) -> str:
+            return "RUNTIME_REPLY_FROM_INJECTED_REPLY_DEFAULTS"
+
+    result = LocalAgentRuntime(replies=RuntimeReplies()).run(
+        "estado",
+        principal=_principal(),
+        budget=TokenBudget(limit=100),
+    )
+
+    assert result.reply == "RUNTIME_REPLY_FROM_INJECTED_REPLY_DEFAULTS"
 
 
 class ReminderReplyDefaults(AssistantReplies):
