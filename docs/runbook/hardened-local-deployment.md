@@ -145,9 +145,9 @@ by this isolated self-test (the values are placeholders only):
 ```powershell
 $tempEnv = New-TemporaryFile
 @'
-ADMIN_TOKEN="placeholder-admin-token"
-TELEGRAM_BOT_TOKEN="000000:placeholder-bot-token"
-TELEGRAM_WEBHOOK_SECRET="placeholder-webhook-secret"
+ADMIN_TOKEN="test_admin_token"
+TELEGRAM_BOT_TOKEN="test_telegram_bot_token"
+TELEGRAM_WEBHOOK_SECRET="test_webhook_secret"
 TELEGRAM_ALLOWED_USER_IDS="123456789"
 '@ | Set-Content -LiteralPath $tempEnv -NoNewline
 try {
@@ -167,9 +167,9 @@ $tempEnv = New-TemporaryFile
 $checkFile = New-TemporaryFile
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $lines = @(
-  'ADMIN_TOKEN="placeholder-admin-token"',
-  'TELEGRAM_BOT_TOKEN="000000:placeholder-bot-token"',
-  'TELEGRAM_WEBHOOK_SECRET="placeholder-webhook-secret"',
+  'ADMIN_TOKEN="test_admin_token"',
+  'TELEGRAM_BOT_TOKEN="test_telegram_bot_token"',
+  'TELEGRAM_WEBHOOK_SECRET="test_webhook_secret"',
   'TELEGRAM_ALLOWED_USER_IDS="123456789"'
 )
 [IO.File]::WriteAllLines($tempEnv, [string[]]$lines, $utf8NoBom)
@@ -185,9 +185,9 @@ try {
   $check = @'
 from personal_assistant.infrastructure.config import AppSettings
 settings = AppSettings.from_env()
-assert settings.admin_token == "placeholder-admin-token"
-assert settings.telegram_bot_token == "000000:placeholder-bot-token"
-assert settings.telegram_webhook_secret == "placeholder-webhook-secret"
+assert settings.admin_token == "test_admin_token"
+assert settings.telegram_bot_token == "test_telegram_bot_token"
+assert settings.telegram_webhook_secret == "test_webhook_secret"
 print("AppSettings dotenv read passed")
 '@
   [IO.File]::WriteAllText($checkFile, $check, $utf8NoBom)
