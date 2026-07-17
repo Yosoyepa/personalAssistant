@@ -293,16 +293,22 @@ class AppSettingsTests(unittest.TestCase):
     "FastAPI optional dependency is not installed",
 )
 class HttpRuntimeTests(unittest.TestCase):
-    headers = {
-        "X-Principal-Id": "user-1",
-        "X-Tenant-Id": "tenant-a",
-        "X-Permission-Tier": "P5",
-    }
+    admin_token = "admin-secret"
+    headers = {"Authorization": f"Bearer {admin_token}"}
 
     def setUp(self) -> None:
         self.container = build_container()
         self.client = TestClient(
-            create_app(self.container, settings=AppSettings(tenant_id="tenant-a"))
+            create_app(
+                self.container,
+                settings=AppSettings(
+                    tenant_id="tenant-a",
+                    admin_token=self.admin_token,
+                    local_auth_principal_id="user-1",
+                    local_auth_permission_tier=PermissionTier.P5,
+                ),
+            ),
+            client=("127.0.0.1", 50000),
         )
 
     def principal(self, tenant_id: str = "tenant-a") -> Principal:
@@ -353,7 +359,7 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(ready.status_code, 200)
         self.assertEqual(ready.json()["checks"]["scheduler"], "ok")
 
-    def test_reminder_requires_principal_headers(self) -> None:
+    def test_reminder_requires_local_bearer_credentials(self) -> None:
         response = self.client.post("/v1/runtime/reminders", json=self.payload())
 
         self.assertEqual(response.status_code, 401)
@@ -471,7 +477,16 @@ class HttpRuntimeTests(unittest.TestCase):
     def test_http_approvals_survive_app_recreation_with_same_container(self) -> None:
         approval_id = self.request_pending_approval()
         recreated_client = TestClient(
-            create_app(self.container, settings=AppSettings(tenant_id="tenant-a"))
+            create_app(
+                self.container,
+                settings=AppSettings(
+                    tenant_id="tenant-a",
+                    admin_token=self.admin_token,
+                    local_auth_principal_id="user-1",
+                    local_auth_permission_tier=PermissionTier.P5,
+                ),
+            ),
+            client=("127.0.0.1", 50000),
         )
 
         approvals = recreated_client.get("/v1/runtime/approvals", headers=self.headers)
@@ -505,9 +520,20 @@ class HttpRuntimeTests(unittest.TestCase):
         tenant_a_traces = self.client.get(
             f"/v1/runtime/traces?run_id={run_id}", headers=self.headers
         )
-        tenant_b_headers = dict(self.headers, **{"X-Tenant-Id": "tenant-b"})
-        tenant_b_workflows = self.client.get(
-            "/v1/runtime/workflows", headers=tenant_b_headers
+        tenant_b_client = TestClient(
+            create_app(
+                self.container,
+                settings=AppSettings(
+                    tenant_id="tenant-b",
+                    admin_token=self.admin_token,
+                    local_auth_principal_id="user-tenant-b",
+                    local_auth_permission_tier=PermissionTier.P5,
+                ),
+            ),
+            client=("127.0.0.1", 50000),
+        )
+        tenant_b_workflows = tenant_b_client.get(
+            "/v1/runtime/workflows", headers=self.headers
         )
 
         self.assertEqual(len(tenant_a_workflows.json()), 1)
@@ -954,7 +980,12 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertFalse(thread.is_alive())
 
     def test_admin_endpoints_use_default_settings_tenant(self) -> None:
-        settings = AppSettings(tenant_id="tenant-a")
+        settings = AppSettings(
+            tenant_id="tenant-a",
+            admin_token=self.admin_token,
+            local_auth_principal_id="user-1",
+            local_auth_permission_tier=PermissionTier.P5,
+        )
         client = TestClient(
             create_app(self.container, settings=settings), client=("127.0.0.1", 50000)
         )
@@ -970,9 +1001,9 @@ class HttpRuntimeTests(unittest.TestCase):
         )
         self.assertEqual(approved.status_code, 200, approved.text)
 
-        page = client.get("/admin")
-        snapshot = client.get("/admin/snapshot")
-        health = client.get("/admin/health")
+        page = client.get("/admin", headers=self.headers)
+        snapshot = client.get("/admin/snapshot", headers=self.headers)
+        health = client.get("/admin/health", headers=self.headers)
         admin_paths = {
             route.path
             for route in client.app.routes
@@ -1015,7 +1046,7 @@ class HttpRuntimeTests(unittest.TestCase):
         for path in sorted(
             admin_paths - {"/admin", "/admin/snapshot", "/admin/health"}
         ):
-            response = client.get(path)
+            response = client.get(path, headers=self.headers)
             self.assertEqual(response.status_code, 200, response.text)
             section = path.rsplit("/", 1)[-1]
             self.assertEqual(response.json(), snapshot_body[section])
@@ -1030,15 +1061,15 @@ class HttpRuntimeTests(unittest.TestCase):
         bearer = client.get(
             "/admin/health", headers={"Authorization": "Bearer admin-secret"}
         )
-        custom_header = client.get(
+        legacy_header = client.get(
             "/admin/health", headers={"X-Admin-Token": "admin-secret"}
         )
-        wrong = client.get("/admin/health", headers={"X-Admin-Token": "wrong"})
+        wrong = client.get("/admin/health", headers={"Authorization": "Bearer wrong"})
 
-        self.assertEqual(missing.status_code, 403, missing.text)
-        self.assertEqual(wrong.status_code, 403, wrong.text)
+        self.assertEqual(missing.status_code, 401, missing.text)
+        self.assertEqual(wrong.status_code, 401, wrong.text)
         self.assertEqual(bearer.status_code, 200, bearer.text)
-        self.assertEqual(custom_header.status_code, 200, custom_header.text)
+        self.assertEqual(legacy_header.status_code, 401, legacy_header.text)
 
 
 if __name__ == "__main__":
