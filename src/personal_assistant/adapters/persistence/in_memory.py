@@ -17,6 +17,14 @@ from personal_assistant.application.dto.commands import (
     PendingApproval,
     PendingApprovalStatus,
 )
+from personal_assistant.application.dto.delivery import (
+    DeliveryError,
+    MAX_CLAIM_LEASE_SECONDS,
+    MAX_CLAIM_LIMIT,
+    MAX_CLAIM_OWNER_LENGTH,
+    canonical_utc,
+    is_valid_claim_owner,
+)
 from personal_assistant.application.dto.workflows import (
     WorkflowState,
     WorkflowStateRegistration,
@@ -251,13 +259,62 @@ class InMemoryOutbox:
         lease_seconds: int = 60,
     ) -> list[OutboxMessage]:
         require_trusted_principal(principal)
-        now = datetime.now(UTC)
+        return self.claim_due(
+            principal,
+            datetime.now(UTC),
+            limit=limit,
+            owner=owner,
+            lease_seconds=lease_seconds,
+        )
+
+    def claim_due(
+        self,
+        principal: Principal,
+        now: datetime,
+        *,
+        limit: int = 10,
+        owner: str = "local-worker",
+        lease_seconds: int = 60,
+    ) -> list[OutboxMessage]:
+        require_trusted_principal(principal)
+        now = canonical_utc(now, field="now")
+        if isinstance(limit, bool) or not isinstance(limit, int):
+            raise TypeError("limit must be an integer")
+        if not 1 <= limit <= MAX_CLAIM_LIMIT:
+            raise ValueError(f"limit must be between 1 and {MAX_CLAIM_LIMIT}")
+        if isinstance(lease_seconds, bool) or not isinstance(lease_seconds, int):
+            raise TypeError("lease_seconds must be an integer")
+        if not 1 <= lease_seconds <= MAX_CLAIM_LEASE_SECONDS:
+            raise ValueError(
+                f"lease_seconds must be between 1 and {MAX_CLAIM_LEASE_SECONDS}"
+            )
+        if not isinstance(owner, str):
+            raise TypeError("owner must be a string")
+        normalized_owner = owner.strip()
+        if not normalized_owner:
+            raise ValueError("owner must not be blank")
+        if len(normalized_owner) > MAX_CLAIM_OWNER_LENGTH:
+            raise ValueError(
+                f"owner must be at most {MAX_CLAIM_OWNER_LENGTH} characters"
+            )
+        if not is_valid_claim_owner(normalized_owner):
+            raise ValueError("owner contains unsupported characters")
         claimed: list[OutboxMessage] = []
         with self._lock:
-            for key, message in list(self._messages_by_key.items()):
-                if key[0] != principal.tenant_id or message.published:
+            candidates = sorted(
+                self._messages_by_key.items(),
+                key=lambda item: (item[1].created_at, item[1].id),
+            )
+            for key, message in candidates:
+                if key[0] != principal.tenant_id:
                     continue
-                if message.claimed_until is not None and message.claimed_until > now:
+                is_pending = message.dispatch_status == OutboxStatus.pending
+                is_expired_claim = (
+                    message.dispatch_status == OutboxStatus.claimed
+                    and message.claimed_until is not None
+                    and message.claimed_until <= now
+                )
+                if not (is_pending or is_expired_claim):
                     continue
                 if (
                     message.next_attempt_at is not None
@@ -268,9 +325,8 @@ class InMemoryOutbox:
                     update={
                         "dispatch_status": OutboxStatus.claimed,
                         "claim_token": f"claim_{uuid4().hex}",
-                        "claim_owner": owner,
+                        "claim_owner": normalized_owner,
                         "claimed_until": now + timedelta(seconds=lease_seconds),
-                        "attempts": message.attempts + 1,
                     }
                 )
                 self._messages_by_key[key] = updated
@@ -279,61 +335,201 @@ class InMemoryOutbox:
                     break
         return claimed
 
-    def mark_published(
-        self, principal: Principal, message_id: str, *, claim_token: str
+    def mark_sending(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        claim_token: str,
+        started_at: datetime,
     ) -> OutboxMessage:
-        require_trusted_principal(principal)
-        with self._lock:
-            for key, message in list(self._messages_by_key.items()):
-                if key[0] == principal.tenant_id and message.id == message_id:
-                    if message.published:
-                        return message.model_copy(deep=True)
-                    if not message.claimed or message.claim_token != claim_token:
-                        raise AssistantError(
-                            ErrorCode.PERMISSION_DENIED,
-                            "invalid outbox claim token",
-                            tenant_id=principal.tenant_id,
-                        )
-                    updated = message.model_copy(
-                        update={
-                            "dispatch_status": OutboxStatus.published,
-                            "claim_token": None,
-                            "claim_owner": None,
-                            "claimed_until": None,
-                            "published_at": datetime.now(UTC),
-                        }
-                    )
-                    self._messages_by_key[key] = updated
-                    return updated.model_copy(deep=True)
-        raise AssistantError(
-            ErrorCode.NOT_FOUND,
-            "outbox message not found",
-            tenant_id=principal.tenant_id,
+        return self._transition(
+            principal,
+            message_id,
+            claim_token=claim_token,
+            expected=OutboxStatus.claimed,
+            target=OutboxStatus.sending,
+            updates={
+                "sending_at": canonical_utc(started_at, field="started_at"),
+            },
+            increment_attempts=True,
+        )
+
+    def mark_published(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        claim_token: str,
+        published_at: datetime | None = None,
+    ) -> OutboxMessage:
+        effective_time = published_at or datetime.now(UTC)
+        return self._transition(
+            principal,
+            message_id,
+            claim_token=claim_token,
+            expected=OutboxStatus.sending,
+            target=OutboxStatus.published,
+            updates={
+                "claim_token": None,
+                "claim_owner": None,
+                "claimed_until": None,
+                "published_at": canonical_utc(effective_time, field="published_at"),
+                "last_error": None,
+            },
+        )
+
+    def mark_failed(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        claim_token: str,
+        error: DeliveryError,
+    ) -> OutboxMessage:
+        return self._terminal_error(
+            principal,
+            message_id,
+            claim_token=claim_token,
+            target=OutboxStatus.failed,
+            error=error,
+        )
+
+    def mark_uncertain(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        claim_token: str,
+        error: DeliveryError,
+    ) -> OutboxMessage:
+        return self._terminal_error(
+            principal,
+            message_id,
+            claim_token=claim_token,
+            target=OutboxStatus.uncertain,
+            error=error,
         )
 
     def release(
-        self, principal: Principal, message_id: str, *, claim_token: str
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        claim_token: str,
+        next_attempt_at: datetime | None = None,
+    ) -> OutboxMessage:
+        normalized_next = (
+            canonical_utc(next_attempt_at, field="next_attempt_at")
+            if next_attempt_at is not None
+            else None
+        )
+        return self._transition(
+            principal,
+            message_id,
+            claim_token=claim_token,
+            expected=OutboxStatus.claimed,
+            target=OutboxStatus.pending,
+            updates={
+                "claim_token": None,
+                "claim_owner": None,
+                "claimed_until": None,
+                "next_attempt_at": normalized_next,
+            },
+        )
+
+    def reschedule(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        claim_token: str,
+        next_attempt_at: datetime,
+        error: DeliveryError,
+    ) -> OutboxMessage:
+        return self._transition(
+            principal,
+            message_id,
+            claim_token=claim_token,
+            expected=OutboxStatus.sending,
+            target=OutboxStatus.pending,
+            updates={
+                "claim_token": None,
+                "claim_owner": None,
+                "claimed_until": None,
+                "next_attempt_at": canonical_utc(
+                    next_attempt_at, field="next_attempt_at"
+                ),
+                "sending_at": None,
+                "last_error": error,
+            },
+        )
+
+    def _terminal_error(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        claim_token: str,
+        target: OutboxStatus,
+        error: DeliveryError,
+    ) -> OutboxMessage:
+        return self._transition(
+            principal,
+            message_id,
+            claim_token=claim_token,
+            expected=OutboxStatus.sending,
+            target=target,
+            updates={
+                "claim_token": None,
+                "claim_owner": None,
+                "claimed_until": None,
+                "last_error": error,
+            },
+        )
+
+    def _transition(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        claim_token: str,
+        expected: OutboxStatus,
+        target: OutboxStatus,
+        updates: dict[str, object],
+        increment_attempts: bool = False,
     ) -> OutboxMessage:
         require_trusted_principal(principal)
+        if not claim_token:
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "invalid outbox claim token",
+                tenant_id=principal.tenant_id,
+            )
         with self._lock:
-            for key, message in list(self._messages_by_key.items()):
-                if key[0] == principal.tenant_id and message.id == message_id:
-                    if message.claim_token != claim_token:
-                        raise AssistantError(
-                            ErrorCode.PERMISSION_DENIED,
-                            "invalid outbox claim token",
-                            tenant_id=principal.tenant_id,
-                        )
-                    updated = message.model_copy(
-                        update={
-                            "dispatch_status": OutboxStatus.pending,
-                            "claim_token": None,
-                            "claim_owner": None,
-                            "claimed_until": None,
-                        }
+            for key, message in self._messages_by_key.items():
+                if key[0] != principal.tenant_id or message.id != message_id:
+                    continue
+                if message.claim_token != claim_token:
+                    raise AssistantError(
+                        ErrorCode.PERMISSION_DENIED,
+                        "invalid outbox claim token",
+                        tenant_id=principal.tenant_id,
                     )
-                    self._messages_by_key[key] = updated
-                    return updated.model_copy(deep=True)
+                if message.dispatch_status != expected:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "illegal outbox delivery transition",
+                        tenant_id=principal.tenant_id,
+                    )
+                transition_updates = {"dispatch_status": target, **updates}
+                if increment_attempts:
+                    transition_updates["attempts"] = message.attempts + 1
+                updated = OutboxMessage.model_validate(
+                    message.model_copy(update=transition_updates).model_dump()
+                )
+                self._messages_by_key[key] = updated
+                return updated.model_copy(deep=True)
         raise AssistantError(
             ErrorCode.NOT_FOUND,
             "outbox message not found",
