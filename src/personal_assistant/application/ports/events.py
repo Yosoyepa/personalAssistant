@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Protocol
 
 from personal_assistant.application.dto.events import CloudEvent, OutboxMessage
@@ -23,9 +24,10 @@ class OutboxPort(Protocol):
         event: CloudEvent,
         *,
         idempotency_key: str,
+        next_attempt_at: datetime | None = None,
         message_id: str | None = None,
     ) -> OutboxMessage:
-        """Add an event to the transactional outbox idempotently."""
+        """Add an event to the outbox with an optional activation time and ID."""
 
     def claim(
         self,

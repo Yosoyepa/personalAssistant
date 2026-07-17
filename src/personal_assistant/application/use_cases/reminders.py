@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from types import TracebackType
+from typing import Any, Literal
 
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.reminders import (
@@ -26,6 +27,10 @@ from personal_assistant.application.ports.prompts import (
     PromptCatalogPort,
     RenderedPrompt,
 )
+from personal_assistant.application.ports.reminder_unit_of_work import (
+    ReminderTransaction,
+    ReminderUnitOfWork,
+)
 from personal_assistant.application.ports.scheduler import ReminderSchedulerPort
 from personal_assistant.application.ports.services import LLMProvider
 from personal_assistant.application.ports.workflow_state import WorkflowStateStorePort
@@ -34,7 +39,11 @@ from personal_assistant.application.services.prompts import (
     DefaultPromptCatalog,
 )
 from personal_assistant.application.services.replies import AssistantReplies
-from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
+from personal_assistant.application.dto.workflows import (
+    WorkflowState,
+    WorkflowStateRegistration,
+    WorkflowStatus,
+)
 from personal_assistant.application.dto.events import CloudEvent
 from personal_assistant.domain.common.guardrails import assert_prompt_safe
 from personal_assistant.domain.common.permissions import (
@@ -92,6 +101,39 @@ def reminder_idempotency(
 
 
 @dataclass(slots=True)
+class _DirectReminderTransaction:
+    """Compatibility transaction for custom v1 compositions without a UoW.
+
+    Runtime composition always supplies a real unit of work. This adapter keeps
+    direct construction source-compatible while third-party persistence
+    adapters migrate to the new contract; it cannot compensate partial writes.
+    """
+
+    calendar: CalendarPort
+    scheduler: ReminderSchedulerPort
+    event_store: EventStorePort
+    outbox: OutboxPort
+    states: WorkflowStateStorePort
+
+    def __enter__(self) -> _DirectReminderTransaction:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> Literal[False]:
+        return False
+
+    def commit(self) -> None:
+        return None
+
+    def rollback(self) -> None:
+        return None
+
+
+@dataclass(slots=True)
 class ReminderWorkflow:
     calendar: CalendarPort
     scheduler: ReminderSchedulerPort
@@ -99,6 +141,7 @@ class ReminderWorkflow:
     outbox: OutboxPort
     states: WorkflowStateStorePort
     traces: TraceRecorderPort
+    unit_of_work: ReminderUnitOfWork | None = None
     llm: LLMProvider | None = None
     reminder_minutes_before: int = 30
     prompt_catalog: PromptCatalogPort = field(default_factory=DefaultPromptCatalog)
@@ -168,316 +211,230 @@ class ReminderWorkflow:
         self.traces.write(guardrail_trace)
         self.traces.write(context_trace)
 
-        registration = self.states.register_or_replay(
-            principal,
-            WorkflowState(
-                tenant_id=principal.tenant_id,
-                workflow_type="reminder.create",
-                status=WorkflowStatus.running,
-                step=ReminderWorkflowStep.classify.value,
-                idempotency_key=effective_key,
-                payload_fingerprint=payload_fingerprint,
-                data={
-                    "message_id": request.message_id,
-                    "source_event_id": source_event_id,
-                    "channel": request.channel,
-                    "conversation_id": request.conversation_id,
-                    "timezone": timezone,
-                },
-            ),
-            resume_from_step=resume_from_step,
+        initial_state = WorkflowState(
+            tenant_id=principal.tenant_id,
+            workflow_type="reminder.create",
+            status=WorkflowStatus.running,
+            step=ReminderWorkflowStep.classify.value,
+            idempotency_key=effective_key,
+            payload_fingerprint=payload_fingerprint,
+            data={
+                "message_id": request.message_id,
+                "source_event_id": source_event_id,
+                "channel": request.channel,
+                "conversation_id": request.conversation_id,
+                "timezone": timezone,
+            },
         )
-        existing = (
-            registration.state
-            if registration.replayed or registration.resumed
-            else None
-        )
-        if existing is not None and existing.status == WorkflowStatus.completed:
-            return ReminderWorkflowResult(
-                status=AgentStatus.completed,
-                intent=ReminderIntent.create,
-                reply=self.replies.reminder_duplicate(),
-                idempotency_key=effective_key,
+        base_trace_ids = [
+            started.trace_id,
+            guardrail_trace.trace_id,
+            context_trace.trace_id,
+        ]
+
+        if request.approval is None:
+            return self._run_before_approval(
+                principal,
+                request,
+                initial_state=initial_state,
+                run_id=run_id,
                 source_event_id=source_event_id,
                 payload_fingerprint=payload_fingerprint,
                 timezone=timezone,
-                calendar_event_id=existing.data.get("calendar_event_id"),
-                reminder_id=existing.data.get("reminder_id"),
-                reused=True,
-                trace_ids=[
-                    started.trace_id,
-                    guardrail_trace.trace_id,
-                    context_trace.trace_id,
-                ],
+                context_trace_id=context_trace.trace_id,
+                base_trace_ids=base_trace_ids,
             )
 
+        existing_before_transaction = self.states.get_by_idempotency_key(
+            principal, effective_key
+        )
         if (
-            existing is not None
-            and existing.status == WorkflowStatus.running
-            and registration.replayed
+            existing_before_transaction is not None
+            and existing_before_transaction.payload_fingerprint != payload_fingerprint
         ):
-            # A matching concurrent delivery may observe the elected executor,
-            # but must never become a second side-effecting executor.
-            return ReminderWorkflowResult(
-                status=AgentStatus.escalated,
-                intent=ReminderIntent.create,
-                reply=self.replies.reminder_duplicate(),
+            raise ReminderIdempotencyConflict(
+                tenant_id=principal.tenant_id,
                 idempotency_key=effective_key,
+            )
+
+        llm_trace_id: str | None = None
+        extraction: ReminderExtraction | None = None
+        clarification: ReminderNeedsClarification | None = None
+        if (
+            existing_before_transaction is not None
+            and existing_before_transaction.status == WorkflowStatus.waiting_approval
+            and existing_before_transaction.step
+            == ReminderWorkflowStep.approval_required.value
+        ):
+            extraction = ReminderDraft.from_mapping(
+                existing_before_transaction.data
+            ).to_extraction()
+        elif existing_before_transaction is None:
+            extraction, clarification, llm_trace_id = self._resolve_extraction(
+                principal,
+                request,
+                run_id=run_id,
+                parent_event_id=context_trace.trace_id,
+            )
+
+        calendar_result = None
+        reminder = None
+        notice_minutes_before = self.reminder_minutes_before
+        with self._begin_transaction(principal) as transaction:
+            registration = transaction.states.register_or_replay(
+                principal,
+                initial_state,
+                resume_from_step=resume_from_step,
+            )
+            replay = self._registration_result(
+                registration,
+                effective_key=effective_key,
                 source_event_id=source_event_id,
                 payload_fingerprint=payload_fingerprint,
                 timezone=timezone,
-                reused=True,
-                trace_ids=[
-                    started.trace_id,
-                    guardrail_trace.trace_id,
-                    context_trace.trace_id,
-                ],
+                trace_ids=base_trace_ids,
             )
-        if existing is not None and existing.status == WorkflowStatus.failed:
-            return ReminderWorkflowResult(
-                status=AgentStatus.failed,
-                intent=ReminderIntent.create,
-                reply=self.replies.reminder_duplicate(),
-                idempotency_key=effective_key,
-                source_event_id=source_event_id,
-                payload_fingerprint=payload_fingerprint,
-                timezone=timezone,
-                reused=True,
-                trace_ids=[
-                    started.trace_id,
-                    guardrail_trace.trace_id,
-                    context_trace.trace_id,
-                ],
-            )
-        if (
-            existing is not None
-            and existing.status == WorkflowStatus.waiting_approval
-            and request.approval is None
-        ):
-            if existing.step == ReminderWorkflowStep.approval_required.value:
-                draft = ReminderDraft.from_mapping(existing.data)
+            if replay is not None:
+                transaction.commit()
+                return replay
+
+            state = registration.state
+            if extraction is None:
+                clarification_reason = (
+                    clarification.reason
+                    if clarification is not None
+                    else ReminderClarificationReason.missing_datetime
+                )
+                reply_id, reply_version, reply = self.replies.reminder_clarification(
+                    clarification_reason
+                )
+                waiting = state.transition(
+                    status=WorkflowStatus.waiting_approval,
+                    step=ReminderWorkflowStep.needs_clarification.value,
+                    data={
+                        "clarification_reason": clarification_reason.value,
+                        "clarification_reply_id": reply_id,
+                        "clarification_reply_version": reply_version,
+                    },
+                )
+                transaction.states.upsert(principal, waiting)
+                transaction.commit()
                 return ReminderWorkflowResult(
-                    status=AgentStatus.escalated,
-                    intent=ReminderIntent.create,
-                    reply=self.replies.reminder_needs_approval(draft.title),
+                    status=AgentStatus.needs_clarification,
+                    intent=ReminderIntent.unsupported,
+                    reply=reply,
                     idempotency_key=effective_key,
                     source_event_id=source_event_id,
                     payload_fingerprint=payload_fingerprint,
                     timezone=timezone,
-                    approval_required=True,
-                    reused=True,
+                    clarification_reason=clarification_reason,
+                    clarification_reply_id=reply_id,
+                    clarification_reply_version=reply_version,
                     trace_ids=[
-                        started.trace_id,
-                        guardrail_trace.trace_id,
-                        context_trace.trace_id,
+                        trace_id
+                        for trace_id in [*base_trace_ids, llm_trace_id]
+                        if trace_id is not None
                     ],
                 )
-            try:
-                clarification_reason = ReminderClarificationReason(
-                    str(existing.data.get("clarification_reason"))
-                )
-            except ValueError:
-                clarification_reason = ReminderClarificationReason.missing_datetime
-            reply_id, reply_version, reply = self.replies.reminder_clarification(
-                clarification_reason
-            )
-            return ReminderWorkflowResult(
-                status=AgentStatus.needs_clarification,
-                intent=ReminderIntent.unsupported,
-                reply=reply,
-                idempotency_key=effective_key,
-                source_event_id=source_event_id,
-                payload_fingerprint=payload_fingerprint,
-                timezone=timezone,
-                clarification_reason=clarification_reason,
-                clarification_reply_id=reply_id,
-                clarification_reply_version=reply_version,
-                reused=True,
-                trace_ids=[
-                    started.trace_id,
-                    guardrail_trace.trace_id,
-                    context_trace.trace_id,
-                ],
-            )
 
-        # A validated grant may atomically resume waiting -> running. Concurrent
-        # deliveries observe running and take the non-executing branch above.
-        state = registration.state
-
-        llm_trace_id: str | None = None
-        extraction: ReminderExtraction | None
-        clarification: ReminderNeedsClarification | None = None
-        if (
-            existing
-            and existing.step == ReminderWorkflowStep.approval_required.value
-            and request.approval is not None
-        ):
-            extraction = ReminderDraft.from_mapping(existing.data).to_extraction()
-        else:
-            parse_result = extract_reminder(
-                request.text,
-                request.now,
-                timezone=request.timezone,
+            calendar_result = transaction.calendar.create_event(
+                principal,
+                CalendarEventRequest(
+                    event_id=effect_ids.calendar_event_id,
+                    title=extraction.title,
+                    starts_at=extraction.starts_at,
+                    timezone=extraction.timezone,
+                    idempotency_key=f"{effective_key}:calendar",
+                    source_event_id=source_event_id,
+                    payload_fingerprint=payload_fingerprint,
+                ),
+                approval=request.approval,
             )
-            extraction = (
-                parse_result.extraction
-                if isinstance(parse_result, ParsedReminder)
-                else None
+            notice_minutes_before = _notice_minutes_before(
+                extraction, default_minutes=self.reminder_minutes_before
             )
-            if isinstance(parse_result, ReminderNeedsClarification):
-                clarification = parse_result
-            if (
-                isinstance(parse_result, UnsupportedReminder)
-                and parse_result.reason == ReminderUnsupportedReason.not_a_reminder
-                and self.llm is not None
-            ):
-                extraction, llm_trace_id = self._extract_with_llm(
-                    principal,
-                    request,
-                    run_id=run_id,
-                    parent_event_id=context_trace.trace_id,
-                )
-        if extraction is None:
-            clarification_reason = (
-                clarification.reason
-                if clarification is not None
-                else ReminderClarificationReason.missing_datetime
-            )
-            reply_id, reply_version, reply = self.replies.reminder_clarification(
-                clarification_reason
-            )
-            waiting = state.transition(
-                status=WorkflowStatus.waiting_approval,
-                step=ReminderWorkflowStep.needs_clarification.value,
-                data={
-                    "clarification_reason": clarification_reason.value,
-                    "clarification_reply_id": reply_id,
-                    "clarification_reply_version": reply_version,
-                },
-            )
-            self.states.upsert(principal, waiting)
-            return ReminderWorkflowResult(
-                status=AgentStatus.needs_clarification,
-                intent=ReminderIntent.unsupported,
-                reply=reply,
-                idempotency_key=effective_key,
-                source_event_id=source_event_id,
-                payload_fingerprint=payload_fingerprint,
-                timezone=timezone,
-                clarification_reason=clarification_reason,
-                clarification_reply_id=reply_id,
-                clarification_reply_version=reply_version,
-                trace_ids=[
-                    trace_id
-                    for trace_id in [
-                        started.trace_id,
-                        guardrail_trace.trace_id,
-                        context_trace.trace_id,
-                        llm_trace_id,
-                    ]
-                    if trace_id is not None
-                ],
-            )
-
-        if request.approval is None:
-            approval = TraceEvent(
-                run_id=run_id,
-                agent_id="personal_assistant",
-                event_type=TraceEventType.approval_requested,
-                tenant_id=principal.tenant_id,
-                tool_call={
-                    "name": "calendar.create_event",
-                    "tier": PermissionTier.P3.value,
-                },
-                parent_event_id=context_trace.trace_id,
-            )
-            self.traces.write(approval)
-            waiting = state.transition(
-                status=WorkflowStatus.waiting_approval,
-                step=ReminderWorkflowStep.approval_required.value,
-                data=ReminderDraft.from_extraction(extraction).to_workflow_data(),
-            )
-            self.states.upsert(principal, waiting)
-            return ReminderWorkflowResult(
-                status=AgentStatus.escalated,
-                intent=ReminderIntent.create,
-                reply=self.replies.reminder_needs_approval(extraction.title),
-                idempotency_key=effective_key,
-                source_event_id=source_event_id,
-                payload_fingerprint=payload_fingerprint,
-                timezone=timezone,
-                approval_required=True,
-                trace_ids=[
-                    trace_id
-                    for trace_id in [
-                        started.trace_id,
-                        guardrail_trace.trace_id,
-                        context_trace.trace_id,
-                        llm_trace_id,
-                        approval.trace_id,
-                    ]
-                    if trace_id is not None
-                ],
-            )
-
-        calendar_result = self.calendar.create_event(
-            principal,
-            CalendarEventRequest(
-                event_id=effect_ids.calendar_event_id,
-                title=extraction.title,
+            reminder = transaction.scheduler.schedule_before_event(
+                principal,
+                calendar_event_id=calendar_result.event_id,
                 starts_at=extraction.starts_at,
+                channel=request.channel,
+                recipient=request.recipient,
+                body=self.replies.reminder_notification_body(extraction.title),
                 timezone=extraction.timezone,
-                idempotency_key=f"{effective_key}:calendar",
                 source_event_id=source_event_id,
                 payload_fingerprint=payload_fingerprint,
-            ),
-            approval=request.approval,
-        )
-        notice_minutes_before = _notice_minutes_before(
-            extraction, default_minutes=self.reminder_minutes_before
-        )
-        reminder = self.scheduler.schedule_before_event(
-            principal,
-            calendar_event_id=calendar_result.event_id,
-            starts_at=extraction.starts_at,
-            channel=request.channel,
-            recipient=request.recipient,
-            body=self.replies.reminder_notification_body(extraction.title),
-            timezone=extraction.timezone,
-            source_event_id=source_event_id,
-            payload_fingerprint=payload_fingerprint,
-            minutes_before=notice_minutes_before,
-            idempotency_key=f"{effective_key}:notify",
-            reminder_id=effect_ids.reminder_id,
-        )
-        event = CloudEvent(
-            id=effect_ids.reminder_created_event_id,
-            type="reminder.created",
-            source="personal_assistant.application.reminders",
-            subject=reminder.reminder_id,
-            tenant_id=principal.tenant_id,
-            correlation_id=effective_key,
-            causation_id=source_event_id,
-            source_event_id=source_event_id,
-            payload_fingerprint=payload_fingerprint,
-            timezone=extraction.timezone,
-            data={
-                "calendar_event_id": calendar_result.event_id,
-                "reminder_id": reminder.reminder_id,
-                "starts_at": extraction.starts_at.isoformat(),
-                "timezone": extraction.timezone,
-                "notify_at": reminder.notify_at.isoformat(),
-                "source_event_id": source_event_id,
-                "payload_fingerprint": payload_fingerprint,
-            },
-        )
-        self.event_store.append(principal, event)
-        self.outbox.add(
-            principal,
-            event,
-            idempotency_key=f"{effective_key}:outbox",
-            message_id=effect_ids.outbox_message_id,
-        )
+                minutes_before=notice_minutes_before,
+                idempotency_key=f"{effective_key}:notify",
+                reminder_id=effect_ids.reminder_id,
+            )
+            reminder_created = CloudEvent(
+                id=effect_ids.reminder_created_event_id,
+                type="reminder.created",
+                source="personal_assistant.application.reminders",
+                subject=reminder.reminder_id,
+                tenant_id=principal.tenant_id,
+                correlation_id=effective_key,
+                causation_id=source_event_id,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=extraction.timezone,
+                data={
+                    "calendar_event_id": calendar_result.event_id,
+                    "reminder_id": reminder.reminder_id,
+                    "starts_at": extraction.starts_at.isoformat(),
+                    "timezone": extraction.timezone,
+                    "notify_at": reminder.notify_at.isoformat(),
+                    "source_event_id": source_event_id,
+                    "payload_fingerprint": payload_fingerprint,
+                },
+            )
+            transaction.event_store.append(principal, reminder_created)
+            notification_requested = CloudEvent(
+                id=effect_ids.notification_requested_event_id,
+                type="notification.requested",
+                source="personal_assistant.application.reminders",
+                subject=reminder.reminder_id,
+                tenant_id=principal.tenant_id,
+                correlation_id=effective_key,
+                causation_id=reminder_created.id,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=extraction.timezone,
+                data={
+                    "calendar_event_id": calendar_result.event_id,
+                    "reminder_id": reminder.reminder_id,
+                    "channel": request.channel,
+                    "recipient": request.recipient,
+                    "body": reminder.body,
+                    "notify_at": reminder.notify_at.isoformat(),
+                    "timezone": extraction.timezone,
+                    "source_event_id": source_event_id,
+                    "payload_fingerprint": payload_fingerprint,
+                },
+            )
+            transaction.outbox.add(
+                principal,
+                notification_requested,
+                idempotency_key=f"{effective_key}:outbox",
+                next_attempt_at=reminder.notify_at,
+                message_id=effect_ids.outbox_message_id,
+            )
+            completed = state.transition(
+                status=WorkflowStatus.completed,
+                step=ReminderWorkflowStep.completed.value,
+                data={
+                    "calendar_event_id": calendar_result.event_id,
+                    "reminder_id": reminder.reminder_id,
+                    "notify_at": reminder.notify_at.isoformat(),
+                    "timezone": extraction.timezone,
+                    "source_event_id": source_event_id,
+                },
+            )
+            transaction.states.upsert(principal, completed)
+            transaction.commit()
+
+        if calendar_result is None or reminder is None or extraction is None:
+            raise RuntimeError("committed reminder transaction produced no result")
         tool_trace = TraceEvent(
             run_id=run_id,
             agent_id="personal_assistant",
@@ -489,6 +446,7 @@ class ReminderWorkflow:
             },
             parent_event_id=context_trace.trace_id,
         )
+        self.traces.write(tool_trace)
         completed_trace = TraceEvent(
             run_id=run_id,
             agent_id="personal_assistant",
@@ -497,20 +455,7 @@ class ReminderWorkflow:
             output_summary={"reminder_id": reminder.reminder_id},
             parent_event_id=tool_trace.trace_id,
         )
-        self.traces.write(tool_trace)
         self.traces.write(completed_trace)
-        completed = state.transition(
-            status=WorkflowStatus.completed,
-            step=ReminderWorkflowStep.completed.value,
-            data={
-                "calendar_event_id": calendar_result.event_id,
-                "reminder_id": reminder.reminder_id,
-                "notify_at": reminder.notify_at.isoformat(),
-                "timezone": extraction.timezone,
-                "source_event_id": source_event_id,
-            },
-        )
-        self.states.upsert(principal, completed)
         return ReminderWorkflowResult(
             status=AgentStatus.completed,
             intent=ReminderIntent.create,
@@ -538,6 +483,251 @@ class ReminderWorkflow:
                 ]
                 if trace_id is not None
             ],
+        )
+
+    def _run_before_approval(
+        self,
+        principal: Principal,
+        request: ReminderWorkflowInput,
+        *,
+        initial_state: WorkflowState,
+        run_id: str,
+        source_event_id: str,
+        payload_fingerprint: str,
+        timezone: str,
+        context_trace_id: str,
+        base_trace_ids: list[str],
+    ) -> ReminderWorkflowResult:
+        registration = self.states.register_or_replay(principal, initial_state)
+        replay = self._registration_result(
+            registration,
+            effective_key=initial_state.idempotency_key,
+            source_event_id=source_event_id,
+            payload_fingerprint=payload_fingerprint,
+            timezone=timezone,
+            trace_ids=base_trace_ids,
+        )
+        if replay is not None:
+            return replay
+
+        extraction, clarification, llm_trace_id = self._resolve_extraction(
+            principal,
+            request,
+            run_id=run_id,
+            parent_event_id=context_trace_id,
+        )
+        if extraction is None:
+            clarification_reason = (
+                clarification.reason
+                if clarification is not None
+                else ReminderClarificationReason.missing_datetime
+            )
+            reply_id, reply_version, reply = self.replies.reminder_clarification(
+                clarification_reason
+            )
+            waiting = registration.state.transition(
+                status=WorkflowStatus.waiting_approval,
+                step=ReminderWorkflowStep.needs_clarification.value,
+                data={
+                    "clarification_reason": clarification_reason.value,
+                    "clarification_reply_id": reply_id,
+                    "clarification_reply_version": reply_version,
+                },
+            )
+            self.states.upsert(principal, waiting)
+            return ReminderWorkflowResult(
+                status=AgentStatus.needs_clarification,
+                intent=ReminderIntent.unsupported,
+                reply=reply,
+                idempotency_key=initial_state.idempotency_key,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=timezone,
+                clarification_reason=clarification_reason,
+                clarification_reply_id=reply_id,
+                clarification_reply_version=reply_version,
+                trace_ids=[
+                    trace_id
+                    for trace_id in [*base_trace_ids, llm_trace_id]
+                    if trace_id is not None
+                ],
+            )
+
+        approval = TraceEvent(
+            run_id=run_id,
+            agent_id="personal_assistant",
+            event_type=TraceEventType.approval_requested,
+            tenant_id=principal.tenant_id,
+            tool_call={
+                "name": "calendar.create_event",
+                "tier": PermissionTier.P3.value,
+            },
+            parent_event_id=context_trace_id,
+        )
+        self.traces.write(approval)
+        waiting = registration.state.transition(
+            status=WorkflowStatus.waiting_approval,
+            step=ReminderWorkflowStep.approval_required.value,
+            data=ReminderDraft.from_extraction(extraction).to_workflow_data(),
+        )
+        self.states.upsert(principal, waiting)
+        return ReminderWorkflowResult(
+            status=AgentStatus.escalated,
+            intent=ReminderIntent.create,
+            reply=self.replies.reminder_needs_approval(extraction.title),
+            idempotency_key=initial_state.idempotency_key,
+            source_event_id=source_event_id,
+            payload_fingerprint=payload_fingerprint,
+            timezone=timezone,
+            approval_required=True,
+            trace_ids=[
+                trace_id
+                for trace_id in [*base_trace_ids, llm_trace_id, approval.trace_id]
+                if trace_id is not None
+            ],
+        )
+
+    def _registration_result(
+        self,
+        registration: WorkflowStateRegistration,
+        *,
+        effective_key: str,
+        source_event_id: str,
+        payload_fingerprint: str,
+        timezone: str,
+        trace_ids: list[str],
+    ) -> ReminderWorkflowResult | None:
+        if not registration.replayed:
+            return None
+        existing = registration.state
+        if existing.status == WorkflowStatus.completed:
+            return ReminderWorkflowResult(
+                status=AgentStatus.completed,
+                intent=ReminderIntent.create,
+                reply=self.replies.reminder_duplicate(),
+                idempotency_key=effective_key,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=timezone,
+                calendar_event_id=existing.data.get("calendar_event_id"),
+                reminder_id=existing.data.get("reminder_id"),
+                reused=True,
+                trace_ids=trace_ids,
+            )
+        if existing.status == WorkflowStatus.running:
+            return ReminderWorkflowResult(
+                status=AgentStatus.escalated,
+                intent=ReminderIntent.create,
+                reply=self.replies.reminder_duplicate(),
+                idempotency_key=effective_key,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=timezone,
+                reused=True,
+                trace_ids=trace_ids,
+            )
+        if existing.status == WorkflowStatus.failed:
+            return ReminderWorkflowResult(
+                status=AgentStatus.failed,
+                intent=ReminderIntent.create,
+                reply=self.replies.reminder_duplicate(),
+                idempotency_key=effective_key,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=timezone,
+                reused=True,
+                trace_ids=trace_ids,
+            )
+        if existing.status != WorkflowStatus.waiting_approval:
+            return None
+        if existing.step == ReminderWorkflowStep.approval_required.value:
+            draft = ReminderDraft.from_mapping(existing.data)
+            return ReminderWorkflowResult(
+                status=AgentStatus.escalated,
+                intent=ReminderIntent.create,
+                reply=self.replies.reminder_needs_approval(draft.title),
+                idempotency_key=effective_key,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=timezone,
+                approval_required=True,
+                reused=True,
+                trace_ids=trace_ids,
+            )
+        try:
+            clarification_reason = ReminderClarificationReason(
+                str(existing.data.get("clarification_reason"))
+            )
+        except ValueError:
+            clarification_reason = ReminderClarificationReason.missing_datetime
+        reply_id, reply_version, reply = self.replies.reminder_clarification(
+            clarification_reason
+        )
+        return ReminderWorkflowResult(
+            status=AgentStatus.needs_clarification,
+            intent=ReminderIntent.unsupported,
+            reply=reply,
+            idempotency_key=effective_key,
+            source_event_id=source_event_id,
+            payload_fingerprint=payload_fingerprint,
+            timezone=timezone,
+            clarification_reason=clarification_reason,
+            clarification_reply_id=reply_id,
+            clarification_reply_version=reply_version,
+            reused=True,
+            trace_ids=trace_ids,
+        )
+
+    def _resolve_extraction(
+        self,
+        principal: Principal,
+        request: ReminderWorkflowInput,
+        *,
+        run_id: str,
+        parent_event_id: str,
+    ) -> tuple[
+        ReminderExtraction | None,
+        ReminderNeedsClarification | None,
+        str | None,
+    ]:
+        parse_result = extract_reminder(
+            request.text,
+            request.now,
+            timezone=request.timezone,
+        )
+        extraction = (
+            parse_result.extraction
+            if isinstance(parse_result, ParsedReminder)
+            else None
+        )
+        clarification = (
+            parse_result
+            if isinstance(parse_result, ReminderNeedsClarification)
+            else None
+        )
+        llm_trace_id: str | None = None
+        if (
+            isinstance(parse_result, UnsupportedReminder)
+            and parse_result.reason == ReminderUnsupportedReason.not_a_reminder
+            and self.llm is not None
+        ):
+            extraction, llm_trace_id = self._extract_with_llm(
+                principal,
+                request,
+                run_id=run_id,
+                parent_event_id=parent_event_id,
+            )
+        return extraction, clarification, llm_trace_id
+
+    def _begin_transaction(self, principal: Principal) -> ReminderTransaction:
+        if self.unit_of_work is not None:
+            return self.unit_of_work.begin(principal)
+        return _DirectReminderTransaction(
+            calendar=self.calendar,
+            scheduler=self.scheduler,
+            event_store=self.event_store,
+            outbox=self.outbox,
+            states=self.states,
         )
 
     def _extract_with_llm(

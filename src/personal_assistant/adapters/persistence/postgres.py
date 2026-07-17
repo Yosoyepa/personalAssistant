@@ -386,6 +386,7 @@ class PostgresOutbox(_PostgresStore):
         event: CloudEvent,
         *,
         idempotency_key: str,
+        next_attempt_at: datetime | None = None,
         message_id: str | None = None,
     ) -> OutboxMessage:
         require_trusted_principal(principal)
@@ -396,12 +397,24 @@ class PostgresOutbox(_PostgresStore):
                 tenant_id=principal.tenant_id,
             )
 
+        if next_attempt_at is not None:
+            if next_attempt_at.tzinfo is None or next_attempt_at.utcoffset() is None:
+                raise ValueError("next_attempt_at must be timezone-aware")
+            next_attempt_at = next_attempt_at.astimezone(UTC)
         event_payload = event.model_dump(mode="json")
-        event_fingerprint = _fingerprint(event_payload)
+        fingerprint_payload: object = event_payload
+        if next_attempt_at is not None or message_id is not None:
+            fingerprint_payload = {
+                "event": event_payload,
+                "next_attempt_at": next_attempt_at,
+                "message_id": message_id,
+            }
+        event_fingerprint = _fingerprint(fingerprint_payload)
         message_data: dict[str, object] = {
             "tenant_id": principal.tenant_id,
             "event": event,
             "idempotency_key": idempotency_key,
+            "next_attempt_at": next_attempt_at,
         }
         if message_id is not None:
             message_data["id"] = message_id

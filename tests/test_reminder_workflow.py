@@ -40,6 +40,9 @@ from personal_assistant.adapters.persistence.in_memory import (
     InMemoryOutbox,
     InMemoryWorkflowStateStore,
 )
+from personal_assistant.adapters.persistence.in_memory_uow import (
+    InMemoryReminderUnitOfWork,
+)
 from personal_assistant.adapters.observability.local import TraceRecorder
 
 
@@ -74,6 +77,13 @@ class ReminderWorkflowTests(unittest.TestCase):
         self.outbox = InMemoryOutbox()
         self.states = InMemoryWorkflowStateStore()
         self.traces = TraceRecorder()
+        self.unit_of_work = InMemoryReminderUnitOfWork(
+            calendar=self.calendar,
+            scheduler=self.scheduler,
+            event_store=self.event_store,
+            outbox=self.outbox,
+            states=self.states,
+        )
         self.workflow = ReminderWorkflow(
             calendar=self.calendar,
             scheduler=self.scheduler,
@@ -81,6 +91,7 @@ class ReminderWorkflowTests(unittest.TestCase):
             outbox=self.outbox,
             states=self.states,
             traces=self.traces,
+            unit_of_work=self.unit_of_work,
         )
 
     def key(self, source_event_id: str) -> str:
@@ -352,6 +363,7 @@ class ReminderWorkflowTests(unittest.TestCase):
             outbox=self.outbox,
             states=self.states,
             traces=self.traces,
+            unit_of_work=self.unit_of_work,
             reminder_minutes_before=2,
         )
 
@@ -385,6 +397,7 @@ class ReminderWorkflowTests(unittest.TestCase):
             outbox=self.outbox,
             states=self.states,
             traces=self.traces,
+            unit_of_work=self.unit_of_work,
             reminder_minutes_before=2,
         )
         approval = ApprovalGrant.issue(
@@ -522,6 +535,10 @@ class ReminderWorkflowTests(unittest.TestCase):
         self.assertTrue(
             any(result.status == AgentStatus.completed for result in results)
         )
+        self.assertTrue(
+            all(result.status == AgentStatus.completed for result in results)
+        )
+        self.assertEqual(sum(not result.reused for result in results), 1)
         self.assertEqual(len(self.calendar.list_events(self.principal)), 1)
         self.assertEqual(len(self.scheduler.list_for_tenant(self.principal)), 1)
         self.assertEqual(len(self.event_store.list_for_tenant(self.principal)), 1)
@@ -594,6 +611,7 @@ class ReminderWorkflowTests(unittest.TestCase):
             outbox=self.outbox,
             states=self.states,
             traces=self.traces,
+            unit_of_work=self.unit_of_work,
             llm=FakeLLMProvider(),
         )
         text = "necesito que quede lo de almorzar con Ana a las tres treinta y tres"
