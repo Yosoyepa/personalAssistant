@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -38,7 +37,10 @@ from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
 from personal_assistant.application.dto.events import CloudEvent
 from personal_assistant.domain.common.guardrails import assert_prompt_safe
-from personal_assistant.domain.common.permissions import PermissionTier
+from personal_assistant.domain.common.permissions import (
+    PermissionTier,
+    require_approval,
+)
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.domain.reminders.models import (
@@ -49,6 +51,13 @@ from personal_assistant.domain.reminders.models import (
     ReminderUnsupportedReason,
     UnsupportedReminder,
 )
+from personal_assistant.domain.reminders.idempotency import (
+    ReminderIdempotency,
+    ReminderIdempotencyConflict,
+    ReminderIdempotencyIdentity,
+    ReminderPayload,
+    reminder_idempotency_key,
+)
 from personal_assistant.domain.reminders.parser import extract_reminder
 from personal_assistant.domain.reminders.workflow_state import (
     ReminderDraft,
@@ -56,11 +65,29 @@ from personal_assistant.domain.reminders.workflow_state import (
 )
 
 
-def reminder_idempotency_key(tenant_id: str, message_id: str, text: str) -> str:
-    digest = hashlib.sha256(
-        f"{tenant_id}:{message_id}:{text}".encode("utf-8")
-    ).hexdigest()[:24]
-    return f"reminder:{digest}"
+__all__ = ["ReminderWorkflow", "reminder_idempotency", "reminder_idempotency_key"]
+
+
+def reminder_idempotency(
+    principal: Principal,
+    request: ReminderWorkflowInput,
+) -> ReminderIdempotency:
+    """Build the claim from trusted identity and normalized application input."""
+
+    return ReminderIdempotency(
+        identity=ReminderIdempotencyIdentity(
+            tenant_id=principal.tenant_id,
+            channel=request.channel,
+            principal_id=principal.principal_id,
+            conversation_id=request.conversation_id,
+            source_event_id=request.source_event_id or request.message_id,
+        ),
+        payload=ReminderPayload(
+            text=request.text,
+            recipient=request.recipient,
+            timezone=request.timezone,
+        ),
+    )
 
 
 @dataclass(slots=True)
@@ -84,11 +111,26 @@ class ReminderWorkflow:
         self, principal: Principal, request: ReminderWorkflowInput
     ) -> ReminderWorkflowResult:
         assert_prompt_safe(request.text)
-        effective_key = request.idempotency_key or reminder_idempotency_key(
-            principal.tenant_id,
-            request.message_id,
-            request.text,
-        )
+        idempotency = reminder_idempotency(principal, request)
+        effective_key = idempotency.key
+        if (
+            request.idempotency_key is not None
+            and request.idempotency_key != effective_key
+        ):
+            raise ReminderIdempotencyConflict(
+                tenant_id=principal.tenant_id,
+                idempotency_key=effective_key,
+            )
+        resume_from_step: str | None = None
+        if request.approval is not None:
+            require_approval(
+                principal=principal,
+                tier=PermissionTier.P3,
+                approval=request.approval,
+                action="calendar.create_event",
+                resource=f"{effective_key}:calendar",
+            )
+            resume_from_step = ReminderWorkflowStep.approval_required.value
         run_id = effective_key
         started = TraceEvent(
             run_id=run_id,
@@ -120,12 +162,29 @@ class ReminderWorkflow:
         self.traces.write(guardrail_trace)
         self.traces.write(context_trace)
 
-        existing = self.states.get_by_idempotency_key(principal, effective_key)
-        if existing and existing.status == WorkflowStatus.completed:
+        registration = self.states.register_or_replay(
+            principal,
+            WorkflowState(
+                tenant_id=principal.tenant_id,
+                workflow_type="reminder.create",
+                status=WorkflowStatus.running,
+                step=ReminderWorkflowStep.classify.value,
+                idempotency_key=effective_key,
+                payload_fingerprint=idempotency.payload_fingerprint,
+            ),
+            resume_from_step=resume_from_step,
+        )
+        existing = (
+            registration.state
+            if registration.replayed or registration.resumed
+            else None
+        )
+        if existing is not None and existing.status == WorkflowStatus.completed:
             return ReminderWorkflowResult(
                 status=AgentStatus.completed,
                 intent=ReminderIntent.create,
                 reply=self.replies.reminder_duplicate(),
+                idempotency_key=effective_key,
                 calendar_event_id=existing.data.get("calendar_event_id"),
                 reminder_id=existing.data.get("reminder_id"),
                 reused=True,
@@ -136,14 +195,74 @@ class ReminderWorkflow:
                 ],
             )
 
-        state = existing or WorkflowState(
-            tenant_id=principal.tenant_id,
-            workflow_type="reminder.create",
-            status=WorkflowStatus.running,
-            step=ReminderWorkflowStep.classify.value,
-            idempotency_key=effective_key,
-        )
-        self.states.upsert(principal, state)
+        if (
+            existing is not None
+            and existing.status == WorkflowStatus.running
+            and registration.replayed
+        ):
+            # A matching concurrent delivery may observe the elected executor,
+            # but must never become a second side-effecting executor.
+            return ReminderWorkflowResult(
+                status=AgentStatus.escalated,
+                intent=ReminderIntent.create,
+                reply=self.replies.reminder_duplicate(),
+                idempotency_key=effective_key,
+                reused=True,
+                trace_ids=[
+                    started.trace_id,
+                    guardrail_trace.trace_id,
+                    context_trace.trace_id,
+                ],
+            )
+        if existing is not None and existing.status == WorkflowStatus.failed:
+            return ReminderWorkflowResult(
+                status=AgentStatus.failed,
+                intent=ReminderIntent.create,
+                reply=self.replies.reminder_duplicate(),
+                idempotency_key=effective_key,
+                reused=True,
+                trace_ids=[
+                    started.trace_id,
+                    guardrail_trace.trace_id,
+                    context_trace.trace_id,
+                ],
+            )
+        if (
+            existing is not None
+            and existing.status == WorkflowStatus.waiting_approval
+            and request.approval is None
+        ):
+            if existing.step == ReminderWorkflowStep.approval_required.value:
+                draft = ReminderDraft.from_mapping(existing.data)
+                return ReminderWorkflowResult(
+                    status=AgentStatus.escalated,
+                    intent=ReminderIntent.create,
+                    reply=self.replies.reminder_needs_approval(draft.title),
+                    idempotency_key=effective_key,
+                    approval_required=True,
+                    reused=True,
+                    trace_ids=[
+                        started.trace_id,
+                        guardrail_trace.trace_id,
+                        context_trace.trace_id,
+                    ],
+                )
+            return ReminderWorkflowResult(
+                status=AgentStatus.needs_clarification,
+                intent=ReminderIntent.unsupported,
+                reply=self.replies.reminder_needs_datetime(),
+                idempotency_key=effective_key,
+                reused=True,
+                trace_ids=[
+                    started.trace_id,
+                    guardrail_trace.trace_id,
+                    context_trace.trace_id,
+                ],
+            )
+
+        # A validated grant may atomically resume waiting -> running. Concurrent
+        # deliveries observe running and take the non-executing branch above.
+        state = registration.state
 
         llm_trace_id: str | None = None
         extraction: ReminderExtraction | None
@@ -193,6 +312,7 @@ class ReminderWorkflow:
                 status=AgentStatus.needs_clarification,
                 intent=ReminderIntent.unsupported,
                 reply=self.replies.reminder_needs_datetime(),
+                idempotency_key=effective_key,
                 trace_ids=[
                     trace_id
                     for trace_id in [
@@ -228,6 +348,7 @@ class ReminderWorkflow:
                 status=AgentStatus.escalated,
                 intent=ReminderIntent.create,
                 reply=self.replies.reminder_needs_approval(extraction.title),
+                idempotency_key=effective_key,
                 approval_required=True,
                 trace_ids=[
                     trace_id
@@ -320,6 +441,7 @@ class ReminderWorkflow:
                 minutes_before=notice_minutes_before,
                 direct_notice=extraction.notify_at is not None,
             ),
+            idempotency_key=effective_key,
             calendar_event_id=calendar_result.event_id,
             reminder_id=reminder.reminder_id,
             reused=calendar_result.reused,

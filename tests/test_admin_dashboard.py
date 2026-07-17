@@ -79,7 +79,13 @@ class AdminDashboardTests(unittest.TestCase):
         text: str = "recuerdame clase el martes a las 11 am",
         approved: bool = True,
     ) -> ReminderWorkflowInput:
-        key = reminder_idempotency_key(principal.tenant_id, message_id, text)
+        key = reminder_idempotency_key(
+            tenant_id=principal.tenant_id,
+            channel="telegram",
+            principal_id=principal.principal_id,
+            conversation_id="chat-1",
+            source_event_id=message_id,
+        )
         approval = None
         if approved:
             approval = ApprovalGrant.issue(

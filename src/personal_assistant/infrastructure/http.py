@@ -17,11 +17,20 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from personal_assistant.adapters.inbound.auth import principal_from_auth_claims
 from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
-from personal_assistant.adapters.outbound.notifications.telegram import TelegramBotApiClient, TelegramNotificationTool
+from personal_assistant.adapters.outbound.notifications.telegram import (
+    TelegramBotApiClient,
+    TelegramNotificationTool,
+)
 from personal_assistant.application.dto.channels import NormalizedMessage
-from personal_assistant.application.dto.commands import PendingApproval, PendingApprovalStatus
+from personal_assistant.application.dto.commands import (
+    PendingApproval,
+    PendingApprovalStatus,
+)
 from personal_assistant.application.dto.context import TokenBudget
-from personal_assistant.application.dto.reminders import ReminderWorkflowInput, ReminderWorkflowResult
+from personal_assistant.application.dto.reminders import (
+    ReminderWorkflowInput,
+    ReminderWorkflowResult,
+)
 from personal_assistant.application.dto.runtime import (
     AgentStatus,
     ApprovalStatus,
@@ -30,13 +39,25 @@ from personal_assistant.application.dto.runtime import (
 )
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.application.dto.workflows import WorkflowState
-from personal_assistant.application.ports.notifications import NotificationMedia, NotificationRequest
+from personal_assistant.application.ports.notifications import (
+    NotificationMedia,
+    NotificationRequest,
+)
 from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.use_cases.reminders import reminder_idempotency_key
-from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode, error_response
+from personal_assistant.domain.common.exceptions import (
+    AssistantError,
+    ErrorCode,
+    error_response,
+)
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
-from personal_assistant.infrastructure.admin import AdminDashboard, clamp_limit, is_local_client, local_admin_principal
+from personal_assistant.infrastructure.admin import (
+    AdminDashboard,
+    clamp_limit,
+    is_local_client,
+    local_admin_principal,
+)
 from personal_assistant.infrastructure.bootstrap import (
     AppContainer,
     build_container,
@@ -86,7 +107,9 @@ class ReminderCommandRequest(BaseModel):
     timezone: str = "America/Bogota"
     idempotency_key: str | None = None
 
-    def to_workflow_input(self, *, approval: ApprovalGrant | None = None) -> ReminderWorkflowInput:
+    def to_workflow_input(
+        self, *, approval: ApprovalGrant | None = None
+    ) -> ReminderWorkflowInput:
         return ReminderWorkflowInput(
             message_id=self.message_id,
             conversation_id=self.conversation_id,
@@ -170,12 +193,24 @@ def _status_for_error(code: ErrorCode) -> int:
     }.get(code, 500)
 
 
-def _effective_idempotency_key(principal: Principal, request: ReminderCommandRequest) -> str:
-    return request.idempotency_key or reminder_idempotency_key(principal.tenant_id, request.message_id, request.text)
+def _effective_idempotency_key(
+    principal: Principal, request: ReminderCommandRequest
+) -> str:
+    return request.idempotency_key or reminder_idempotency_key(
+        tenant_id=principal.tenant_id,
+        channel=request.channel,
+        principal_id=principal.principal_id,
+        conversation_id=request.conversation_id,
+        source_event_id=request.message_id,
+    )
 
 
-def _approval_id(tenant_id: str, principal_id: str, idempotency_key: str, action: str) -> str:
-    digest = hashlib.sha256(f"{tenant_id}:{principal_id}:{idempotency_key}:{action}".encode("utf-8")).hexdigest()[:24]
+def _approval_id(
+    tenant_id: str, principal_id: str, idempotency_key: str, action: str
+) -> str:
+    digest = hashlib.sha256(
+        f"{tenant_id}:{principal_id}:{idempotency_key}:{action}".encode("utf-8")
+    ).hexdigest()[:24]
     return f"apr_{digest}"
 
 
@@ -187,7 +222,9 @@ def _approval_status_from_pending(status: PendingApprovalStatus) -> ApprovalStat
     return ApprovalStatus.pending
 
 
-def _pending_status_from_approval(status: ApprovalStatus) -> PendingApprovalStatus | None:
+def _pending_status_from_approval(
+    status: ApprovalStatus,
+) -> PendingApprovalStatus | None:
     if status == ApprovalStatus.approved:
         return PendingApprovalStatus.approved
     if status == ApprovalStatus.rejected:
@@ -197,7 +234,9 @@ def _pending_status_from_approval(status: ApprovalStatus) -> PendingApprovalStat
     return None
 
 
-def _approval_view_from_pending(pending: PendingApproval, *, reason: str) -> ApprovalView:
+def _approval_view_from_pending(
+    pending: PendingApproval, *, reason: str
+) -> ApprovalView:
     return ApprovalView(
         approval_id=pending.approval_id,
         action=pending.action,
@@ -217,7 +256,9 @@ def _pending_approval_from_request(
     action: str,
 ) -> PendingApproval:
     return PendingApproval(
-        approval_id=_approval_id(principal.tenant_id, principal.principal_id, run_id, action),
+        approval_id=_approval_id(
+            principal.tenant_id, principal.principal_id, run_id, action
+        ),
         tenant_id=principal.tenant_id,
         principal_id=principal.principal_id,
         action=action,
@@ -334,13 +375,19 @@ def _run_reminder_worker_loop(
 def current_principal(
     x_principal_id: Annotated[str | None, Header(alias="X-Principal-Id")] = None,
     x_tenant_id: Annotated[str | None, Header(alias="X-Tenant-Id")] = None,
-    x_permission_tier: Annotated[str, Header(alias="X-Permission-Tier")] = PermissionTier.P0.value,
+    x_permission_tier: Annotated[
+        str, Header(alias="X-Permission-Tier")
+    ] = PermissionTier.P0.value,
     x_scopes: Annotated[str | None, Header(alias="X-Scopes")] = None,
 ) -> Principal:
     if not x_principal_id:
-        raise AssistantError(ErrorCode.AUTHENTICATION_REQUIRED, "X-Principal-Id header is required")
+        raise AssistantError(
+            ErrorCode.AUTHENTICATION_REQUIRED, "X-Principal-Id header is required"
+        )
     if not x_tenant_id:
-        raise AssistantError(ErrorCode.TENANT_REQUIRED, "X-Tenant-Id header is required")
+        raise AssistantError(
+            ErrorCode.TENANT_REQUIRED, "X-Tenant-Id header is required"
+        )
     try:
         tier = PermissionTier(x_permission_tier)
     except ValueError as exc:
@@ -357,7 +404,10 @@ def current_principal(
 
 
 def telegram_principal(settings: AppSettings, actor_id: str) -> Principal:
-    if settings.telegram_allowed_user_ids and actor_id not in settings.telegram_allowed_user_ids:
+    if (
+        settings.telegram_allowed_user_ids
+        and actor_id not in settings.telegram_allowed_user_ids
+    ):
         raise AssistantError(
             ErrorCode.PERMISSION_DENIED,
             "telegram user is not allowed",
@@ -400,14 +450,21 @@ def _send_telegram_reply(
     return True
 
 
-def _should_send_audio_reply(settings: AppSettings, message: NormalizedMessage, text: str) -> bool:
+def _should_send_audio_reply(
+    settings: AppSettings, message: NormalizedMessage, text: str
+) -> bool:
     if settings.telegram_audio_reply_mode in {"", "disabled", "none"}:
         return False
     if len(text) > settings.tts_max_reply_characters:
         return False
     if settings.telegram_audio_reply_mode == "always":
         return True
-    if settings.telegram_audio_reply_mode in {"voice_only", "voice-only", "audio_only", "audio-only"}:
+    if settings.telegram_audio_reply_mode in {
+        "voice_only",
+        "voice-only",
+        "audio_only",
+        "audio-only",
+    }:
         return message.media_kind in {"voice", "audio"}
     return False
 
@@ -465,7 +522,9 @@ def _send_telegram_audio_reply(
             request=AudioSynthesisRequest(
                 text=text,
                 voice_id=settings.tts_voice_id,
-                audio_format=cast(Literal["mp3", "wav", "flac"], settings.tts_audio_format),
+                audio_format=cast(
+                    Literal["mp3", "wav", "flac"], settings.tts_audio_format
+                ),
                 language_boost=settings.tts_language_boost,
             ),
             budget=TokenBudget(limit=settings.tts_max_reply_characters),
@@ -544,7 +603,10 @@ def _transcribe_telegram_media(
         return None, replies.telegram_transcription_not_configured()
     if not settings.telegram_bot_token:
         return None, replies.telegram_token_missing_for_audio()
-    if message.media_file_size is not None and message.media_file_size > MAX_TELEGRAM_AUDIO_BYTES:
+    if (
+        message.media_file_size is not None
+        and message.media_file_size > MAX_TELEGRAM_AUDIO_BYTES
+    ):
         return None, replies.telegram_audio_too_large()
 
     transcription_filename: str | None = None
@@ -559,7 +621,9 @@ def _transcribe_telegram_media(
         if len(audio) > MAX_TELEGRAM_AUDIO_BYTES:
             return None, replies.telegram_audio_download_too_large()
 
-        telegram_file_extension = file_path.rsplit(".", 1)[-1].lower() if "." in file_path else None
+        telegram_file_extension = (
+            file_path.rsplit(".", 1)[-1].lower() if "." in file_path else None
+        )
         transcription_filename = _transcription_filename(message, file_path)
         transcript = container.transcription.transcribe(
             AudioTranscriptionRequest(
@@ -567,7 +631,9 @@ def _transcribe_telegram_media(
                 content_type=message.media_mime_type or "audio/ogg",
                 data=audio,
                 language="es",
-                prompt=container.prompt_catalog.render("telegram_voice_transcription", {}).text,
+                prompt=container.prompt_catalog.render(
+                    "telegram_voice_transcription", {}
+                ).text,
             ),
             budget=TokenBudget(limit=4_000),
         )
@@ -586,7 +652,10 @@ def _transcribe_telegram_media(
                 },
                 tool_call={"name": "audio.transcribe", "provider": transcript.provider},
                 model=transcript.model,
-                output_summary={"transcript": transcript.text[:500], "text_length": len(transcript.text)},
+                output_summary={
+                    "transcript": transcript.text[:500],
+                    "text_length": len(transcript.text),
+                },
             )
         )
     except Exception as exc:
@@ -619,7 +688,9 @@ def _transcribe_telegram_media(
     )
 
 
-def _admin_principal(settings: AppSettings, tenant_id: str | None, principal_id: str) -> Principal:
+def _admin_principal(
+    settings: AppSettings, tenant_id: str | None, principal_id: str
+) -> Principal:
     return local_admin_principal(
         tenant_id=tenant_id or settings.tenant_id,
         principal_id=principal_id,
@@ -649,7 +720,9 @@ def _admin_request_token(request: Request) -> str | None:
     return None
 
 
-def create_app(container: AppContainer | None = None, settings: AppSettings | None = None) -> FastAPI:
+def create_app(
+    container: AppContainer | None = None, settings: AppSettings | None = None
+) -> FastAPI:
     runtime_settings = settings or AppSettings.from_env()
     runtime_container = container or build_runtime_container(runtime_settings)
     runtime_replies = runtime_container.commands.replies
@@ -677,7 +750,9 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
             if thread is not None:
                 thread.join(timeout=5)
 
-    app = FastAPI(title="Personal Assistant Runtime", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(
+        title="Personal Assistant Runtime", version="0.1.0", lifespan=lifespan
+    )
     app.state.container = runtime_container
     app.state.settings = runtime_settings
     app.state.reminder_worker_stop = threading.Event()
@@ -686,16 +761,23 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
 
     @app.exception_handler(AssistantError)
     async def handle_assistant_error(_: Any, exc: AssistantError) -> JSONResponse:
-        return JSONResponse(status_code=_status_for_error(exc.code), content=jsonable_encoder(exc.model_dump()))
+        return JSONResponse(
+            status_code=_status_for_error(exc.code),
+            content=jsonable_encoder(exc.model_dump()),
+        )
 
     @app.exception_handler(RequestValidationError)
-    async def handle_request_validation_error(_: Any, exc: RequestValidationError) -> JSONResponse:
+    async def handle_request_validation_error(
+        _: Any, exc: RequestValidationError
+    ) -> JSONResponse:
         response = error_response(
             ErrorCode.VALIDATION_FAILED,
             "request validation failed",
             context={"errors": exc.errors()},
         )
-        return JSONResponse(status_code=422, content=jsonable_encoder(response.model_dump(mode="json")))
+        return JSONResponse(
+            status_code=422, content=jsonable_encoder(response.model_dump(mode="json"))
+        )
 
     @app.exception_handler(ValidationError)
     async def handle_validation_error(_: Any, exc: ValidationError) -> JSONResponse:
@@ -704,12 +786,16 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
             "request validation failed",
             context={"errors": exc.errors()},
         )
-        return JSONResponse(status_code=422, content=jsonable_encoder(response.model_dump(mode="json")))
+        return JSONResponse(
+            status_code=422, content=jsonable_encoder(response.model_dump(mode="json"))
+        )
 
     @app.exception_handler(ValueError)
     async def handle_value_error(_: Any, exc: ValueError) -> JSONResponse:
         response = error_response(ErrorCode.VALIDATION_FAILED, str(exc))
-        return JSONResponse(status_code=422, content=jsonable_encoder(response.model_dump(mode="json")))
+        return JSONResponse(
+            status_code=422, content=jsonable_encoder(response.model_dump(mode="json"))
+        )
 
     @app.get("/healthz", response_model=HealthResponse, tags=["runtime"])
     def healthz() -> HealthResponse:
@@ -742,11 +828,20 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         ] = None,
     ) -> TelegramWebhookResponse:
         if secret != runtime_settings.telegram_webhook_secret:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "invalid telegram webhook secret")
-        if x_telegram_secret is not None and x_telegram_secret != runtime_settings.telegram_webhook_secret:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "invalid telegram secret token")
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED, "invalid telegram webhook secret"
+            )
+        if (
+            x_telegram_secret is not None
+            and x_telegram_secret != runtime_settings.telegram_webhook_secret
+        ):
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED, "invalid telegram secret token"
+            )
 
-        message = normalize_telegram_webhook(payload, tenant_id=runtime_settings.tenant_id)
+        message = normalize_telegram_webhook(
+            payload, tenant_id=runtime_settings.tenant_id
+        )
         principal = telegram_principal(runtime_settings, message.actor_id)
         if message.media_kind in {"voice", "audio"}:
             transcribed, transcription_error = _transcribe_telegram_media(
@@ -790,9 +885,12 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
                 principal,
                 chat_id=message.conversation_id,
                 text=result.reply,
-                idempotency_key=message.idempotency_key or f"telegram:{message.conversation_id}:{message.message_id}",
+                idempotency_key=message.idempotency_key
+                or f"telegram:{message.conversation_id}:{message.message_id}",
             )
-            if sent and _should_send_audio_reply(runtime_settings, message, result.reply):
+            if sent and _should_send_audio_reply(
+                runtime_settings, message, result.reply
+            ):
                 audio_sent = _send_telegram_audio_reply(
                     runtime_container,
                     principal,
@@ -976,7 +1074,9 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         principal: Annotated[Principal, Depends(current_principal)],
     ) -> ReminderCommandResponse:
         run_id = _effective_idempotency_key(principal, request)
-        result = runtime_container.reminder_workflow.run(principal, request.to_workflow_input())
+        result = runtime_container.reminder_workflow.run(
+            principal, request.to_workflow_input()
+        )
         approval_view: ApprovalView | None = None
         if result.approval_required:
             response.status_code = 202
@@ -994,7 +1094,9 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
                 pending,
                 reason=runtime_replies.approval_reason_calendar_create_event(),
             )
-        return _reminder_response(principal=principal, run_id=run_id, result=result, approval=approval_view)
+        return _reminder_response(
+            principal=principal, run_id=run_id, result=result, approval=approval_view
+        )
 
     @app.get(
         "/v1/runtime/approvals",
@@ -1010,7 +1112,11 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
             expected = _pending_status_from_approval(status)
             if expected is None:
                 return []
-            pending_approvals = [approval for approval in pending_approvals if approval.status == expected]
+            pending_approvals = [
+                approval
+                for approval in pending_approvals
+                if approval.status == expected
+            ]
         approvals = [
             _approval_view_from_pending(
                 approval,
@@ -1032,9 +1138,15 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
     ) -> ApprovalDecisionResponse:
         pending = runtime_container.approvals.get(principal, approval_id)
         if pending is None:
-            raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id
+            )
         if pending.status == PendingApprovalStatus.cancelled:
-            raise AssistantError(ErrorCode.CONFLICT, "approval was already rejected", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.CONFLICT,
+                "approval was already rejected",
+                tenant_id=principal.tenant_id,
+            )
 
         grant = runtime_container.approvals.approve(principal, approval_id)
         result = runtime_container.reminder_workflow.run(
@@ -1044,7 +1156,9 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
         return ApprovalDecisionResponse(
             approval_id=approval_id,
             status=ApprovalStatus.approved,
-            result=_reminder_response(principal=principal, run_id=pending.idempotency_key, result=result),
+            result=_reminder_response(
+                principal=principal, run_id=pending.idempotency_key, result=result
+            ),
         )
 
     @app.post(
@@ -1059,18 +1173,29 @@ def create_app(container: AppContainer | None = None, settings: AppSettings | No
     ) -> ApprovalDecisionResponse:
         existing = runtime_container.approvals.get(principal, approval_id)
         if existing is None:
-            raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id
+            )
         if existing.status == PendingApprovalStatus.approved:
-            raise AssistantError(ErrorCode.CONFLICT, "approval was already approved", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.CONFLICT,
+                "approval was already approved",
+                tenant_id=principal.tenant_id,
+            )
         pending = runtime_container.approvals.reject(principal, approval_id)
-        return ApprovalDecisionResponse(approval_id=approval_id, status=_approval_status_from_pending(pending.status))
+        return ApprovalDecisionResponse(
+            approval_id=approval_id,
+            status=_approval_status_from_pending(pending.status),
+        )
 
     @app.get(
         "/v1/runtime/workflows",
         response_model=list[WorkflowState],
         tags=["runtime"],
     )
-    def list_workflows(principal: Annotated[Principal, Depends(current_principal)]) -> list[WorkflowState]:
+    def list_workflows(
+        principal: Annotated[Principal, Depends(current_principal)],
+    ) -> list[WorkflowState]:
         return runtime_container.states.list_for_tenant(principal)
 
     @app.get(

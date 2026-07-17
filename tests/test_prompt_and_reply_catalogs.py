@@ -288,7 +288,6 @@ def test_reminder_workflow_uses_injected_reply_defaults() -> None:
             text="recordame pagar",
             recipient="chat-1",
             now=NOW,
-            idempotency_key="reply-defaults:missing-time",
             approval=None,
         ),
     )
@@ -300,7 +299,6 @@ def test_reminder_workflow_uses_injected_reply_defaults() -> None:
             text="recordame clase el martes a las 17",
             recipient="chat-1",
             now=NOW,
-            idempotency_key="reply-defaults:needs-approval",
             approval=None,
         ),
     )
@@ -389,7 +387,6 @@ def test_reminder_workflow_renders_extraction_prompt_from_injected_catalog() -> 
             text="deja lo de almorzar con Ana a las tres treinta y tres",
             recipient="chat-1",
             now=NOW,
-            idempotency_key="prompt-catalog:llm-catalog",
             approval=None,
         ),
     )

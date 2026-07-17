@@ -5,21 +5,37 @@ import json
 import sys
 import unittest
 
-from personal_assistant.application.dto.commands import PendingApproval, PendingApprovalStatus
-from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
+from personal_assistant.application.dto.commands import (
+    PendingApproval,
+    PendingApprovalStatus,
+)
+from personal_assistant.application.dto.events import (
+    CloudEvent,
+    OutboxMessage,
+    OutboxStatus,
+)
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
-from personal_assistant.application.ports.calendar import CalendarEventRequest, CalendarEventResult
+from personal_assistant.application.ports.calendar import (
+    CalendarEventRequest,
+    CalendarEventResult,
+)
 from personal_assistant.application.ports.scheduler import ScheduledReminder
 from personal_assistant.adapters.persistence import postgres
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
+from personal_assistant.domain.reminders.idempotency import ReminderIdempotencyConflict
 
 
 class RecordingConnection:
-    def __init__(self, *, fetchone_results: list[object] | None = None, fetchall_results: list[list[object]] | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        fetchone_results: list[object] | None = None,
+        fetchall_results: list[list[object]] | None = None,
+    ) -> None:
         self.statements: list[tuple[str, tuple[object, ...] | None]] = []
         self.fetchone_results = list(fetchone_results or [])
         self.fetchall_results = list(fetchall_results or [])
@@ -73,7 +89,9 @@ class PostgresPersistenceTests(unittest.TestCase):
             permission_tier=PermissionTier.P5,
         )
 
-    def cloud_event(self, principal: Principal, *, event_id: str = "evt-1") -> CloudEvent:
+    def cloud_event(
+        self, principal: Principal, *, event_id: str = "evt-1"
+    ) -> CloudEvent:
         return CloudEvent(
             id=event_id,
             type="test.created",
@@ -83,7 +101,9 @@ class PostgresPersistenceTests(unittest.TestCase):
             data={"value": "ok"},
         )
 
-    def pending_approval(self, principal: Principal, *, approval_id: str = "apr-1") -> PendingApproval:
+    def pending_approval(
+        self, principal: Principal, *, approval_id: str = "apr-1"
+    ) -> PendingApproval:
         return PendingApproval(
             approval_id=approval_id,
             tenant_id=principal.tenant_id,
@@ -118,13 +138,29 @@ class PostgresPersistenceTests(unittest.TestCase):
         postgres.ensure_schema(connection=connection, schema="assistant_test")
 
         statements = [statement for statement, _ in connection.statements]
-        table_statements = [statement for statement in statements if "CREATE TABLE IF NOT EXISTS" in statement]
+        table_statements = [
+            statement
+            for statement in statements
+            if "CREATE TABLE IF NOT EXISTS" in statement
+        ]
 
         self.assertEqual(connection.commits, 2)
         self.assertEqual(len(table_statements), 16)
         self.assertTrue(all("JSONB" in statement for statement in table_statements))
-        self.assertTrue(all("IF NOT EXISTS" in statement for statement in statements if "CREATE " in statement))
+        self.assertTrue(
+            all(
+                "IF NOT EXISTS" in statement
+                for statement in statements
+                if "CREATE " in statement
+            )
+        )
         self.assertIn('CREATE SCHEMA IF NOT EXISTS "assistant_test"', statements[0])
+        self.assertTrue(
+            any(
+                "ADD COLUMN IF NOT EXISTS payload_fingerprint TEXT" in statement
+                for statement in statements
+            )
+        )
 
     def test_schema_identifier_is_validated_before_sql_is_built(self) -> None:
         connection = RecordingConnection()
@@ -144,7 +180,9 @@ class PostgresPersistenceTests(unittest.TestCase):
             time=datetime(2026, 6, 28, 12, tzinfo=UTC),
             data={"value": "ok"},
         )
-        connection = RecordingConnection(fetchone_results=[{"payload": event.model_dump(mode="json")}])
+        connection = RecordingConnection(
+            fetchone_results=[{"payload": event.model_dump(mode="json")}]
+        )
         store = postgres.PostgresEventStore(connection=connection)
 
         saved = store.append(principal, event)
@@ -180,7 +218,9 @@ class PostgresPersistenceTests(unittest.TestCase):
 
         statement, params = connection.statements[0]
         normalized_statement = " ".join(statement.split())
-        self.assertIn("WHERE tenant_id = %s AND principal_id = %s", normalized_statement)
+        self.assertIn(
+            "WHERE tenant_id = %s AND principal_id = %s", normalized_statement
+        )
         self.assertIn("ORDER BY created_at, approval_id", normalized_statement)
         self.assertEqual(params, (principal.tenant_id, principal.principal_id))
         self.assertEqual([row.approval_id for row in rows], ["apr-1", "apr-2"])
@@ -194,7 +234,9 @@ class PostgresPersistenceTests(unittest.TestCase):
             idempotency_key="idem-outbox-1",
             attempts=2,
         )
-        connection = RecordingConnection(fetchall_results=[[("idem-outbox-1", message.model_dump(mode="json"))]])
+        connection = RecordingConnection(
+            fetchall_results=[[("idem-outbox-1", message.model_dump(mode="json"))]]
+        )
         store = postgres.PostgresOutbox(connection=connection)
 
         claimed = store.claim(principal, limit=1, owner="worker-1", lease_seconds=30)
@@ -241,7 +283,9 @@ class PostgresPersistenceTests(unittest.TestCase):
             tier=PermissionTier.P3,
             approval_id="apr-1",
         )
-        connection = RecordingConnection(fetchone_results=[{"payload": result.model_dump(mode="json")}])
+        connection = RecordingConnection(
+            fetchone_results=[{"payload": result.model_dump(mode="json")}]
+        )
         store = postgres.PostgresCalendarStore(connection=connection)
 
         saved = store.create_event(principal, request, approval=approval)
@@ -269,7 +313,9 @@ class PostgresPersistenceTests(unittest.TestCase):
             body="Recordatorio: pagar arriendo",
             idempotency_key="idem-reminder-1",
         )
-        connection = RecordingConnection(fetchone_results=[("idem-reminder-1", reminder.model_dump(mode="json"))])
+        connection = RecordingConnection(
+            fetchone_results=[("idem-reminder-1", reminder.model_dump(mode="json"))]
+        )
         store = postgres.PostgresReminderScheduler(connection=connection)
 
         saved = store.mark_sent(principal, "rem-1")
@@ -285,7 +331,9 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertEqual(update_params[1:], (principal.tenant_id, "idem-reminder-1"))
         self.assertTrue(saved.sent)
 
-    def test_memory_retrieve_scopes_by_tenant_user_kind_confirmed_and_query(self) -> None:
+    def test_memory_retrieve_scopes_by_tenant_user_kind_confirmed_and_query(
+        self,
+    ) -> None:
         principal = self.principal()
         record = MemoryRecord(
             tenant_id=principal.tenant_id,
@@ -295,7 +343,9 @@ class PostgresPersistenceTests(unittest.TestCase):
             source="test",
             confirmed=True,
         )
-        connection = RecordingConnection(fetchall_results=[[{"payload": record.model_dump(mode="json")}]])
+        connection = RecordingConnection(
+            fetchall_results=[[{"payload": record.model_dump(mode="json")}]]
+        )
         store = postgres.PostgresMemoryStore(connection=connection)
 
         rows = store.retrieve(
@@ -334,7 +384,9 @@ class PostgresPersistenceTests(unittest.TestCase):
             tenant_id=principal.tenant_id,
             error={"type": "RuntimeError", "message": "boom"},
         )
-        write_connection = RecordingConnection(fetchone_results=[{"payload": trace.model_dump(mode="json")}])
+        write_connection = RecordingConnection(
+            fetchone_results=[{"payload": trace.model_dump(mode="json")}]
+        )
         write_store = postgres.PostgresTraceRecorder(connection=write_connection)
 
         write_store.write(trace)
@@ -342,16 +394,29 @@ class PostgresPersistenceTests(unittest.TestCase):
         insert_sql, insert_params = write_connection.statements[0]
         assert insert_params is not None
         self.assertIn("%s::jsonb", insert_sql)
-        self.assertEqual(insert_params[:5], (trace.tenant_id, trace.trace_id, trace.run_id, trace.agent_id, trace.event_type.value))
+        self.assertEqual(
+            insert_params[:5],
+            (
+                trace.tenant_id,
+                trace.trace_id,
+                trace.run_id,
+                trace.agent_id,
+                trace.event_type.value,
+            ),
+        )
         self.assertEqual(json.loads(insert_params[-1])["trace_id"], "trace-1")
 
-        list_connection = RecordingConnection(fetchall_results=[[{"payload": trace.model_dump(mode="json")}]])
+        list_connection = RecordingConnection(
+            fetchall_results=[[{"payload": trace.model_dump(mode="json")}]]
+        )
         list_store = postgres.PostgresTraceRecorder(connection=list_connection)
 
         rows = list_store.list_for_run(principal, "run-1")
 
         select_sql, select_params = list_connection.statements[0]
-        self.assertIn("WHERE tenant_id = %s AND run_id = %s", " ".join(select_sql.split()))
+        self.assertIn(
+            "WHERE tenant_id = %s AND run_id = %s", " ".join(select_sql.split())
+        )
         self.assertEqual(select_params, (principal.tenant_id, "run-1"))
         self.assertEqual(rows[0].trace_id, "trace-1")
 
@@ -365,9 +430,18 @@ class PostgresPersistenceTests(unittest.TestCase):
             idempotency_key="same",
             data={"result": "done"},
         )
-        regressed = completed.model_copy(update={"status": WorkflowStatus.running, "step": "retry"})
+        regressed = completed.model_copy(
+            update={"status": WorkflowStatus.running, "step": "retry"}
+        )
         connection = RecordingConnection(
-            fetchone_results=[(completed.model_dump(mode="json"), "different-fingerprint", WorkflowStatus.completed.value)]
+            fetchone_results=[
+                (
+                    completed.model_dump(mode="json"),
+                    "different-fingerprint",
+                    WorkflowStatus.completed.value,
+                    None,
+                )
+            ]
         )
         store = postgres.PostgresWorkflowStateStore(connection=connection)
 
@@ -377,6 +451,215 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, ErrorCode.CONFLICT)
         self.assertEqual(len(connection.statements), 1)
         self.assertEqual(connection.rollbacks, 1)
+
+    def test_workflow_registration_uses_atomic_insert_and_separate_payload_fingerprint(
+        self,
+    ) -> None:
+        principal = self.principal()
+        state = WorkflowState(
+            workflow_id="wf-register",
+            tenant_id=principal.tenant_id,
+            workflow_type="reminder.create",
+            status=WorkflowStatus.running,
+            step="classify",
+            idempotency_key=f"reminder:v2:{'a' * 64}",
+            payload_fingerprint="b" * 64,
+        )
+        connection = RecordingConnection(
+            fetchone_results=[{"payload": state.model_dump(mode="json")}]
+        )
+        store = postgres.PostgresWorkflowStateStore(connection=connection)
+
+        registration = store.register_or_replay(principal, state)
+
+        statement, params = connection.statements[0]
+        assert params is not None
+        self.assertIn("ON CONFLICT (tenant_id, idempotency_key) DO NOTHING", statement)
+        self.assertIn("payload_fingerprint", statement)
+        self.assertEqual(params[0], principal.tenant_id)
+        self.assertEqual(params[1], state.idempotency_key)
+        self.assertEqual(params[8], state.payload_fingerprint)
+        self.assertFalse(registration.replayed)
+        self.assertEqual(registration.state, state)
+
+    def test_workflow_registration_replays_matching_payload_after_conflict(
+        self,
+    ) -> None:
+        principal = self.principal()
+        state = WorkflowState(
+            workflow_id="wf-existing",
+            tenant_id=principal.tenant_id,
+            workflow_type="reminder.create",
+            status=WorkflowStatus.waiting_approval,
+            step="approval_required",
+            idempotency_key=f"reminder:v2:{'a' * 64}",
+            payload_fingerprint="b" * 64,
+        )
+        duplicate = state.model_copy(update={"workflow_id": "wf-candidate"})
+        connection = RecordingConnection(
+            fetchone_results=[
+                None,
+                (state.model_dump(mode="json"), state.payload_fingerprint),
+            ]
+        )
+        store = postgres.PostgresWorkflowStateStore(connection=connection)
+
+        registration = store.register_or_replay(principal, duplicate)
+
+        self.assertTrue(registration.replayed)
+        self.assertEqual(registration.state.workflow_id, "wf-existing")
+        self.assertEqual(len(connection.statements), 2)
+        self.assertIn("FOR UPDATE", connection.statements[1][0])
+        self.assertEqual(
+            connection.statements[1][1], (principal.tenant_id, state.idempotency_key)
+        )
+
+    def test_workflow_registration_atomically_resumes_matching_waiting_step(
+        self,
+    ) -> None:
+        principal = self.principal()
+        waiting = WorkflowState(
+            workflow_id="wf-existing",
+            tenant_id=principal.tenant_id,
+            workflow_type="reminder.create",
+            status=WorkflowStatus.waiting_approval,
+            step="approval_required",
+            idempotency_key=f"reminder:v2:{'a' * 64}",
+            payload_fingerprint="b" * 64,
+            data={"title": "pagar"},
+        )
+        resumed = waiting.model_copy(update={"status": WorkflowStatus.running})
+        connection = RecordingConnection(
+            fetchone_results=[
+                None,
+                (waiting.model_dump(mode="json"), waiting.payload_fingerprint),
+                {"payload": resumed.model_dump(mode="json")},
+            ]
+        )
+        store = postgres.PostgresWorkflowStateStore(connection=connection)
+
+        registration = store.register_or_replay(
+            principal,
+            waiting.model_copy(
+                update={"workflow_id": "wf-candidate", "status": WorkflowStatus.running}
+            ),
+            resume_from_step="approval_required",
+        )
+
+        self.assertTrue(registration.resumed)
+        self.assertFalse(registration.replayed)
+        self.assertEqual(registration.state.workflow_id, waiting.workflow_id)
+        self.assertEqual(registration.state.status, WorkflowStatus.running)
+        self.assertEqual(len(connection.statements), 3)
+        resume_sql, resume_params = connection.statements[2]
+        assert resume_params is not None
+        self.assertTrue(resume_sql.lstrip().startswith("UPDATE"))
+        self.assertIn("AND status = %s", resume_sql)
+        self.assertIn("AND step = %s", resume_sql)
+        self.assertEqual(
+            resume_params[-3:],
+            (WorkflowStatus.waiting_approval.value, "approval_required", "b" * 64),
+        )
+
+    def test_workflow_registration_rejects_changed_payload_without_update(self) -> None:
+        principal = self.principal()
+        persisted = WorkflowState(
+            workflow_id="wf-existing",
+            tenant_id=principal.tenant_id,
+            workflow_type="reminder.create",
+            status=WorkflowStatus.running,
+            step="classify",
+            idempotency_key=f"reminder:v2:{'a' * 64}",
+            payload_fingerprint="b" * 64,
+        )
+        candidate = persisted.model_copy(update={"payload_fingerprint": "c" * 64})
+        connection = RecordingConnection(
+            fetchone_results=[
+                None,
+                (persisted.model_dump(mode="json"), persisted.payload_fingerprint),
+            ]
+        )
+        store = postgres.PostgresWorkflowStateStore(connection=connection)
+
+        with self.assertRaises(ReminderIdempotencyConflict) as captured:
+            store.register_or_replay(principal, candidate)
+
+        self.assertEqual(
+            captured.exception.response.error.context["idempotency_key"],
+            persisted.idempotency_key,
+        )
+        self.assertEqual(len(connection.statements), 2)
+        self.assertTrue(connection.statements[1][0].lstrip().startswith("SELECT"))
+
+    def test_workflow_upsert_cannot_change_or_remove_payload_fingerprint(self) -> None:
+        principal = self.principal()
+        persisted = WorkflowState(
+            workflow_id="wf-existing",
+            tenant_id=principal.tenant_id,
+            workflow_type="reminder.create",
+            status=WorkflowStatus.running,
+            step="classify",
+            idempotency_key=f"reminder:v2:{'a' * 64}",
+            payload_fingerprint="b" * 64,
+        )
+        connection = RecordingConnection(
+            fetchone_results=[
+                (
+                    persisted.model_dump(mode="json"),
+                    "state-fingerprint",
+                    WorkflowStatus.running.value,
+                    persisted.payload_fingerprint,
+                )
+            ]
+        )
+        store = postgres.PostgresWorkflowStateStore(connection=connection)
+
+        with self.assertRaises(ReminderIdempotencyConflict):
+            store.upsert(
+                principal, persisted.model_copy(update={"payload_fingerprint": None})
+            )
+
+        self.assertEqual(len(connection.statements), 1)
+        self.assertTrue(connection.statements[0][0].lstrip().startswith("SELECT"))
+
+    def test_workflow_upsert_sql_preserves_registered_identity_columns(self) -> None:
+        principal = self.principal()
+        persisted = WorkflowState(
+            workflow_id="wf-existing",
+            tenant_id=principal.tenant_id,
+            workflow_type="reminder.create",
+            status=WorkflowStatus.running,
+            step="classify",
+            idempotency_key=f"reminder:v2:{'a' * 64}",
+            payload_fingerprint="b" * 64,
+        )
+        updated = persisted.model_copy(
+            update={
+                "status": WorkflowStatus.waiting_approval,
+                "step": "approval_required",
+            }
+        )
+        connection = RecordingConnection(
+            fetchone_results=[
+                (
+                    persisted.model_dump(mode="json"),
+                    "state-fingerprint",
+                    WorkflowStatus.running.value,
+                    persisted.payload_fingerprint,
+                ),
+                {"payload": updated.model_dump(mode="json")},
+            ]
+        )
+        store = postgres.PostgresWorkflowStateStore(connection=connection)
+
+        saved = store.upsert(principal, updated)
+
+        update_statement = connection.statements[1][0]
+        update_clause = update_statement.split("DO UPDATE", 1)[1].split("WHERE", 1)[0]
+        self.assertNotIn("workflow_id =", update_clause)
+        self.assertNotIn("workflow_type =", update_clause)
+        self.assertNotIn("payload_fingerprint =", update_clause)
+        self.assertEqual(saved.status, WorkflowStatus.waiting_approval)
 
 
 if __name__ == "__main__":

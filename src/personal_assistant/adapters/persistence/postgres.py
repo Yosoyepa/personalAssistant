@@ -19,14 +19,31 @@ import re
 from typing import Any
 from uuid import uuid4
 
-from personal_assistant.application.dto.commands import PendingApproval, PendingApprovalStatus
-from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
+from personal_assistant.application.dto.commands import (
+    PendingApproval,
+    PendingApprovalStatus,
+)
+from personal_assistant.application.dto.events import (
+    CloudEvent,
+    OutboxMessage,
+    OutboxStatus,
+)
 from personal_assistant.application.dto.tracing import TraceEvent
-from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
-from personal_assistant.application.ports.calendar import CalendarEventRequest, CalendarEventResult
+from personal_assistant.application.dto.workflows import (
+    WorkflowState,
+    WorkflowStateRegistration,
+    WorkflowStatus,
+)
+from personal_assistant.application.ports.calendar import (
+    CalendarEventRequest,
+    CalendarEventResult,
+)
 from personal_assistant.application.ports.scheduler import ScheduledReminder
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-from personal_assistant.domain.common.identity import Principal, require_trusted_principal
+from personal_assistant.domain.common.identity import (
+    Principal,
+    require_trusted_principal,
+)
 from personal_assistant.domain.common.permissions import (
     ApprovalGrant,
     PermissionRequest,
@@ -35,6 +52,7 @@ from personal_assistant.domain.common.permissions import (
     require_permission,
 )
 from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
+from personal_assistant.domain.reminders.idempotency import ReminderIdempotencyConflict
 
 
 ConnectionFactory = Callable[[], Any]
@@ -145,9 +163,15 @@ class _PostgresDatabase:
     commit: bool = True
 
     def __post_init__(self) -> None:
-        sources = [self.dsn is not None, self.connection_factory is not None, self.connection is not None]
+        sources = [
+            self.dsn is not None,
+            self.connection_factory is not None,
+            self.connection is not None,
+        ]
         if sum(sources) > 1:
-            raise ValueError("provide only one of dsn, connection_factory, or connection")
+            raise ValueError(
+                "provide only one of dsn, connection_factory, or connection"
+            )
         self.schema = _quote_identifier(self.schema)
 
     def table(self, name: str) -> str:
@@ -163,7 +187,11 @@ class _PostgresDatabase:
                 connection = self.connection_factory()
             else:
                 psycopg = _load_psycopg()
-                connection = psycopg.connect(self.dsn) if self.dsn is not None else psycopg.connect()
+                connection = (
+                    psycopg.connect(self.dsn)
+                    if self.dsn is not None
+                    else psycopg.connect()
+                )
         try:
             yield connection
             if self.commit:
@@ -241,7 +269,11 @@ class PostgresEventStore(_PostgresStore):
     def append(self, principal: Principal, event: CloudEvent) -> CloudEvent:
         require_trusted_principal(principal)
         if event.tenant_id != principal.tenant_id:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "event tenant mismatch", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "event tenant mismatch",
+                tenant_id=principal.tenant_id,
+            )
 
         payload = event.model_dump(mode="json")
         event_fingerprint = _fingerprint(payload)
@@ -278,9 +310,17 @@ class PostgresEventStore(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is None:
-                raise AssistantError(ErrorCode.INTERNAL_ERROR, "event append failed", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.INTERNAL_ERROR,
+                    "event append failed",
+                    tenant_id=principal.tenant_id,
+                )
             if _row_value(existing, "fingerprint", 1) != event_fingerprint:
-                raise AssistantError(ErrorCode.CONFLICT, "event idempotency conflict", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "event idempotency conflict",
+                    tenant_id=principal.tenant_id,
+                )
             return CloudEvent.model_validate(_payload_from_row(existing))
 
     def list_for_tenant(self, principal: Principal) -> list[CloudEvent]:
@@ -295,18 +335,29 @@ class PostgresEventStore(_PostgresStore):
                 """,
                 (principal.tenant_id,),
             )
-            return [CloudEvent.model_validate(_payload_from_row(row)) for row in cursor.fetchall()]
+            return [
+                CloudEvent.model_validate(_payload_from_row(row))
+                for row in cursor.fetchall()
+            ]
 
 
 class PostgresOutbox(_PostgresStore):
-    def add(self, principal: Principal, event: CloudEvent, *, idempotency_key: str) -> OutboxMessage:
+    def add(
+        self, principal: Principal, event: CloudEvent, *, idempotency_key: str
+    ) -> OutboxMessage:
         require_trusted_principal(principal)
         if event.tenant_id != principal.tenant_id:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "outbox tenant mismatch", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "outbox tenant mismatch",
+                tenant_id=principal.tenant_id,
+            )
 
         event_payload = event.model_dump(mode="json")
         event_fingerprint = _fingerprint(event_payload)
-        message = OutboxMessage(tenant_id=principal.tenant_id, event=event, idempotency_key=idempotency_key)
+        message = OutboxMessage(
+            tenant_id=principal.tenant_id, event=event, idempotency_key=idempotency_key
+        )
         message_payload = message.model_dump(mode="json")
         with self._db.cursor() as cursor:
             cursor.execute(
@@ -353,9 +404,17 @@ class PostgresOutbox(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is None:
-                raise AssistantError(ErrorCode.INTERNAL_ERROR, "outbox insert failed", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.INTERNAL_ERROR,
+                    "outbox insert failed",
+                    tenant_id=principal.tenant_id,
+                )
             if _row_value(existing, "fingerprint", 1) != event_fingerprint:
-                raise AssistantError(ErrorCode.CONFLICT, "outbox idempotency conflict", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "outbox idempotency conflict",
+                    tenant_id=principal.tenant_id,
+                )
             return OutboxMessage.model_validate(_payload_from_row(existing))
 
     def claim(
@@ -398,20 +457,32 @@ class PostgresOutbox(_PostgresStore):
                         "attempts": message.attempts + 1,
                     }
                 )
-                self._update_outbox_payload(cursor, principal.tenant_id, idempotency_key, updated)
+                self._update_outbox_payload(
+                    cursor, principal.tenant_id, idempotency_key, updated
+                )
                 claimed.append(updated)
         return claimed
 
-    def mark_published(self, principal: Principal, message_id: str, *, claim_token: str) -> OutboxMessage:
+    def mark_published(
+        self, principal: Principal, message_id: str, *, claim_token: str
+    ) -> OutboxMessage:
         require_trusted_principal(principal)
         with self._db.cursor() as cursor:
             message = self._get_by_message_id(cursor, principal.tenant_id, message_id)
             if message is None:
-                raise AssistantError(ErrorCode.NOT_FOUND, "outbox message not found", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.NOT_FOUND,
+                    "outbox message not found",
+                    tenant_id=principal.tenant_id,
+                )
             if message.published:
                 return message
             if not message.claimed or message.claim_token != claim_token:
-                raise AssistantError(ErrorCode.PERMISSION_DENIED, "invalid outbox claim token", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.PERMISSION_DENIED,
+                    "invalid outbox claim token",
+                    tenant_id=principal.tenant_id,
+                )
             updated = message.model_copy(
                 update={
                     "dispatch_status": OutboxStatus.published,
@@ -421,17 +492,29 @@ class PostgresOutbox(_PostgresStore):
                     "published_at": datetime.now(UTC),
                 }
             )
-            self._update_outbox_payload(cursor, principal.tenant_id, updated.idempotency_key, updated)
+            self._update_outbox_payload(
+                cursor, principal.tenant_id, updated.idempotency_key, updated
+            )
             return updated
 
-    def release(self, principal: Principal, message_id: str, *, claim_token: str) -> OutboxMessage:
+    def release(
+        self, principal: Principal, message_id: str, *, claim_token: str
+    ) -> OutboxMessage:
         require_trusted_principal(principal)
         with self._db.cursor() as cursor:
             message = self._get_by_message_id(cursor, principal.tenant_id, message_id)
             if message is None:
-                raise AssistantError(ErrorCode.NOT_FOUND, "outbox message not found", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.NOT_FOUND,
+                    "outbox message not found",
+                    tenant_id=principal.tenant_id,
+                )
             if message.claim_token != claim_token:
-                raise AssistantError(ErrorCode.PERMISSION_DENIED, "invalid outbox claim token", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.PERMISSION_DENIED,
+                    "invalid outbox claim token",
+                    tenant_id=principal.tenant_id,
+                )
             updated = message.model_copy(
                 update={
                     "dispatch_status": OutboxStatus.pending,
@@ -440,7 +523,9 @@ class PostgresOutbox(_PostgresStore):
                     "claimed_until": None,
                 }
             )
-            self._update_outbox_payload(cursor, principal.tenant_id, updated.idempotency_key, updated)
+            self._update_outbox_payload(
+                cursor, principal.tenant_id, updated.idempotency_key, updated
+            )
             return updated
 
     def list_for_tenant(self, principal: Principal) -> list[OutboxMessage]:
@@ -455,9 +540,14 @@ class PostgresOutbox(_PostgresStore):
                 """,
                 (principal.tenant_id,),
             )
-            return [OutboxMessage.model_validate(_payload_from_row(row)) for row in cursor.fetchall()]
+            return [
+                OutboxMessage.model_validate(_payload_from_row(row))
+                for row in cursor.fetchall()
+            ]
 
-    def _get_by_message_id(self, cursor: Any, tenant_id: str, message_id: str) -> OutboxMessage | None:
+    def _get_by_message_id(
+        self, cursor: Any, tenant_id: str, message_id: str
+    ) -> OutboxMessage | None:
         cursor.execute(
             f"""
             SELECT payload
@@ -472,7 +562,9 @@ class PostgresOutbox(_PostgresStore):
             return None
         return OutboxMessage.model_validate(_payload_from_row(row))
 
-    def _update_outbox_payload(self, cursor: Any, tenant_id: str, idempotency_key: str, message: OutboxMessage) -> None:
+    def _update_outbox_payload(
+        self, cursor: Any, tenant_id: str, idempotency_key: str, message: OutboxMessage
+    ) -> None:
         payload = message.model_dump(mode="json")
         cursor.execute(
             f"""
@@ -503,17 +595,155 @@ class PostgresOutbox(_PostgresStore):
 
 
 class PostgresWorkflowStateStore(_PostgresStore):
-    def upsert(self, principal: Principal, state: WorkflowState) -> WorkflowState:
+    def register_or_replay(
+        self,
+        principal: Principal,
+        state: WorkflowState,
+        *,
+        resume_from_step: str | None = None,
+    ) -> WorkflowStateRegistration:
+        """Atomically insert one executor or return the matching persisted replay."""
+
         require_trusted_principal(principal)
         if state.tenant_id != principal.tenant_id:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "workflow tenant mismatch", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "workflow tenant mismatch",
+                tenant_id=principal.tenant_id,
+            )
+        if state.payload_fingerprint is None:
+            raise ValueError(
+                "payload_fingerprint is required for workflow registration"
+            )
 
         payload = state.model_dump(mode="json")
         state_fingerprint = _fingerprint(payload)
         with self._db.cursor() as cursor:
             cursor.execute(
                 f"""
-                SELECT payload, fingerprint, status
+                INSERT INTO {self._table("workflow_states")}
+                    (
+                        tenant_id, idempotency_key, workflow_id, workflow_type, status,
+                        step, created_at, updated_at, payload_fingerprint, fingerprint, payload
+                    )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+                RETURNING payload
+                """,
+                (
+                    principal.tenant_id,
+                    state.idempotency_key,
+                    state.workflow_id,
+                    state.workflow_type,
+                    state.status.value,
+                    state.step,
+                    state.created_at,
+                    state.updated_at,
+                    state.payload_fingerprint,
+                    state_fingerprint,
+                    _json(payload),
+                ),
+            )
+            inserted = cursor.fetchone()
+            if inserted is not None:
+                return WorkflowStateRegistration(
+                    state=WorkflowState.model_validate(_payload_from_row(inserted)),
+                    replayed=False,
+                )
+
+            cursor.execute(
+                f"""
+                SELECT payload, payload_fingerprint
+                FROM {self._table("workflow_states")}
+                WHERE tenant_id = %s AND idempotency_key = %s
+                FOR UPDATE
+                """,
+                (principal.tenant_id, state.idempotency_key),
+            )
+            existing = cursor.fetchone()
+            if existing is None:
+                raise AssistantError(
+                    ErrorCode.INTERNAL_ERROR,
+                    "workflow registration disappeared during replay",
+                    tenant_id=principal.tenant_id,
+                    retryable=True,
+                )
+            persisted = WorkflowState.model_validate(_payload_from_row(existing))
+            stored_payload_fingerprint = _row_value(existing, "payload_fingerprint", 1)
+            if stored_payload_fingerprint != state.payload_fingerprint:
+                raise ReminderIdempotencyConflict(
+                    tenant_id=principal.tenant_id,
+                    idempotency_key=state.idempotency_key,
+                )
+            if persisted.workflow_type != state.workflow_type:
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "workflow identity is immutable",
+                    tenant_id=principal.tenant_id,
+                )
+            if (
+                resume_from_step is not None
+                and persisted.status == WorkflowStatus.waiting_approval
+                and persisted.step == resume_from_step
+            ):
+                resumed = persisted.transition(status=WorkflowStatus.running)
+                resumed_payload = resumed.model_dump(mode="json")
+                cursor.execute(
+                    f"""
+                    UPDATE {self._table("workflow_states")}
+                    SET status = %s,
+                        updated_at = %s,
+                        fingerprint = %s,
+                        payload = %s::jsonb
+                    WHERE tenant_id = %s
+                      AND idempotency_key = %s
+                      AND status = %s
+                      AND step = %s
+                      AND payload_fingerprint = %s
+                    RETURNING payload
+                    """,
+                    (
+                        resumed.status.value,
+                        resumed.updated_at,
+                        _fingerprint(resumed_payload),
+                        _json(resumed_payload),
+                        principal.tenant_id,
+                        state.idempotency_key,
+                        WorkflowStatus.waiting_approval.value,
+                        resume_from_step,
+                        state.payload_fingerprint,
+                    ),
+                )
+                saved = cursor.fetchone()
+                if saved is None:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "workflow resume was not acquired",
+                        tenant_id=principal.tenant_id,
+                        retryable=True,
+                    )
+                return WorkflowStateRegistration(
+                    state=WorkflowState.model_validate(_payload_from_row(saved)),
+                    replayed=False,
+                    resumed=True,
+                )
+            return WorkflowStateRegistration(state=persisted, replayed=True)
+
+    def upsert(self, principal: Principal, state: WorkflowState) -> WorkflowState:
+        require_trusted_principal(principal)
+        if state.tenant_id != principal.tenant_id:
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "workflow tenant mismatch",
+                tenant_id=principal.tenant_id,
+            )
+
+        payload = state.model_dump(mode="json")
+        state_fingerprint = _fingerprint(payload)
+        with self._db.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT payload, fingerprint, status, payload_fingerprint
                 FROM {self._table("workflow_states")}
                 WHERE tenant_id = %s AND idempotency_key = %s
                 FOR UPDATE
@@ -522,6 +752,24 @@ class PostgresWorkflowStateStore(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is not None:
+                persisted = WorkflowState.model_validate(_payload_from_row(existing))
+                stored_payload_fingerprint = _row_value(
+                    existing, "payload_fingerprint", 3
+                )
+                if stored_payload_fingerprint != state.payload_fingerprint:
+                    raise ReminderIdempotencyConflict(
+                        tenant_id=principal.tenant_id,
+                        idempotency_key=state.idempotency_key,
+                    )
+                if (
+                    persisted.workflow_id != state.workflow_id
+                    or persisted.workflow_type != state.workflow_type
+                ):
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "workflow identity is immutable",
+                        tenant_id=principal.tenant_id,
+                    )
                 status = WorkflowStatus(_row_value(existing, "status", 2))
                 if status in {WorkflowStatus.completed, WorkflowStatus.failed}:
                     if _row_value(existing, "fingerprint", 1) != state_fingerprint:
@@ -537,17 +785,18 @@ class PostgresWorkflowStateStore(_PostgresStore):
                 INSERT INTO {self._table("workflow_states")}
                     (
                         tenant_id, idempotency_key, workflow_id, workflow_type, status,
-                        step, created_at, updated_at, fingerprint, payload
+                        step, created_at, updated_at, payload_fingerprint, fingerprint, payload
                     )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
                 ON CONFLICT (tenant_id, idempotency_key) DO UPDATE
-                SET workflow_id = EXCLUDED.workflow_id,
-                    workflow_type = EXCLUDED.workflow_type,
-                    status = EXCLUDED.status,
+                SET status = EXCLUDED.status,
                     step = EXCLUDED.step,
                     updated_at = EXCLUDED.updated_at,
                     fingerprint = EXCLUDED.fingerprint,
                     payload = EXCLUDED.payload
+                WHERE {self._table("workflow_states")}.workflow_id = EXCLUDED.workflow_id
+                  AND {self._table("workflow_states")}.workflow_type = EXCLUDED.workflow_type
+                  AND {self._table("workflow_states")}.payload_fingerprint IS NOT DISTINCT FROM EXCLUDED.payload_fingerprint
                 RETURNING payload
                 """,
                 (
@@ -559,13 +808,23 @@ class PostgresWorkflowStateStore(_PostgresStore):
                     state.step,
                     state.created_at,
                     state.updated_at,
+                    state.payload_fingerprint,
                     state_fingerprint,
                     _json(payload),
                 ),
             )
-            return WorkflowState.model_validate(_payload_from_row(cursor.fetchone()))
+            saved = cursor.fetchone()
+            if saved is None:
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "workflow identity is immutable",
+                    tenant_id=principal.tenant_id,
+                )
+            return WorkflowState.model_validate(_payload_from_row(saved))
 
-    def get_by_idempotency_key(self, principal: Principal, idempotency_key: str) -> WorkflowState | None:
+    def get_by_idempotency_key(
+        self, principal: Principal, idempotency_key: str
+    ) -> WorkflowState | None:
         require_trusted_principal(principal)
         with self._db.cursor() as cursor:
             cursor.execute(
@@ -593,14 +852,26 @@ class PostgresWorkflowStateStore(_PostgresStore):
                 """,
                 (principal.tenant_id,),
             )
-            return [WorkflowState.model_validate(_payload_from_row(row)) for row in cursor.fetchall()]
+            return [
+                WorkflowState.model_validate(_payload_from_row(row))
+                for row in cursor.fetchall()
+            ]
 
 
 class PostgresApprovalStore(_PostgresStore):
-    def create(self, principal: Principal, approval: PendingApproval) -> PendingApproval:
+    def create(
+        self, principal: Principal, approval: PendingApproval
+    ) -> PendingApproval:
         require_trusted_principal(principal)
-        if approval.tenant_id != principal.tenant_id or approval.principal_id != principal.principal_id:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "approval principal mismatch", tenant_id=principal.tenant_id)
+        if (
+            approval.tenant_id != principal.tenant_id
+            or approval.principal_id != principal.principal_id
+        ):
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "approval principal mismatch",
+                tenant_id=principal.tenant_id,
+            )
         tier = PermissionTier(approval.tier)
         if tier.rank < PermissionTier.P3.rank:
             raise AssistantError(
@@ -642,7 +913,9 @@ class PostgresApprovalStore(_PostgresStore):
             )
             row = cursor.fetchone()
             if row is not None:
-                return PendingApproval.model_validate(_payload_from_row(row)).model_copy(deep=True)
+                return PendingApproval.model_validate(
+                    _payload_from_row(row)
+                ).model_copy(deep=True)
 
             cursor.execute(
                 f"""
@@ -653,18 +926,29 @@ class PostgresApprovalStore(_PostgresStore):
                   AND workflow_kind = %s
                   AND idempotency_key = %s
                 """,
-                (principal.tenant_id, principal.principal_id, approval.workflow_kind, approval.idempotency_key),
+                (
+                    principal.tenant_id,
+                    principal.principal_id,
+                    approval.workflow_kind,
+                    approval.idempotency_key,
+                ),
             )
             existing = cursor.fetchone()
             if existing is None:
-                raise AssistantError(ErrorCode.INTERNAL_ERROR, "approval insert failed", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.INTERNAL_ERROR,
+                    "approval insert failed",
+                    tenant_id=principal.tenant_id,
+                )
             if _row_value(existing, "fingerprint", 1) != approval_fingerprint:
                 raise AssistantError(
                     ErrorCode.CONFLICT,
                     "approval request idempotency conflict",
                     tenant_id=principal.tenant_id,
                 )
-            return PendingApproval.model_validate(_payload_from_row(existing)).model_copy(deep=True)
+            return PendingApproval.model_validate(
+                _payload_from_row(existing)
+            ).model_copy(deep=True)
 
     def get(self, principal: Principal, approval_id: str) -> PendingApproval | None:
         require_trusted_principal(principal)
@@ -680,7 +964,9 @@ class PostgresApprovalStore(_PostgresStore):
             row = cursor.fetchone()
             if row is None:
                 return None
-            return PendingApproval.model_validate(_payload_from_row(row)).model_copy(deep=True)
+            return PendingApproval.model_validate(_payload_from_row(row)).model_copy(
+                deep=True
+            )
 
     def list_pending(self, principal: Principal) -> list[PendingApproval]:
         require_trusted_principal(principal)
@@ -692,9 +978,18 @@ class PostgresApprovalStore(_PostgresStore):
                 WHERE tenant_id = %s AND principal_id = %s AND status = %s
                 ORDER BY created_at, approval_id
                 """,
-                (principal.tenant_id, principal.principal_id, PendingApprovalStatus.pending.value),
+                (
+                    principal.tenant_id,
+                    principal.principal_id,
+                    PendingApprovalStatus.pending.value,
+                ),
             )
-            return [PendingApproval.model_validate(_payload_from_row(row)).model_copy(deep=True) for row in cursor.fetchall()]
+            return [
+                PendingApproval.model_validate(_payload_from_row(row)).model_copy(
+                    deep=True
+                )
+                for row in cursor.fetchall()
+            ]
 
     def list_for_tenant(self, principal: Principal) -> list[PendingApproval]:
         require_trusted_principal(principal)
@@ -708,28 +1003,48 @@ class PostgresApprovalStore(_PostgresStore):
                 """,
                 (principal.tenant_id, principal.principal_id),
             )
-            return [PendingApproval.model_validate(_payload_from_row(row)).model_copy(deep=True) for row in cursor.fetchall()]
+            return [
+                PendingApproval.model_validate(_payload_from_row(row)).model_copy(
+                    deep=True
+                )
+                for row in cursor.fetchall()
+            ]
 
     def mark_approved(self, principal: Principal, approval_id: str) -> PendingApproval:
         approval = self.get(principal, approval_id)
         if approval is None:
-            raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id
+            )
         if approval.status != PendingApprovalStatus.pending:
             return approval
-        updated = approval.model_copy(update={"status": PendingApprovalStatus.approved, "updated_at": datetime.now(UTC)})
+        updated = approval.model_copy(
+            update={
+                "status": PendingApprovalStatus.approved,
+                "updated_at": datetime.now(UTC),
+            }
+        )
         self._update_status(principal, updated)
         return updated
 
     def approve(self, principal: Principal, approval_id: str) -> ApprovalGrant:
         approval = self.get(principal, approval_id)
         if approval is None:
-            raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id
+            )
         if approval.status == PendingApprovalStatus.cancelled:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "approval was cancelled", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "approval was cancelled",
+                tenant_id=principal.tenant_id,
+            )
         tier = PermissionTier(approval.tier)
         require_permission(
             principal,
-            PermissionRequest(action=approval.action, resource=approval.resource, required_tier=tier),
+            PermissionRequest(
+                action=approval.action, resource=approval.resource, required_tier=tier
+            ),
         )
         if approval.status == PendingApprovalStatus.pending:
             approval = self.mark_approved(principal, approval_id)
@@ -745,12 +1060,23 @@ class PostgresApprovalStore(_PostgresStore):
     def cancel(self, principal: Principal, approval_id: str) -> PendingApproval:
         approval = self.get(principal, approval_id)
         if approval is None:
-            raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id
+            )
         if approval.status == PendingApprovalStatus.approved:
-            raise AssistantError(ErrorCode.CONFLICT, "approved approval cannot be cancelled", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.CONFLICT,
+                "approved approval cannot be cancelled",
+                tenant_id=principal.tenant_id,
+            )
         if approval.status == PendingApprovalStatus.cancelled:
             return approval
-        updated = approval.model_copy(update={"status": PendingApprovalStatus.cancelled, "updated_at": datetime.now(UTC)})
+        updated = approval.model_copy(
+            update={
+                "status": PendingApprovalStatus.cancelled,
+                "updated_at": datetime.now(UTC),
+            }
+        )
         self._update_status(principal, updated)
         return updated
 
@@ -844,10 +1170,20 @@ class PostgresCalendarStore(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is None:
-                raise AssistantError(ErrorCode.INTERNAL_ERROR, "calendar insert failed", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.INTERNAL_ERROR,
+                    "calendar insert failed",
+                    tenant_id=principal.tenant_id,
+                )
             if _row_value(existing, "request_fingerprint", 1) != request_fingerprint:
-                raise AssistantError(ErrorCode.CONFLICT, "calendar idempotency conflict", tenant_id=principal.tenant_id)
-            return CalendarEventResult.model_validate(_payload_from_row(existing)).model_copy(update={"reused": True})
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "calendar idempotency conflict",
+                    tenant_id=principal.tenant_id,
+                )
+            return CalendarEventResult.model_validate(
+                _payload_from_row(existing)
+            ).model_copy(update={"reused": True})
 
     def list_events(self, principal: Principal) -> list[CalendarEventResult]:
         require_trusted_principal(principal)
@@ -861,7 +1197,10 @@ class PostgresCalendarStore(_PostgresStore):
                 """,
                 (principal.tenant_id,),
             )
-            return [CalendarEventResult.model_validate(_payload_from_row(row)) for row in cursor.fetchall()]
+            return [
+                CalendarEventResult.model_validate(_payload_from_row(row))
+                for row in cursor.fetchall()
+            ]
 
 
 class PostgresReminderScheduler(_PostgresStore):
@@ -930,7 +1269,11 @@ class PostgresReminderScheduler(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is None:
-                raise AssistantError(ErrorCode.INTERNAL_ERROR, "reminder schedule failed", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.INTERNAL_ERROR,
+                    "reminder schedule failed",
+                    tenant_id=principal.tenant_id,
+                )
             return ScheduledReminder.model_validate(_payload_from_row(existing))
 
     def due(self, principal: Principal, now: datetime) -> list[ScheduledReminder]:
@@ -946,7 +1289,10 @@ class PostgresReminderScheduler(_PostgresStore):
                 """,
                 (principal.tenant_id, now),
             )
-            return [ScheduledReminder.model_validate(_payload_from_row(row)) for row in cursor.fetchall()]
+            return [
+                ScheduledReminder.model_validate(_payload_from_row(row))
+                for row in cursor.fetchall()
+            ]
 
     def mark_sent(self, principal: Principal, reminder_id: str) -> ScheduledReminder:
         require_trusted_principal(principal)
@@ -962,9 +1308,15 @@ class PostgresReminderScheduler(_PostgresStore):
             )
             row = cursor.fetchone()
             if row is None:
-                raise AssistantError(ErrorCode.NOT_FOUND, "scheduled reminder not found", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.NOT_FOUND,
+                    "scheduled reminder not found",
+                    tenant_id=principal.tenant_id,
+                )
             idempotency_key = _row_value(row, "idempotency_key", 0)
-            job = ScheduledReminder.model_validate(_payload_from_row(row, index=1)).model_copy(update={"sent": True})
+            job = ScheduledReminder.model_validate(
+                _payload_from_row(row, index=1)
+            ).model_copy(update={"sent": True})
             cursor.execute(
                 f"""
                 UPDATE {self._table("scheduled_reminders")}
@@ -972,7 +1324,11 @@ class PostgresReminderScheduler(_PostgresStore):
                     payload = %s::jsonb
                 WHERE tenant_id = %s AND idempotency_key = %s
                 """,
-                (_json(job.model_dump(mode="json")), principal.tenant_id, idempotency_key),
+                (
+                    _json(job.model_dump(mode="json")),
+                    principal.tenant_id,
+                    idempotency_key,
+                ),
             )
             return job
 
@@ -988,7 +1344,10 @@ class PostgresReminderScheduler(_PostgresStore):
                 """,
                 (principal.tenant_id,),
             )
-            return [ScheduledReminder.model_validate(_payload_from_row(row)) for row in cursor.fetchall()]
+            return [
+                ScheduledReminder.model_validate(_payload_from_row(row))
+                for row in cursor.fetchall()
+            ]
 
 
 class PostgresMemoryStore(_PostgresStore):
@@ -1016,9 +1375,17 @@ class PostgresMemoryStore(_PostgresStore):
     def save(self, record: MemoryRecord, *, principal: Principal) -> MemoryRecord:
         require_trusted_principal(principal)
         if record.tenant_id != principal.tenant_id:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "memory tenant mismatch", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "memory tenant mismatch",
+                tenant_id=principal.tenant_id,
+            )
         if record.user_id is not None and record.user_id != principal.actor_id:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "memory user mismatch", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "memory user mismatch",
+                tenant_id=principal.tenant_id,
+            )
         if record.user_id is None:
             record = record.model_copy(update={"user_id": principal.actor_id})
 
@@ -1063,9 +1430,17 @@ class PostgresMemoryStore(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is None:
-                raise AssistantError(ErrorCode.INTERNAL_ERROR, "memory insert failed", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.INTERNAL_ERROR,
+                    "memory insert failed",
+                    tenant_id=principal.tenant_id,
+                )
             if _row_value(existing, "fingerprint", 1) != record_fingerprint:
-                raise AssistantError(ErrorCode.CONFLICT, "memory idempotency conflict", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "memory idempotency conflict",
+                    tenant_id=principal.tenant_id,
+                )
             return MemoryRecord.model_validate(_payload_from_row(existing))
 
     def retrieve(
@@ -1103,7 +1478,10 @@ class PostgresMemoryStore(_PostgresStore):
                     limit,
                 ),
             )
-            return [MemoryRecord.model_validate(_payload_from_row(row)) for row in cursor.fetchall()]
+            return [
+                MemoryRecord.model_validate(_payload_from_row(row))
+                for row in cursor.fetchall()
+            ]
 
     def list_for_tenant(self, principal: Principal) -> list[MemoryRecord]:
         require_trusted_principal(principal)
@@ -1117,7 +1495,10 @@ class PostgresMemoryStore(_PostgresStore):
                 """,
                 (principal.tenant_id, principal.actor_id),
             )
-            return [MemoryRecord.model_validate(_payload_from_row(row)) for row in cursor.fetchall()]
+            return [
+                MemoryRecord.model_validate(_payload_from_row(row))
+                for row in cursor.fetchall()
+            ]
 
 
 class PostgresTraceRecorder(_PostgresStore):
@@ -1161,8 +1542,15 @@ class PostgresTraceRecorder(_PostgresStore):
                 (event.tenant_id, event.trace_id),
             )
             existing = cursor.fetchone()
-            if existing is not None and _row_value(existing, "fingerprint", 0) != trace_fingerprint:
-                raise AssistantError(ErrorCode.CONFLICT, "trace idempotency conflict", tenant_id=event.tenant_id)
+            if (
+                existing is not None
+                and _row_value(existing, "fingerprint", 0) != trace_fingerprint
+            ):
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "trace idempotency conflict",
+                    tenant_id=event.tenant_id,
+                )
 
     def list_for_tenant(self, principal: Principal | str) -> list[TraceEvent]:
         tenant_id = _tenant_id_from_principal(principal)
@@ -1176,7 +1564,10 @@ class PostgresTraceRecorder(_PostgresStore):
                 """,
                 (tenant_id,),
             )
-            return [TraceEvent.model_validate(_payload_from_row(row)) for row in cursor.fetchall()]
+            return [
+                TraceEvent.model_validate(_payload_from_row(row))
+                for row in cursor.fetchall()
+            ]
 
     def list_for_run(self, principal: Principal | str, run_id: str) -> list[TraceEvent]:
         tenant_id = _tenant_id_from_principal(principal)
@@ -1190,7 +1581,10 @@ class PostgresTraceRecorder(_PostgresStore):
                 """,
                 (tenant_id, run_id),
             )
-            return [TraceEvent.model_validate(_payload_from_row(row)) for row in cursor.fetchall()]
+            return [
+                TraceEvent.model_validate(_payload_from_row(row))
+                for row in cursor.fetchall()
+            ]
 
 
 def _tenant_id_from_principal(principal: Principal | str) -> str:
@@ -1305,11 +1699,16 @@ def _schema_statements(db: _PostgresDatabase) -> tuple[str, ...]:
             step TEXT NOT NULL,
             created_at TIMESTAMPTZ NOT NULL,
             updated_at TIMESTAMPTZ NOT NULL,
+            payload_fingerprint TEXT,
             fingerprint TEXT NOT NULL,
             payload JSONB NOT NULL,
             PRIMARY KEY (tenant_id, idempotency_key),
             UNIQUE (tenant_id, workflow_id)
         )
+        """,
+        f"""
+        ALTER TABLE {workflow_states}
+        ADD COLUMN IF NOT EXISTS payload_fingerprint TEXT
         """,
         f"""
         CREATE INDEX IF NOT EXISTS assistant_workflow_states_status_idx

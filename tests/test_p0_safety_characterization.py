@@ -127,7 +127,13 @@ def approved_request(
     text: str,
     timezone: str = "UTC",
 ) -> ReminderWorkflowInput:
-    key = reminder_idempotency_key(actor.tenant_id, message_id, text)
+    key = reminder_idempotency_key(
+        tenant_id=actor.tenant_id,
+        channel="telegram",
+        principal_id=actor.principal_id,
+        conversation_id="chat-1",
+        source_event_id=message_id,
+    )
     approval = ApprovalGrant.issue(
         principal=actor,
         action="calendar.create_event",
@@ -182,8 +188,8 @@ def schedule_due(scheduler: ReminderScheduler, actor: Principal, *, key: str) ->
     strict=True,
     raises=AssertionError,
     reason=(
-        "P0 atomicity gap: retry after the outbox write creates a new event fingerprint "
-        "and conflicts before terminal workflow state is persisted"
+        "P0 recovery gap: a crash after effects leaves the elected workflow running; "
+        "v2 replay prevents duplicate effects but has no durable lease/recovery path yet"
     ),
 )
 def test_retry_after_crash_between_outbox_and_terminal_state_is_atomic() -> None:
