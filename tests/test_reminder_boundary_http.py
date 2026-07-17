@@ -328,3 +328,104 @@ def test_http_identity_dimensions_do_not_collide() -> None:
         assert _effect_counts(container, _principal(headers)) == (0, 0, 0, 0)
 
     assert len(run_ids) == len(variants)
+
+
+def test_http_requires_tenant_header_and_rejects_wrong_telegram_token() -> None:
+    container = _container()
+    missing_tenant = _client(container).get(
+        "/v1/runtime/approvals",
+        headers={"X-Principal-Id": "user-1"},
+    )
+
+    assert missing_tenant.status_code == 400
+    assert missing_tenant.json()["error"]["code"] == "tenant_required"
+
+    telegram_client = TestClient(
+        create_app(
+            container,
+            settings=AppSettings(
+                tenant_id="tenant-a",
+                reminder_worker_enabled=False,
+                telegram_webhook_secret="webhook-secret",
+            ),
+        )
+    )
+    wrong_token = telegram_client.post(
+        "/webhooks/telegram/webhook-secret",
+        json={},
+        headers={"X-Telegram-Bot-Api-Secret-Token": "wrong-token"},
+    )
+
+    assert wrong_token.status_code == 403
+    assert wrong_token.json()["error"]["code"] == "permission_denied"
+
+
+def test_http_approval_filters_and_terminal_decisions_are_explicit() -> None:
+    container = _container()
+    client = _client(container)
+    first_pending = client.post(
+        "/v1/runtime/reminders",
+        json=_payload(),
+        headers=BASE_HEADERS,
+    )
+    assert first_pending.status_code == 202, first_pending.text
+    first_approval_id = first_pending.json()["approval"]["approval_id"]
+
+    filtered = client.get(
+        "/v1/runtime/approvals?status=pending",
+        headers=BASE_HEADERS,
+    )
+    assert filtered.status_code == 200
+    assert [approval["approval_id"] for approval in filtered.json()] == [
+        first_approval_id
+    ]
+
+    missing_approve = client.post(
+        "/v1/runtime/approvals/missing/approve",
+        json={},
+        headers=BASE_HEADERS,
+    )
+    missing_reject = client.post(
+        "/v1/runtime/approvals/missing/reject",
+        json={},
+        headers=BASE_HEADERS,
+    )
+    assert missing_approve.status_code == missing_reject.status_code == 404
+
+    rejected = client.post(
+        f"/v1/runtime/approvals/{first_approval_id}/reject",
+        json={},
+        headers=BASE_HEADERS,
+    )
+    assert rejected.status_code == 200, rejected.text
+    assert rejected.json()["status"] == "rejected"
+
+    approve_rejected = client.post(
+        f"/v1/runtime/approvals/{first_approval_id}/approve",
+        json={},
+        headers=BASE_HEADERS,
+    )
+    assert approve_rejected.status_code == 409
+
+    second_pending = client.post(
+        "/v1/runtime/reminders",
+        json=_payload(
+            message_id="provider-message-43", source_event_id="http-event-901"
+        ),
+        headers=BASE_HEADERS,
+    )
+    assert second_pending.status_code == 202, second_pending.text
+    second_approval_id = second_pending.json()["approval"]["approval_id"]
+    approved = client.post(
+        f"/v1/runtime/approvals/{second_approval_id}/approve",
+        json={},
+        headers=BASE_HEADERS,
+    )
+    assert approved.status_code == 200, approved.text
+
+    reject_approved = client.post(
+        f"/v1/runtime/approvals/{second_approval_id}/reject",
+        json={},
+        headers=BASE_HEADERS,
+    )
+    assert reject_approved.status_code == 409
