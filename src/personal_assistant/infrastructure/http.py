@@ -52,6 +52,7 @@ from personal_assistant.domain.common.exceptions import (
 )
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
+from personal_assistant.domain.reminders.idempotency import ReminderIdempotencyConflict
 from personal_assistant.infrastructure.admin import (
     AdminDashboard,
     clamp_limit,
@@ -99,6 +100,7 @@ class ReminderCommandRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     message_id: str = Field(min_length=1)
+    source_event_id: str = Field(min_length=1)
     conversation_id: str = Field(min_length=1)
     text: str = Field(min_length=1)
     channel: Literal["telegram", "whatsapp"] = "telegram"
@@ -112,6 +114,7 @@ class ReminderCommandRequest(BaseModel):
     ) -> ReminderWorkflowInput:
         return ReminderWorkflowInput(
             message_id=self.message_id,
+            source_event_id=self.source_event_id,
             conversation_id=self.conversation_id,
             text=self.text,
             channel=self.channel,
@@ -150,6 +153,12 @@ class ReminderCommandResponse(BaseModel):
     status: AgentStatus
     intent: str
     reply: str
+    source_event_id: str
+    payload_fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    timezone: str
+    clarification_reason: str | None = None
+    clarification_reply_id: str | None = None
+    clarification_reply_version: str | None = None
     approval_required: bool = False
     approval: ApprovalView | None = None
     calendar_event_id: str | None = None
@@ -196,12 +205,12 @@ def _status_for_error(code: ErrorCode) -> int:
 def _effective_idempotency_key(
     principal: Principal, request: ReminderCommandRequest
 ) -> str:
-    return request.idempotency_key or reminder_idempotency_key(
+    return reminder_idempotency_key(
         tenant_id=principal.tenant_id,
         channel=request.channel,
         principal_id=principal.principal_id,
         conversation_id=request.conversation_id,
-        source_event_id=request.message_id,
+        source_event_id=request.source_event_id,
     )
 
 
@@ -253,6 +262,7 @@ def _pending_approval_from_request(
     principal: Principal,
     request: ReminderCommandRequest,
     run_id: str,
+    payload_fingerprint: str,
     action: str,
 ) -> PendingApproval:
     return PendingApproval(
@@ -266,6 +276,7 @@ def _pending_approval_from_request(
         tier=PermissionTier.P3.value,
         workflow_kind="reminder.create",
         message_id=request.message_id,
+        source_event_id=request.source_event_id,
         conversation_id=request.conversation_id,
         channel=request.channel,
         recipient=request.recipient,
@@ -273,6 +284,7 @@ def _pending_approval_from_request(
         request_now=request.now,
         timezone=request.timezone,
         idempotency_key=run_id,
+        payload_fingerprint=payload_fingerprint,
     )
 
 
@@ -283,6 +295,7 @@ def _workflow_input_from_pending(
 ) -> ReminderWorkflowInput:
     return ReminderWorkflowInput(
         message_id=pending.message_id,
+        source_event_id=pending.source_event_id,
         conversation_id=pending.conversation_id,
         text=pending.request_text,
         channel=cast(Literal["telegram", "whatsapp"], pending.channel),
@@ -307,6 +320,16 @@ def _reminder_response(
         status=result.status,
         intent=result.intent.value,
         reply=result.reply,
+        source_event_id=result.source_event_id,
+        payload_fingerprint=result.payload_fingerprint,
+        timezone=result.timezone,
+        clarification_reason=(
+            result.clarification_reason.value
+            if result.clarification_reason is not None
+            else None
+        ),
+        clarification_reply_id=result.clarification_reply_id,
+        clarification_reply_version=result.clarification_reply_version,
         approval_required=result.approval_required,
         approval=approval,
         calendar_event_id=result.calendar_event_id,
@@ -871,12 +894,25 @@ def create_app(
             if transcribed is not None:
                 message = transcribed
 
-        result = runtime_container.commands.handle(
-            principal,
-            message,
-            now=datetime.now(UTC),
-            timezone=runtime_settings.timezone,
-        )
+        try:
+            result = runtime_container.commands.handle(
+                principal,
+                message,
+                now=datetime.now(UTC),
+                timezone=runtime_settings.timezone,
+            )
+        except ReminderIdempotencyConflict:
+            # Telegram must acknowledge provider delivery with HTTP 200 while
+            # exposing no internal key/fingerprint metadata and performing no
+            # reply, calendar, scheduler, event, or outbox side effect.
+            return TelegramWebhookResponse(
+                status=AgentStatus.failed,
+                reply=runtime_replies.reminder_replay_conflict(),
+                sent=False,
+                audio_sent=False,
+                approval_id=None,
+                command=message.command,
+            )
         sent = False
         audio_sent = False
         if runtime_settings.telegram_bot_token:
@@ -1087,6 +1123,7 @@ def create_app(
                     principal=principal,
                     request=request,
                     run_id=run_id,
+                    payload_fingerprint=result.payload_fingerprint,
                     action=action,
                 ),
             )

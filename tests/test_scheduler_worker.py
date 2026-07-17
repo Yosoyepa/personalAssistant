@@ -3,21 +3,33 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 import unittest
 
-from personal_assistant.adapters.outbound.notifications.local import LocalNotificationTool
+from personal_assistant.adapters.outbound.notifications.local import (
+    LocalNotificationTool,
+)
 from personal_assistant.adapters.outbound.scheduler.local import ReminderScheduler
-from personal_assistant.application.ports.notifications import NotificationRequest, NotificationResult
-from personal_assistant.application.use_cases.reminder_notifications import DispatchDueReminders
+from personal_assistant.application.ports.notifications import (
+    NotificationRequest,
+    NotificationResult,
+)
+from personal_assistant.application.use_cases.reminder_notifications import (
+    DispatchDueReminders,
+)
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
-from personal_assistant.infrastructure.worker import ReminderWorker, RuntimeNotificationApprovalPolicy
+from personal_assistant.infrastructure.worker import (
+    ReminderWorker,
+    RuntimeNotificationApprovalPolicy,
+)
 
 
 class PartiallyFailingNotificationTool:
     def __init__(self) -> None:
         self.sent: list[NotificationResult] = []
 
-    def send(self, principal, request: NotificationRequest, *, approval=None) -> NotificationResult:
+    def send(
+        self, principal, request: NotificationRequest, *, approval=None
+    ) -> NotificationResult:
         if request.recipient == "bad-chat":
             raise RuntimeError("provider rejected recipient")
         result = NotificationResult(
@@ -40,17 +52,23 @@ class SchedulerWorkerTests(unittest.TestCase):
         )
         self.scheduler = ReminderScheduler()
         self.notifications = LocalNotificationTool()
-        self.dispatcher = DispatchDueReminders(scheduler=self.scheduler, notifications=self.notifications)
+        self.dispatcher = DispatchDueReminders(
+            scheduler=self.scheduler, notifications=self.notifications
+        )
 
     def worker(self, *, approve_notifications: bool = True) -> ReminderWorker:
         return ReminderWorker(
             dispatcher=self.dispatcher,
-            approval_policy=RuntimeNotificationApprovalPolicy(approve_notifications=approve_notifications),
+            approval_policy=RuntimeNotificationApprovalPolicy(
+                approve_notifications=approve_notifications
+            ),
             clock=lambda: self.now,
             sleep=lambda _: None,
         )
 
-    def schedule_due(self, principal: Principal, key: str, *, minutes_from_now: int = 1) -> str:
+    def schedule_due(
+        self, principal: Principal, key: str, *, minutes_from_now: int = 1
+    ) -> str:
         job = self.scheduler.schedule_before_event(
             principal,
             calendar_event_id=f"cal-{key}",
@@ -60,6 +78,9 @@ class SchedulerWorkerTests(unittest.TestCase):
             body=f"Recordatorio {key}",
             minutes_before=30,
             idempotency_key=key,
+            timezone="America/Bogota",
+            source_event_id=f"event-{key}",
+            payload_fingerprint="a" * 64,
         )
         return job.reminder_id
 
@@ -79,7 +100,9 @@ class SchedulerWorkerTests(unittest.TestCase):
     def test_run_once_skips_without_runtime_approval_and_leaves_job_due(self) -> None:
         reminder_id = self.schedule_due(self.principal, "notify-denied")
 
-        tick = self.worker(approve_notifications=False).run_once(self.principal, now=self.now)
+        tick = self.worker(approve_notifications=False).run_once(
+            self.principal, now=self.now
+        )
 
         self.assertEqual(tick.due_count, 1)
         self.assertEqual(tick.sent_count, 0)
@@ -95,14 +118,21 @@ class SchedulerWorkerTests(unittest.TestCase):
 
         self.assertEqual(tick.due_count, 2)
         self.assertEqual(tick.sent_count, 2)
-        sent_keys = {notification.idempotency_key for notification in self.notifications.list_sent(self.principal)}
+        sent_keys = {
+            notification.idempotency_key
+            for notification in self.notifications.list_sent(self.principal)
+        }
         self.assertEqual(sent_keys, {"notify-a", "notify-b"})
 
     def test_provider_failure_does_not_block_other_due_reminders(self) -> None:
         notifications = PartiallyFailingNotificationTool()
         worker = ReminderWorker(
-            dispatcher=DispatchDueReminders(scheduler=self.scheduler, notifications=notifications),
-            approval_policy=RuntimeNotificationApprovalPolicy(approve_notifications=True),
+            dispatcher=DispatchDueReminders(
+                scheduler=self.scheduler, notifications=notifications
+            ),
+            approval_policy=RuntimeNotificationApprovalPolicy(
+                approve_notifications=True
+            ),
             clock=lambda: self.now,
             sleep=lambda _: None,
         )
@@ -115,6 +145,9 @@ class SchedulerWorkerTests(unittest.TestCase):
             body="Bad recipient",
             minutes_before=0,
             idempotency_key="notify-bad",
+            timezone="America/Bogota",
+            source_event_id="event-bad",
+            payload_fingerprint="b" * 64,
         )
         good = self.scheduler.schedule_before_event(
             self.principal,
@@ -125,6 +158,9 @@ class SchedulerWorkerTests(unittest.TestCase):
             body="Good recipient",
             minutes_before=0,
             idempotency_key="notify-good",
+            timezone="America/Bogota",
+            source_event_id="event-good",
+            payload_fingerprint="c" * 64,
         )
 
         tick = worker.run_once(self.principal, now=self.now)
@@ -133,7 +169,10 @@ class SchedulerWorkerTests(unittest.TestCase):
         self.assertEqual(tick.sent_notification_ids, ("ok-notify-good",))
         self.assertEqual(tick.skipped_reminder_ids, (bad.reminder_id,))
         self.assertEqual(self.scheduler.due(self.principal, self.now), [bad])
-        self.assertEqual([item.idempotency_key for item in notifications.sent], [good.idempotency_key])
+        self.assertEqual(
+            [item.idempotency_key for item in notifications.sent],
+            [good.idempotency_key],
+        )
 
     def test_principal_below_p5_cannot_dispatch_notification(self) -> None:
         low_tier = Principal.for_test(
@@ -171,7 +210,9 @@ class SchedulerWorkerTests(unittest.TestCase):
         self.schedule_due(self.principal, "notify-loop")
         worker = ReminderWorker(
             dispatcher=self.dispatcher,
-            approval_policy=RuntimeNotificationApprovalPolicy(approve_notifications=True),
+            approval_policy=RuntimeNotificationApprovalPolicy(
+                approve_notifications=True
+            ),
             clock=lambda: self.now,
             sleep=sleep_calls.append,
         )

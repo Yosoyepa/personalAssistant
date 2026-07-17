@@ -100,10 +100,11 @@ Input invariants:
 - `tenant_id` must not be accepted from `message.text`, attachment content, LLM output, or tool arguments.
 - Attachment size must be within the small-document limit defined by the document module.
 - Reminder idempotency identity is the versioned tuple `(tenant_id, channel, principal_id, conversation_id, source_event_id)`; tenant and principal come from the trusted principal.
-- `source_event_id` is the stable provider delivery/event id; `message.message_id` is only the transitional application fallback until P1-A4 maps HTTP and Telegram explicitly.
+- `source_event_id` is the stable provider delivery/event id and is explicit at HTTP, Telegram, and command boundaries; `message.message_id` remains only a message reference. The only compatibility fallback is on reads of persisted pre-P1-A4 approvals, where `source_event_id = message_id` is deterministic and documented.
 - The reminder key is `reminder:v2:<full SHA-256>` over canonical UTF-8 JSON of that identity. Opaque IDs preserve case; values are trimmed and NFC-normalized; channel is additionally case-folded.
 - A caller-supplied reminder key is only an assertion and must equal the derived v2 key; it never selects or narrows identity.
 - The reminder payload fingerprint is a separate full SHA-256 over versioned canonical JSON containing `text`, `recipient`, and `timezone`. Approval, supplied key, and processing clock are excluded replay controls/context.
+- A request timezone is validated by the reminder parser: an invalid value returns `needs_clarification` with `reminder_invalid_timezone/v1` and creates no approval or side effect. An invalid configured `ASSISTANT_TIMEZONE` is different: settings construction fails and runtime startup is blocked.
 
 ## 5. Required Context
 

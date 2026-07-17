@@ -137,6 +137,14 @@ worker lease fields are typed columns.
 | `assistant_calendar_events` | Local calendar tool state until external calendar sync exists. | Primary `(tenant_id, idempotency_key)`; unique `(tenant_id, event_id)`; index `(tenant_id, starts_at)`. |
 | `assistant_trace_events` | Trace records for admin/runtime inspection. | Primary `(tenant_id, trace_id)`; indexes `(tenant_id, run_id, timestamp)` and `(tenant_id, timestamp)`. |
 
+Pre-P1-A4 JSONB rows are upgraded only while reading: approvals use their
+legacy `message_id` as `source_event_id` and recompute the canonical reminder
+fingerprint; scheduled reminders receive a deterministic legacy source and use
+`UTC` because the original IANA zone was not persisted; calendar results recover
+their timezone and any available identity metadata from the request payload
+stored beside the result. New writes must include the strict fields and never
+use these fallbacks.
+
 ## Idempotency Rules
 
 Every durable write must be tenant-scoped. A key from one tenant must never
@@ -168,7 +176,9 @@ Expected behavior by store:
 - Notifications: `(tenant_id, idempotency_key)` is idempotent. Same approved
   request returns the existing delivery; changed request raises conflict.
 - Scheduled reminders: `(tenant_id, idempotency_key)` is idempotent. Same key
-  returns the existing job.
+  and effect-relevant payload returns the existing job; changed calendar,
+  instant, timezone, source event, payload fingerprint, channel, recipient, or
+  body raises conflict.
 - Memory records currently do not use an idempotency key. Only explicit,
   tenant/user-scoped memory should be stored; do not dump raw chat transcripts
   into memory.

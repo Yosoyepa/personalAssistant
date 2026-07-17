@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from personal_assistant.application.ports.scheduler import ScheduledReminder
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-from personal_assistant.domain.common.identity import Principal, require_trusted_principal
+from personal_assistant.domain.common.identity import (
+    Principal,
+    require_trusted_principal,
+)
 
 
 class ReminderScheduler:
@@ -24,21 +27,44 @@ class ReminderScheduler:
         channel: str,
         recipient: str,
         body: str,
+        timezone: str,
+        source_event_id: str,
+        payload_fingerprint: str,
         minutes_before: int = 30,
         idempotency_key: str,
     ) -> ScheduledReminder:
         require_trusted_principal(principal)
         if starts_at.tzinfo is None or starts_at.utcoffset() is None:
             raise ValueError("starts_at must be timezone-aware")
+        starts_at_utc = starts_at.astimezone(UTC)
+        notify_at = starts_at_utc - timedelta(minutes=minutes_before)
         key = (principal.tenant_id, idempotency_key)
         existing = self._jobs_by_key.get(key)
         if existing is not None:
+            if (
+                existing.calendar_event_id != calendar_event_id
+                or existing.notify_at != notify_at
+                or existing.timezone != timezone
+                or existing.source_event_id != source_event_id
+                or existing.payload_fingerprint != payload_fingerprint
+                or existing.channel != channel
+                or existing.recipient != recipient
+                or existing.body != body
+            ):
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "reminder scheduler idempotency conflict",
+                    tenant_id=principal.tenant_id,
+                )
             return existing
 
         job = ScheduledReminder(
             tenant_id=principal.tenant_id,
             calendar_event_id=calendar_event_id,
-            notify_at=starts_at - timedelta(minutes=minutes_before),
+            notify_at=notify_at,
+            timezone=timezone,
+            source_event_id=source_event_id,
+            payload_fingerprint=payload_fingerprint,
             channel=channel,
             recipient=recipient,
             body=body,
@@ -54,7 +80,9 @@ class ReminderScheduler:
         due_jobs = [
             job
             for job in self._jobs_by_key.values()
-            if job.tenant_id == principal.tenant_id and not job.sent and job.notify_at <= now
+            if job.tenant_id == principal.tenant_id
+            and not job.sent
+            and job.notify_at <= now
         ]
         return sorted(due_jobs, key=lambda job: (job.notify_at, job.reminder_id))
 
@@ -65,7 +93,11 @@ class ReminderScheduler:
                 updated = job.model_copy(update={"sent": True})
                 self._jobs_by_key[key] = updated
                 return updated
-        raise AssistantError(ErrorCode.NOT_FOUND, "scheduled reminder not found", tenant_id=principal.tenant_id)
+        raise AssistantError(
+            ErrorCode.NOT_FOUND,
+            "scheduled reminder not found",
+            tenant_id=principal.tenant_id,
+        )
 
     def list_for_tenant(self, principal: Principal) -> list[ScheduledReminder]:
         require_trusted_principal(principal)

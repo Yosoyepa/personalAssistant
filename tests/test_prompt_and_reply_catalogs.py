@@ -34,6 +34,12 @@ TEMPORAL_REPLY_COPY = {
     "reminder_missing_date": (
         "¿Para qué fecha? Indica un día concreto; por ejemplo, mañana o 20 de julio."
     ),
+    "reminder_missing_time": (
+        "¿A qué hora? Indica una hora concreta; por ejemplo, 9 a. m. o 17:00."
+    ),
+    "reminder_missing_datetime": (
+        "Necesito una fecha y hora claras para crear el recordatorio."
+    ),
     "reminder_nonexistent_local_time": (
         "Esa hora local no existe por el cambio de horario. Elige otra hora para ese día."
     ),
@@ -67,6 +73,7 @@ def _message(text: str, message_id: str = "42") -> NormalizedMessage:
         actor_id=principal.principal_id,
         conversation_id="chat-1",
         message_id=message_id,
+        source_event_id=message_id,
         text=text,
     )
 
@@ -229,14 +236,26 @@ def test_repository_reply_catalog_loads_user_facing_copy_from_locale_file() -> N
 
 def test_temporal_replies_have_stable_v1_ids_and_match_runtime_catalog() -> None:
     repository_root = Path(__file__).resolve().parents[1]
-    registry = json.loads((repository_root / "replies" / "registry.json").read_text(encoding="utf-8"))
-    locale = json.loads((repository_root / "locales" / "es.json").read_text(encoding="utf-8"))
+    registry = json.loads(
+        (repository_root / "replies" / "registry.json").read_text(encoding="utf-8")
+    )
+    locale = json.loads(
+        (repository_root / "locales" / "es.json").read_text(encoding="utf-8")
+    )
     versioned = build_reply_catalog(repository_root / "replies")
     replies = AssistantReplies()
 
     assert set(registry["replies"]) == set(TEMPORAL_REPLY_COPY)
     assert versioned == TEMPORAL_REPLY_COPY
-    internal_terms = {"tenant", "payload", "idempotency", "hash", "traceback", "workflow", "outbox"}
+    internal_terms = {
+        "tenant",
+        "payload",
+        "idempotency",
+        "hash",
+        "traceback",
+        "workflow",
+        "outbox",
+    }
     for reply_id, expected_copy in TEMPORAL_REPLY_COPY.items():
         assert registry["replies"][reply_id] == {
             "version": "v1",
@@ -253,7 +272,11 @@ def test_temporal_replies_have_stable_v1_ids_and_match_runtime_catalog() -> None
         ("help", {"version": "one", "path": "help/one.md"}, "invalid version"),
         ("help", {"version": "v0", "path": "help/v0.md"}, "invalid version"),
         ("help", {"version": "v01", "path": "help/v01.md"}, "invalid version"),
-        ("help", {"version": "v1", "path": "../help/v1.md"}, "match its id and version"),
+        (
+            "help",
+            {"version": "v1", "path": "../help/v1.md"},
+            "match its id and version",
+        ),
         (
             "../escape",
             {"version": "v1", "path": "../escape/v1.md"},
@@ -344,7 +367,7 @@ def test_local_agent_runtime_uses_injected_reply_defaults() -> None:
 
 
 class ReminderReplyDefaults(AssistantReplies):
-    def reminder_needs_datetime(self) -> str:
+    def reminder_missing_datetime(self) -> str:
         return "NEEDS_DATETIME_FROM_INJECTED_REPLY_DEFAULTS"
 
     def reminder_needs_approval(self, title: str) -> str:
@@ -360,6 +383,7 @@ def test_reminder_workflow_uses_injected_reply_defaults() -> None:
         principal,
         ReminderWorkflowInput(
             message_id="missing-time",
+            source_event_id="missing-time",
             conversation_id="chat-1",
             text="recordame pagar",
             recipient="chat-1",
@@ -371,6 +395,7 @@ def test_reminder_workflow_uses_injected_reply_defaults() -> None:
         principal,
         ReminderWorkflowInput(
             message_id="needs-approval",
+            source_event_id="needs-approval",
             conversation_id="chat-1",
             text="recordame clase el martes a las 17",
             recipient="chat-1",
@@ -459,6 +484,7 @@ def test_reminder_workflow_renders_extraction_prompt_from_injected_catalog() -> 
         _principal(),
         ReminderWorkflowInput(
             message_id="llm-catalog",
+            source_event_id="llm-catalog",
             conversation_id="chat-1",
             text="deja lo de almorzar con Ana a las tres treinta y tres",
             recipient="chat-1",

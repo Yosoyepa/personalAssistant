@@ -26,6 +26,8 @@
   "reminder_needs_datetime": "Necesito una fecha y hora claras para crear el recordatorio.",
   "reminder_ambiguous_hour": "¿A qué hora exacta? Indica a. m. o p. m.; por ejemplo, 5 p. m. o 17:00.",
   "reminder_missing_date": "¿Para qué fecha? Indica un día concreto; por ejemplo, mañana o 20 de julio.",
+  "reminder_missing_time": "¿A qué hora? Indica una hora concreta; por ejemplo, 9 a. m. o 17:00.",
+  "reminder_missing_datetime": "Necesito una fecha y hora claras para crear el recordatorio.",
   "reminder_nonexistent_local_time": "Esa hora local no existe por el cambio de horario. Elige otra hora para ese día.",
   "reminder_ambiguous_local_time": "Esa hora local ocurre dos veces por el cambio de horario. Indica si te refieres a la primera o a la segunda.",
   "reminder_invalid_timezone": "No reconozco la zona horaria configurada. Usa un identificador IANA válido; por ejemplo, America/Bogota.",
