@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+from dataclasses import dataclass
 import hashlib
 import json
 from datetime import UTC, datetime, timedelta
-from threading import RLock
 from uuid import uuid4
 
+from personal_assistant.adapters._in_memory_transaction import (
+    ReentrantLock,
+    new_reentrant_lock,
+)
 from personal_assistant.application.dto.commands import (
     PendingApproval,
     PendingApprovalStatus,
@@ -64,11 +69,35 @@ def _approval_hash(approval: PendingApproval) -> str:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class _EventStoreSnapshot:
+    events_by_key: dict[tuple[str, str], CloudEvent]
+    fingerprints: dict[tuple[str, str], str]
+
+
 class InMemoryEventStore:
     def __init__(self) -> None:
         self._events_by_key: dict[tuple[str, str], CloudEvent] = {}
         self._fingerprints: dict[tuple[str, str], str] = {}
-        self._lock = RLock()
+        self._lock = new_reentrant_lock()
+
+    @property
+    def _reminder_transaction_lock(self) -> ReentrantLock:
+        return self._lock
+
+    def _snapshot_reminder_transaction(self) -> object:
+        with self._lock:
+            return _EventStoreSnapshot(
+                events_by_key=deepcopy(self._events_by_key),
+                fingerprints=deepcopy(self._fingerprints),
+            )
+
+    def _restore_reminder_transaction(self, snapshot: object) -> None:
+        if not isinstance(snapshot, _EventStoreSnapshot):
+            raise TypeError("invalid event-store transaction snapshot")
+        with self._lock:
+            self._events_by_key = deepcopy(snapshot.events_by_key)
+            self._fingerprints = deepcopy(snapshot.fingerprints)
 
     def append(self, principal: Principal, event: CloudEvent) -> CloudEvent:
         require_trusted_principal(principal)
@@ -98,10 +127,18 @@ class InMemoryEventStore:
         require_trusted_principal(principal)
         with self._lock:
             return [
-                event
+                event.model_copy(deep=True)
                 for (tenant_id, _), event in self._events_by_key.items()
                 if tenant_id == principal.tenant_id
             ]
+
+
+@dataclass(frozen=True, slots=True)
+class _OutboxSnapshot:
+    messages_by_key: dict[tuple[str, str], OutboxMessage]
+    key_by_message_id: dict[tuple[str, str], str]
+    key_by_event_id: dict[tuple[str, str], str]
+    fingerprints: dict[tuple[str, str], str]
 
 
 class InMemoryOutbox:
@@ -110,7 +147,29 @@ class InMemoryOutbox:
         self._key_by_message_id: dict[tuple[str, str], str] = {}
         self._key_by_event_id: dict[tuple[str, str], str] = {}
         self._fingerprints: dict[tuple[str, str], str] = {}
-        self._lock = RLock()
+        self._lock = new_reentrant_lock()
+
+    @property
+    def _reminder_transaction_lock(self) -> ReentrantLock:
+        return self._lock
+
+    def _snapshot_reminder_transaction(self) -> object:
+        with self._lock:
+            return _OutboxSnapshot(
+                messages_by_key=deepcopy(self._messages_by_key),
+                key_by_message_id=deepcopy(self._key_by_message_id),
+                key_by_event_id=deepcopy(self._key_by_event_id),
+                fingerprints=deepcopy(self._fingerprints),
+            )
+
+    def _restore_reminder_transaction(self, snapshot: object) -> None:
+        if not isinstance(snapshot, _OutboxSnapshot):
+            raise TypeError("invalid outbox transaction snapshot")
+        with self._lock:
+            self._messages_by_key = deepcopy(snapshot.messages_by_key)
+            self._key_by_message_id = deepcopy(snapshot.key_by_message_id)
+            self._key_by_event_id = deepcopy(snapshot.key_by_event_id)
+            self._fingerprints = deepcopy(snapshot.fingerprints)
 
     def add(
         self,
@@ -118,6 +177,7 @@ class InMemoryOutbox:
         event: CloudEvent,
         *,
         idempotency_key: str,
+        next_attempt_at: datetime | None = None,
         message_id: str | None = None,
     ) -> OutboxMessage:
         require_trusted_principal(principal)
@@ -127,27 +187,37 @@ class InMemoryOutbox:
                 "outbox tenant mismatch",
                 tenant_id=principal.tenant_id,
             )
+        if next_attempt_at is not None:
+            if next_attempt_at.tzinfo is None or next_attempt_at.utcoffset() is None:
+                raise ValueError("next_attempt_at must be timezone-aware")
+            next_attempt_at = next_attempt_at.astimezone(UTC)
         key = (principal.tenant_id, idempotency_key)
-        event_fingerprint = _fingerprint(event.model_dump(mode="json"))
+        write_fingerprint = _fingerprint(
+            {
+                "event": event.model_dump(mode="json"),
+                "next_attempt_at": next_attempt_at,
+                "message_id": message_id,
+            }
+        )
         with self._lock:
             existing = self._messages_by_key.get(key)
             if existing is not None:
-                if self._fingerprints[key] != event_fingerprint:
+                if self._fingerprints[key] != write_fingerprint:
                     raise AssistantError(
                         ErrorCode.CONFLICT,
                         "outbox idempotency conflict",
                         tenant_id=principal.tenant_id,
                     )
-                return existing
-
-            message_data: dict[str, object] = {
+                return existing.model_copy(deep=True)
+            values: dict[str, object] = {
                 "tenant_id": principal.tenant_id,
                 "event": event,
                 "idempotency_key": idempotency_key,
+                "next_attempt_at": next_attempt_at,
             }
             if message_id is not None:
-                message_data["id"] = message_id
-            message = OutboxMessage.model_validate(message_data)
+                values["id"] = message_id
+            message = OutboxMessage.model_validate(values)
 
             message_key = (principal.tenant_id, message.id)
             existing_key = self._key_by_message_id.get(message_key)
@@ -166,12 +236,11 @@ class InMemoryOutbox:
                     "outbox event id conflict",
                     tenant_id=principal.tenant_id,
                 )
-
             self._messages_by_key[key] = message
             self._key_by_message_id[message_key] = idempotency_key
             self._key_by_event_id[event_key] = idempotency_key
-            self._fingerprints[key] = event_fingerprint
-            return message
+            self._fingerprints[key] = write_fingerprint
+            return message.model_copy(deep=True)
 
     def claim(
         self,
@@ -190,6 +259,11 @@ class InMemoryOutbox:
                     continue
                 if message.claimed_until is not None and message.claimed_until > now:
                     continue
+                if (
+                    message.next_attempt_at is not None
+                    and message.next_attempt_at > now
+                ):
+                    continue
                 updated = message.model_copy(
                     update={
                         "dispatch_status": OutboxStatus.claimed,
@@ -200,7 +274,7 @@ class InMemoryOutbox:
                     }
                 )
                 self._messages_by_key[key] = updated
-                claimed.append(updated)
+                claimed.append(updated.model_copy(deep=True))
                 if len(claimed) >= limit:
                     break
         return claimed
@@ -213,7 +287,7 @@ class InMemoryOutbox:
             for key, message in list(self._messages_by_key.items()):
                 if key[0] == principal.tenant_id and message.id == message_id:
                     if message.published:
-                        return message
+                        return message.model_copy(deep=True)
                     if not message.claimed or message.claim_token != claim_token:
                         raise AssistantError(
                             ErrorCode.PERMISSION_DENIED,
@@ -230,7 +304,7 @@ class InMemoryOutbox:
                         }
                     )
                     self._messages_by_key[key] = updated
-                    return updated
+                    return updated.model_copy(deep=True)
         raise AssistantError(
             ErrorCode.NOT_FOUND,
             "outbox message not found",
@@ -259,7 +333,7 @@ class InMemoryOutbox:
                         }
                     )
                     self._messages_by_key[key] = updated
-                    return updated
+                    return updated.model_copy(deep=True)
         raise AssistantError(
             ErrorCode.NOT_FOUND,
             "outbox message not found",
@@ -270,17 +344,41 @@ class InMemoryOutbox:
         require_trusted_principal(principal)
         with self._lock:
             return [
-                message
+                message.model_copy(deep=True)
                 for (tenant_id, _), message in self._messages_by_key.items()
                 if tenant_id == principal.tenant_id
             ]
+
+
+@dataclass(frozen=True, slots=True)
+class _WorkflowStateSnapshot:
+    states_by_key: dict[tuple[str, str], WorkflowState]
+    key_by_workflow_id: dict[tuple[str, str], str]
 
 
 class InMemoryWorkflowStateStore:
     def __init__(self) -> None:
         self._states_by_key: dict[tuple[str, str], WorkflowState] = {}
         self._key_by_workflow_id: dict[tuple[str, str], str] = {}
-        self._lock = RLock()
+        self._lock = new_reentrant_lock()
+
+    @property
+    def _reminder_transaction_lock(self) -> ReentrantLock:
+        return self._lock
+
+    def _snapshot_reminder_transaction(self) -> object:
+        with self._lock:
+            return _WorkflowStateSnapshot(
+                states_by_key=deepcopy(self._states_by_key),
+                key_by_workflow_id=deepcopy(self._key_by_workflow_id),
+            )
+
+    def _restore_reminder_transaction(self, snapshot: object) -> None:
+        if not isinstance(snapshot, _WorkflowStateSnapshot):
+            raise TypeError("invalid workflow-state transaction snapshot")
+        with self._lock:
+            self._states_by_key = deepcopy(snapshot.states_by_key)
+            self._key_by_workflow_id = deepcopy(snapshot.key_by_workflow_id)
 
     def register_or_replay(
         self,

@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from threading import RLock
 
+from personal_assistant.adapters._in_memory_transaction import (
+    ReentrantLock,
+    new_reentrant_lock,
+)
 from personal_assistant.application.ports.scheduler import ScheduledReminder
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import (
@@ -13,13 +18,37 @@ from personal_assistant.domain.common.identity import (
 )
 
 
+@dataclass(frozen=True, slots=True)
+class _SchedulerSnapshot:
+    jobs_by_key: dict[tuple[str, str], ScheduledReminder]
+    key_by_reminder_id: dict[tuple[str, str], str]
+
+
 class ReminderScheduler:
     """Stores reminder jobs for local development and tests."""
 
     def __init__(self) -> None:
         self._jobs_by_key: dict[tuple[str, str], ScheduledReminder] = {}
         self._key_by_reminder_id: dict[tuple[str, str], str] = {}
-        self._lock = RLock()
+        self._lock = new_reentrant_lock()
+
+    @property
+    def _reminder_transaction_lock(self) -> ReentrantLock:
+        return self._lock
+
+    def _snapshot_reminder_transaction(self) -> object:
+        with self._lock:
+            return _SchedulerSnapshot(
+                jobs_by_key=deepcopy(self._jobs_by_key),
+                key_by_reminder_id=deepcopy(self._key_by_reminder_id),
+            )
+
+    def _restore_reminder_transaction(self, snapshot: object) -> None:
+        if not isinstance(snapshot, _SchedulerSnapshot):
+            raise TypeError("invalid scheduler transaction snapshot")
+        with self._lock:
+            self._jobs_by_key = deepcopy(snapshot.jobs_by_key)
+            self._key_by_reminder_id = deepcopy(snapshot.key_by_reminder_id)
 
     def schedule_before_event(
         self,
@@ -58,7 +87,6 @@ class ReminderScheduler:
         if reminder_id is not None:
             job_data["reminder_id"] = reminder_id
         job = ScheduledReminder.model_validate(job_data)
-
         with self._lock:
             existing = self._jobs_by_key.get(key)
             if existing is not None:
@@ -87,7 +115,6 @@ class ReminderScheduler:
                     "scheduled reminder id conflict",
                     tenant_id=principal.tenant_id,
                 )
-
             self._jobs_by_key[key] = job
             self._key_by_reminder_id[reminder_key] = idempotency_key
             return job

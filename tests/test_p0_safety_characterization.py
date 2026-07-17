@@ -24,6 +24,9 @@ from personal_assistant.adapters.persistence.in_memory import (
     InMemoryOutbox,
     InMemoryWorkflowStateStore,
 )
+from personal_assistant.adapters.persistence.in_memory_uow import (
+    InMemoryReminderUnitOfWork,
+)
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
 from personal_assistant.application.dto.runtime import AgentStatus
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
@@ -188,14 +191,6 @@ def schedule_due(scheduler: ReminderScheduler, actor: Principal, *, key: str) ->
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=(
-        "P0 recovery gap: a crash after effects leaves the elected workflow running; "
-        "v2 replay prevents duplicate effects but has no durable lease/recovery path yet"
-    ),
-)
 def test_retry_after_crash_between_outbox_and_terminal_state_is_atomic() -> None:
     actor = principal()
     calendar = LocalCalendarTool()
@@ -203,6 +198,13 @@ def test_retry_after_crash_between_outbox_and_terminal_state_is_atomic() -> None
     event_store = InMemoryEventStore()
     outbox = InMemoryOutbox()
     states = CrashBeforeTerminalStateStore()
+    unit_of_work = InMemoryReminderUnitOfWork(
+        calendar=calendar,
+        scheduler=scheduler,
+        event_store=event_store,
+        outbox=outbox,
+        states=states,
+    )
     workflow = ReminderWorkflow(
         calendar=calendar,
         scheduler=scheduler,
@@ -210,6 +212,7 @@ def test_retry_after_crash_between_outbox_and_terminal_state_is_atomic() -> None
         outbox=outbox,
         states=states,
         traces=TraceRecorder(),
+        unit_of_work=unit_of_work,
     )
     request = approved_request(
         actor,
