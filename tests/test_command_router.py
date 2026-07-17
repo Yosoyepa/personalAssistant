@@ -105,7 +105,7 @@ class CommandRouterTests(unittest.TestCase):
                     "message_id": 42,
                     "chat": {"id": "chat-1"},
                     "from": {"id": self.principal.principal_id},
-                    "text": "/recordar@personal_bot recuérdame clase el martes a las 5",
+                    "text": "/recordar@personal_bot recuérdame clase el martes a las 17",
                 },
             },
             tenant_id=self.principal.tenant_id,
@@ -119,15 +119,17 @@ class CommandRouterTests(unittest.TestCase):
         )
 
         self.assertEqual(normalized.command, "recordar")
-        self.assertEqual(normalized.command_args, "recuérdame clase el martes a las 5")
+        self.assertEqual(normalized.command_args, "recuérdame clase el martes a las 17")
         self.assertEqual(normalized.idempotency_key, "telegram:101")
         self.assertEqual(result.status, AgentStatus.escalated)
         self.assertEqual(len(self.container.approvals.list_pending(self.principal)), 1)
 
-    def test_reminder_command_creates_pending_approval_without_side_effect(self) -> None:
+    def test_reminder_command_creates_pending_approval_without_side_effect(
+        self,
+    ) -> None:
         result = self.container.commands.handle(
             self.principal,
-            self.message("/recordar recuérdame clase el martes a las 5"),
+            self.message("/recordar recuérdame clase el martes a las 17"),
             now=self.now,
             timezone="America/Bogota",
         )
@@ -141,7 +143,7 @@ class CommandRouterTests(unittest.TestCase):
     def test_approve_pending_reminder_creates_calendar_event_and_agenda(self) -> None:
         pending = self.container.commands.handle(
             self.principal,
-            self.message("recuérdame clase el martes a las 5"),
+            self.message("recuérdame clase el martes a las 17"),
             now=self.now,
             timezone="America/Bogota",
         )
@@ -168,7 +170,7 @@ class CommandRouterTests(unittest.TestCase):
     def test_cancel_pending_approval_blocks_later_approval(self) -> None:
         pending = self.container.commands.handle(
             self.principal,
-            self.message("recuérdame clase el martes a las 5"),
+            self.message("recuérdame clase el martes a las 17"),
             now=self.now,
             timezone="America/Bogota",
         )
@@ -194,7 +196,7 @@ class CommandRouterTests(unittest.TestCase):
     def test_other_principal_cannot_approve_pending_request(self) -> None:
         pending = self.container.commands.handle(
             self.principal,
-            self.message("recuérdame clase el martes a las 5"),
+            self.message("recuérdame clase el martes a las 17"),
             now=self.now,
             timezone="America/Bogota",
         )
@@ -267,11 +269,15 @@ class CommandRouterTests(unittest.TestCase):
         traces = container.traces.list_for_tenant(self.principal.tenant_id)
         self.assertEqual(len(traces), 1)
         self.assertEqual(traces[0].event_type, TraceEventType.llm_called)
-        self.assertEqual(traces[0].output_summary["kind"], CommandKind.reminder_create.value)
+        self.assertEqual(
+            traces[0].output_summary["kind"], CommandKind.reminder_create.value
+        )
         self.assertFalse(traces[0].output_summary["accepted"])
         self.assertEqual(traces[0].output_summary["confidence"], 0.31)
 
-    def test_voice_transcript_reminder_uses_llm_intent_before_text_heuristics(self) -> None:
+    def test_voice_transcript_reminder_uses_llm_intent_before_text_heuristics(
+        self,
+    ) -> None:
         llm = CapturingIntentLLMProvider(
             reminder_text="dentro de dos minutos revisar mis tareas de la universidad"
         )
@@ -280,7 +286,9 @@ class CommandRouterTests(unittest.TestCase):
 
         result = container.commands.handle(
             self.principal,
-            self.message("Necesito que me recuerdes dentro de dos minutos el revisar mis tareas de la universidad."),
+            self.message(
+                "Necesito que me recuerdes dentro de dos minutos el revisar mis tareas de la universidad."
+            ),
             now=self.now,
             timezone="America/Bogota",
         )
