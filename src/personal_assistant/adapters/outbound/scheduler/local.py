@@ -10,6 +10,7 @@ from personal_assistant.adapters._in_memory_transaction import (
     ReentrantLock,
     new_reentrant_lock,
 )
+from personal_assistant.application.dto.delivery import DeliveryStatus
 from personal_assistant.application.ports.scheduler import ScheduledReminder
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import (
@@ -128,8 +129,9 @@ class ReminderScheduler:
                 job
                 for job in self._jobs_by_key.values()
                 if job.tenant_id == principal.tenant_id
-                and not job.sent
+                and job.delivery_status == DeliveryStatus.pending
                 and job.notify_at <= now
+                and (job.next_attempt_at is None or job.next_attempt_at <= now)
             ]
             return sorted(due_jobs, key=lambda job: (job.notify_at, job.reminder_id))
 
@@ -138,7 +140,13 @@ class ReminderScheduler:
         with self._lock:
             for key, job in self._jobs_by_key.items():
                 if key[0] == principal.tenant_id and job.reminder_id == reminder_id:
-                    updated = job.model_copy(update={"sent": True})
+                    updated = job.model_copy(
+                        update={
+                            "delivery_status": DeliveryStatus.published,
+                            "sent": True,
+                            "published_at": datetime.now(UTC),
+                        }
+                    )
                     self._jobs_by_key[key] = updated
                     return updated
         raise AssistantError(

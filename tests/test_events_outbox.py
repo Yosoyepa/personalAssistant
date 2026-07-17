@@ -87,8 +87,14 @@ class EventOutboxTests(unittest.TestCase):
         with self.assertRaises(AssistantError):
             outbox.mark_published(tenant, message.id, claim_token="wrong")
 
+        sending = outbox.mark_sending(
+            tenant,
+            message.id,
+            claim_token=claimed[0].claim_token or "",
+            started_at=datetime.now(UTC),
+        )
         published = outbox.mark_published(
-            tenant, message.id, claim_token=claimed[0].claim_token or ""
+            tenant, message.id, claim_token=sending.claim_token or ""
         )
         self.assertEqual(published.dispatch_status, OutboxStatus.published)
         self.assertEqual(outbox.claim(tenant), [])

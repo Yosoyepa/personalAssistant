@@ -5,6 +5,11 @@ import json
 from types import SimpleNamespace
 import unittest
 
+from personal_assistant.application.dto.delivery import (
+    DeliveryError,
+    DeliveryErrorCategory,
+    DeliveryErrorCode,
+)
 from personal_assistant.application.dto.events import (
     CloudEvent,
     OutboxMessage,
@@ -186,6 +191,12 @@ class AdminDashboardTests(unittest.TestCase):
             dispatch_status=OutboxStatus.failed,
             attempts=3,
             created_at=datetime(2026, 6, 23, 16, 20, tzinfo=UTC),
+            sending_at=datetime(2026, 6, 23, 16, 20, tzinfo=UTC),
+            last_error=DeliveryError(
+                category=DeliveryErrorCategory.network,
+                code=DeliveryErrorCode.provider_unavailable,
+                occurred_at=datetime(2026, 6, 23, 16, 20, tzinfo=UTC),
+            ),
         )
         due_job = ScheduledReminder(
             reminder_id="rem-due",
@@ -403,6 +414,12 @@ class AdminDashboardTests(unittest.TestCase):
             dispatch_status=OutboxStatus.failed,
             attempts=3,
             created_at=now,
+            sending_at=now,
+            last_error=DeliveryError(
+                category=DeliveryErrorCategory.network,
+                code=DeliveryErrorCode.provider_unavailable,
+                occurred_at=now,
+            ),
         )
         dashboard = AdminDashboard(
             SimpleNamespace(

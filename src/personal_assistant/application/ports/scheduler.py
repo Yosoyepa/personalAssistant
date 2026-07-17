@@ -7,8 +7,9 @@ from typing import Protocol
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
+from personal_assistant.application.dto.delivery import DeliveryError, DeliveryStatus
 from personal_assistant.domain.common.identity import Principal
 
 
@@ -24,7 +25,34 @@ class ScheduledReminder(BaseModel):
     recipient: str
     body: str
     idempotency_key: str
+    delivery_status: DeliveryStatus = DeliveryStatus.pending
+    attempts: int = Field(default=0, ge=0)
+    next_attempt_at: datetime | None = None
+    sending_at: datetime | None = None
+    published_at: datetime | None = None
+    last_error: DeliveryError | None = None
+    # Rollback guard for old binaries whose due query reads only sent=false.
+    # It is false only for pending; it is not delivery truth. New code treats
+    # delivery_status as canonical.
     sent: bool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def upgrade_legacy_sent(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        upgraded = dict(value)
+        if "delivery_status" not in upgraded:
+            upgraded["delivery_status"] = (
+                DeliveryStatus.published
+                if upgraded.get("sent") is True
+                else DeliveryStatus.pending
+            )
+        upgraded["sent"] = upgraded["delivery_status"] not in {
+            DeliveryStatus.pending,
+            DeliveryStatus.pending.value,
+        }
+        return upgraded
 
     @field_validator("timezone")
     @classmethod
@@ -39,6 +67,15 @@ class ScheduledReminder(BaseModel):
     def canonicalize_notify_at(cls, value: datetime) -> datetime:
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("notify_at must be timezone-aware")
+        return value.astimezone(UTC)
+
+    @field_validator("next_attempt_at", "sending_at", "published_at")
+    @classmethod
+    def canonicalize_delivery_time(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("delivery timestamps must be timezone-aware")
         return value.astimezone(UTC)
 
 
