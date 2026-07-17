@@ -4,12 +4,13 @@
 
 | Field | Value |
 |---|---|
-| Status | `ACCEPTED_FOR_MERGE` |
+| Status | `MERGED` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
 | Phase branch | `codex/phase-0-governance` |
 | Base commit | `865dd63` |
 | Local acceptance commit | `3af4425` |
 | Pull request | [#1](https://github.com/Yosoyepa/personalAssistant/pull/1) |
+| Merge commit | `ba82d29` |
 | Date | `2026-07-17` |
 
 ## Objective and acceptance
@@ -81,10 +82,10 @@ The phase must not be marked `MERGED` until all of the following are recorded:
 - [x] `quality`, `tests (3.11)`, `tests (3.12)`, `security`, and
       `postgres-integration` green on code-and-governance head `77418ba`;
 - [x] desired GitHub governance applied and verified;
-- [ ] merge commit recorded.
+- [x] merge commit `ba82d29` recorded in pull request #1.
 
-Branch protection must repeat the required checks for this history-only update
-before the pull request can merge.
+Branch protection repeated all required checks for final head `4ff24e4` before
+GitHub created the merge commit.
 
 ## Risks and rollback
 
