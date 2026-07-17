@@ -51,6 +51,10 @@ jobs:
           uv run pre-commit validate-config
           uv run python -m json.tool eval/cases.json > /dev/null
 
+      - name: Test GitHub governance script without remote calls
+        shell: pwsh
+        run: ./tests/powershell/configure-github-governance.tests.ps1
+
       - name: Lint
         run: uv run ruff check .
 
