@@ -57,6 +57,7 @@ class ReminderSchedulerPort(Protocol):
         payload_fingerprint: str,
         minutes_before: int = 30,
         idempotency_key: str,
+        reminder_id: str | None = None,
     ) -> ScheduledReminder:
         """Schedule an idempotent reminder before a calendar event."""
 

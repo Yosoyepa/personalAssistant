@@ -407,7 +407,12 @@ class PostgresEventStore(_PostgresStore):
 
 class PostgresOutbox(_PostgresStore):
     def add(
-        self, principal: Principal, event: CloudEvent, *, idempotency_key: str
+        self,
+        principal: Principal,
+        event: CloudEvent,
+        *,
+        idempotency_key: str,
+        message_id: str | None = None,
     ) -> OutboxMessage:
         require_trusted_principal(principal)
         if event.tenant_id != principal.tenant_id:
@@ -419,9 +424,14 @@ class PostgresOutbox(_PostgresStore):
 
         event_payload = event.model_dump(mode="json")
         event_fingerprint = _fingerprint(event_payload)
-        message = OutboxMessage(
-            tenant_id=principal.tenant_id, event=event, idempotency_key=idempotency_key
-        )
+        message_data: dict[str, object] = {
+            "tenant_id": principal.tenant_id,
+            "event": event,
+            "idempotency_key": idempotency_key,
+        }
+        if message_id is not None:
+            message_data["id"] = message_id
+        message = OutboxMessage.model_validate(message_data)
         message_payload = message.model_dump(mode="json")
         with self._db.cursor() as cursor:
             cursor.execute(
@@ -433,7 +443,7 @@ class PostgresOutbox(_PostgresStore):
                         created_at, published_at, event_payload, fingerprint, payload
                     )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s::jsonb)
-                ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+                ON CONFLICT DO NOTHING
                 RETURNING payload
                 """,
                 (
@@ -468,6 +478,22 @@ class PostgresOutbox(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is None:
+                cursor.execute(
+                    f"""
+                    SELECT idempotency_key
+                    FROM {self._table("outbox")}
+                    WHERE tenant_id = %s
+                      AND (message_id = %s OR event_id = %s)
+                    """,
+                    (principal.tenant_id, message.id, event.id),
+                )
+                collision = cursor.fetchone()
+                if collision is not None:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "outbox durable id conflict",
+                        tenant_id=principal.tenant_id,
+                    )
                 raise AssistantError(
                     ErrorCode.INTERNAL_ERROR,
                     "outbox insert failed",
@@ -1193,9 +1219,15 @@ class PostgresCalendarStore(_PostgresStore):
             resource=request.idempotency_key,
         )
         request_payload = request.model_dump(mode="json")
-        request_fingerprint = _fingerprint(request_payload)
+        request_fingerprint = _fingerprint(
+            request.model_dump(mode="json", exclude={"event_id"})
+        )
+        compatible_request_fingerprints = {
+            request_fingerprint,
+            _fingerprint(request_payload),
+        }
         result = CalendarEventResult(
-            event_id=f"cal_{uuid4().hex}",
+            event_id=request.event_id or f"cal_{uuid4().hex}",
             title=request.title,
             starts_at=request.starts_at,
             timezone=request.timezone,
@@ -1213,7 +1245,7 @@ class PostgresCalendarStore(_PostgresStore):
                         request_fingerprint, request_payload, payload
                     )
                 VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)
-                ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+                ON CONFLICT DO NOTHING
                 RETURNING payload
                 """,
                 (
@@ -1241,12 +1273,29 @@ class PostgresCalendarStore(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is None:
+                cursor.execute(
+                    f"""
+                    SELECT idempotency_key
+                    FROM {self._table("calendar_events")}
+                    WHERE tenant_id = %s AND event_id = %s
+                    """,
+                    (principal.tenant_id, result.event_id),
+                )
+                if cursor.fetchone() is not None:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "calendar event id conflict",
+                        tenant_id=principal.tenant_id,
+                    )
                 raise AssistantError(
                     ErrorCode.INTERNAL_ERROR,
                     "calendar insert failed",
                     tenant_id=principal.tenant_id,
                 )
-            if _row_value(existing, "request_fingerprint", 1) != request_fingerprint:
+            if (
+                _row_value(existing, "request_fingerprint", 1)
+                not in compatible_request_fingerprints
+            ):
                 raise AssistantError(
                     ErrorCode.CONFLICT,
                     "calendar idempotency conflict",
@@ -1299,22 +1348,26 @@ class PostgresReminderScheduler(_PostgresStore):
         payload_fingerprint: str,
         minutes_before: int = 30,
         idempotency_key: str,
+        reminder_id: str | None = None,
     ) -> ScheduledReminder:
         require_trusted_principal(principal)
         _require_aware(starts_at, "starts_at")
         notify_at = starts_at - timedelta(minutes=minutes_before)
-        job = ScheduledReminder(
-            tenant_id=principal.tenant_id,
-            calendar_event_id=calendar_event_id,
-            notify_at=notify_at,
-            timezone=timezone,
-            source_event_id=source_event_id,
-            payload_fingerprint=payload_fingerprint,
-            channel=channel,
-            recipient=recipient,
-            body=body,
-            idempotency_key=idempotency_key,
-        )
+        job_data: dict[str, object] = {
+            "tenant_id": principal.tenant_id,
+            "calendar_event_id": calendar_event_id,
+            "notify_at": notify_at,
+            "timezone": timezone,
+            "source_event_id": source_event_id,
+            "payload_fingerprint": payload_fingerprint,
+            "channel": channel,
+            "recipient": recipient,
+            "body": body,
+            "idempotency_key": idempotency_key,
+        }
+        if reminder_id is not None:
+            job_data["reminder_id"] = reminder_id
+        job = ScheduledReminder.model_validate(job_data)
         payload = job.model_dump(mode="json")
         with self._db.cursor() as cursor:
             cursor.execute(
@@ -1325,7 +1378,7 @@ class PostgresReminderScheduler(_PostgresStore):
                         notify_at, channel, recipient, sent, payload
                     )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
-                ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+                ON CONFLICT DO NOTHING
                 RETURNING payload
                 """,
                 (
@@ -1356,6 +1409,20 @@ class PostgresReminderScheduler(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is None:
+                cursor.execute(
+                    f"""
+                    SELECT idempotency_key
+                    FROM {self._table("scheduled_reminders")}
+                    WHERE tenant_id = %s AND reminder_id = %s
+                    """,
+                    (principal.tenant_id, job.reminder_id),
+                )
+                if cursor.fetchone() is not None:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "scheduled reminder id conflict",
+                        tenant_id=principal.tenant_id,
+                    )
                 raise AssistantError(
                     ErrorCode.INTERNAL_ERROR,
                     "reminder schedule failed",

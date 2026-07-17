@@ -68,6 +68,7 @@ class InMemoryEventStore:
     def __init__(self) -> None:
         self._events_by_key: dict[tuple[str, str], CloudEvent] = {}
         self._fingerprints: dict[tuple[str, str], str] = {}
+        self._lock = RLock()
 
     def append(self, principal: Principal, event: CloudEvent) -> CloudEvent:
         require_trusted_principal(principal)
@@ -79,35 +80,45 @@ class InMemoryEventStore:
             )
         key = (principal.tenant_id, event.id)
         event_fingerprint = _fingerprint(event.model_dump(mode="json"))
-        existing = self._events_by_key.get(key)
-        if existing is not None:
-            if self._fingerprints[key] != event_fingerprint:
-                raise AssistantError(
-                    ErrorCode.CONFLICT,
-                    "event idempotency conflict",
-                    tenant_id=principal.tenant_id,
-                )
-            return existing
-        self._events_by_key[key] = event
-        self._fingerprints[key] = event_fingerprint
-        return event
+        with self._lock:
+            existing = self._events_by_key.get(key)
+            if existing is not None:
+                if self._fingerprints[key] != event_fingerprint:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "event idempotency conflict",
+                        tenant_id=principal.tenant_id,
+                    )
+                return existing
+            self._events_by_key[key] = event
+            self._fingerprints[key] = event_fingerprint
+            return event
 
     def list_for_tenant(self, principal: Principal) -> list[CloudEvent]:
         require_trusted_principal(principal)
-        return [
-            event
-            for (tenant_id, _), event in self._events_by_key.items()
-            if tenant_id == principal.tenant_id
-        ]
+        with self._lock:
+            return [
+                event
+                for (tenant_id, _), event in self._events_by_key.items()
+                if tenant_id == principal.tenant_id
+            ]
 
 
 class InMemoryOutbox:
     def __init__(self) -> None:
         self._messages_by_key: dict[tuple[str, str], OutboxMessage] = {}
+        self._key_by_message_id: dict[tuple[str, str], str] = {}
+        self._key_by_event_id: dict[tuple[str, str], str] = {}
         self._fingerprints: dict[tuple[str, str], str] = {}
+        self._lock = RLock()
 
     def add(
-        self, principal: Principal, event: CloudEvent, *, idempotency_key: str
+        self,
+        principal: Principal,
+        event: CloudEvent,
+        *,
+        idempotency_key: str,
+        message_id: str | None = None,
     ) -> OutboxMessage:
         require_trusted_principal(principal)
         if event.tenant_id != principal.tenant_id:
@@ -117,24 +128,50 @@ class InMemoryOutbox:
                 tenant_id=principal.tenant_id,
             )
         key = (principal.tenant_id, idempotency_key)
-        existing = self._messages_by_key.get(key)
         event_fingerprint = _fingerprint(event.model_dump(mode="json"))
-        if existing is not None:
-            if self._fingerprints[key] != event_fingerprint:
+        with self._lock:
+            existing = self._messages_by_key.get(key)
+            if existing is not None:
+                if self._fingerprints[key] != event_fingerprint:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "outbox idempotency conflict",
+                        tenant_id=principal.tenant_id,
+                    )
+                return existing
+
+            message_data: dict[str, object] = {
+                "tenant_id": principal.tenant_id,
+                "event": event,
+                "idempotency_key": idempotency_key,
+            }
+            if message_id is not None:
+                message_data["id"] = message_id
+            message = OutboxMessage.model_validate(message_data)
+
+            message_key = (principal.tenant_id, message.id)
+            existing_key = self._key_by_message_id.get(message_key)
+            if existing_key is not None and existing_key != idempotency_key:
                 raise AssistantError(
                     ErrorCode.CONFLICT,
-                    "outbox idempotency conflict",
+                    "outbox message id conflict",
                     tenant_id=principal.tenant_id,
                 )
-            return existing
-        message = OutboxMessage(
-            tenant_id=principal.tenant_id,
-            event=event,
-            idempotency_key=idempotency_key,
-        )
-        self._messages_by_key[key] = message
-        self._fingerprints[key] = event_fingerprint
-        return message
+
+            event_key = (principal.tenant_id, event.id)
+            existing_key = self._key_by_event_id.get(event_key)
+            if existing_key is not None and existing_key != idempotency_key:
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "outbox event id conflict",
+                    tenant_id=principal.tenant_id,
+                )
+
+            self._messages_by_key[key] = message
+            self._key_by_message_id[message_key] = idempotency_key
+            self._key_by_event_id[event_key] = idempotency_key
+            self._fingerprints[key] = event_fingerprint
+            return message
 
     def claim(
         self,
@@ -147,51 +184,53 @@ class InMemoryOutbox:
         require_trusted_principal(principal)
         now = datetime.now(UTC)
         claimed: list[OutboxMessage] = []
-        for key, message in list(self._messages_by_key.items()):
-            if key[0] != principal.tenant_id or message.published:
-                continue
-            if message.claimed_until is not None and message.claimed_until > now:
-                continue
-            updated = message.model_copy(
-                update={
-                    "dispatch_status": OutboxStatus.claimed,
-                    "claim_token": f"claim_{uuid4().hex}",
-                    "claim_owner": owner,
-                    "claimed_until": now + timedelta(seconds=lease_seconds),
-                    "attempts": message.attempts + 1,
-                }
-            )
-            self._messages_by_key[key] = updated
-            claimed.append(updated)
-            if len(claimed) >= limit:
-                break
+        with self._lock:
+            for key, message in list(self._messages_by_key.items()):
+                if key[0] != principal.tenant_id or message.published:
+                    continue
+                if message.claimed_until is not None and message.claimed_until > now:
+                    continue
+                updated = message.model_copy(
+                    update={
+                        "dispatch_status": OutboxStatus.claimed,
+                        "claim_token": f"claim_{uuid4().hex}",
+                        "claim_owner": owner,
+                        "claimed_until": now + timedelta(seconds=lease_seconds),
+                        "attempts": message.attempts + 1,
+                    }
+                )
+                self._messages_by_key[key] = updated
+                claimed.append(updated)
+                if len(claimed) >= limit:
+                    break
         return claimed
 
     def mark_published(
         self, principal: Principal, message_id: str, *, claim_token: str
     ) -> OutboxMessage:
         require_trusted_principal(principal)
-        for key, message in list(self._messages_by_key.items()):
-            if key[0] == principal.tenant_id and message.id == message_id:
-                if message.published:
-                    return message
-                if not message.claimed or message.claim_token != claim_token:
-                    raise AssistantError(
-                        ErrorCode.PERMISSION_DENIED,
-                        "invalid outbox claim token",
-                        tenant_id=principal.tenant_id,
+        with self._lock:
+            for key, message in list(self._messages_by_key.items()):
+                if key[0] == principal.tenant_id and message.id == message_id:
+                    if message.published:
+                        return message
+                    if not message.claimed or message.claim_token != claim_token:
+                        raise AssistantError(
+                            ErrorCode.PERMISSION_DENIED,
+                            "invalid outbox claim token",
+                            tenant_id=principal.tenant_id,
+                        )
+                    updated = message.model_copy(
+                        update={
+                            "dispatch_status": OutboxStatus.published,
+                            "claim_token": None,
+                            "claim_owner": None,
+                            "claimed_until": None,
+                            "published_at": datetime.now(UTC),
+                        }
                     )
-                updated = message.model_copy(
-                    update={
-                        "dispatch_status": OutboxStatus.published,
-                        "claim_token": None,
-                        "claim_owner": None,
-                        "claimed_until": None,
-                        "published_at": datetime.now(UTC),
-                    }
-                )
-                self._messages_by_key[key] = updated
-                return updated
+                    self._messages_by_key[key] = updated
+                    return updated
         raise AssistantError(
             ErrorCode.NOT_FOUND,
             "outbox message not found",
@@ -202,24 +241,25 @@ class InMemoryOutbox:
         self, principal: Principal, message_id: str, *, claim_token: str
     ) -> OutboxMessage:
         require_trusted_principal(principal)
-        for key, message in list(self._messages_by_key.items()):
-            if key[0] == principal.tenant_id and message.id == message_id:
-                if message.claim_token != claim_token:
-                    raise AssistantError(
-                        ErrorCode.PERMISSION_DENIED,
-                        "invalid outbox claim token",
-                        tenant_id=principal.tenant_id,
+        with self._lock:
+            for key, message in list(self._messages_by_key.items()):
+                if key[0] == principal.tenant_id and message.id == message_id:
+                    if message.claim_token != claim_token:
+                        raise AssistantError(
+                            ErrorCode.PERMISSION_DENIED,
+                            "invalid outbox claim token",
+                            tenant_id=principal.tenant_id,
+                        )
+                    updated = message.model_copy(
+                        update={
+                            "dispatch_status": OutboxStatus.pending,
+                            "claim_token": None,
+                            "claim_owner": None,
+                            "claimed_until": None,
+                        }
                     )
-                updated = message.model_copy(
-                    update={
-                        "dispatch_status": OutboxStatus.pending,
-                        "claim_token": None,
-                        "claim_owner": None,
-                        "claimed_until": None,
-                    }
-                )
-                self._messages_by_key[key] = updated
-                return updated
+                    self._messages_by_key[key] = updated
+                    return updated
         raise AssistantError(
             ErrorCode.NOT_FOUND,
             "outbox message not found",
@@ -228,11 +268,12 @@ class InMemoryOutbox:
 
     def list_for_tenant(self, principal: Principal) -> list[OutboxMessage]:
         require_trusted_principal(principal)
-        return [
-            message
-            for (tenant_id, _), message in self._messages_by_key.items()
-            if tenant_id == principal.tenant_id
-        ]
+        with self._lock:
+            return [
+                message
+                for (tenant_id, _), message in self._messages_by_key.items()
+                if tenant_id == principal.tenant_id
+            ]
 
 
 class InMemoryWorkflowStateStore:

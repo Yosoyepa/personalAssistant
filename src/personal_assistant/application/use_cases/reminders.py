@@ -114,6 +114,7 @@ class ReminderWorkflow:
         assert_prompt_safe(request.text)
         idempotency = reminder_idempotency(principal, request)
         effective_key = idempotency.key
+        effect_ids = idempotency.effect_ids
         source_event_id = idempotency.identity.source_event_id
         payload_fingerprint = idempotency.payload_fingerprint
         timezone = idempotency.payload.timezone
@@ -422,6 +423,7 @@ class ReminderWorkflow:
         calendar_result = self.calendar.create_event(
             principal,
             CalendarEventRequest(
+                event_id=effect_ids.calendar_event_id,
                 title=extraction.title,
                 starts_at=extraction.starts_at,
                 timezone=extraction.timezone,
@@ -446,8 +448,10 @@ class ReminderWorkflow:
             payload_fingerprint=payload_fingerprint,
             minutes_before=notice_minutes_before,
             idempotency_key=f"{effective_key}:notify",
+            reminder_id=effect_ids.reminder_id,
         )
         event = CloudEvent(
+            id=effect_ids.reminder_created_event_id,
             type="reminder.created",
             source="personal_assistant.application.reminders",
             subject=reminder.reminder_id,
@@ -468,7 +472,12 @@ class ReminderWorkflow:
             },
         )
         self.event_store.append(principal, event)
-        self.outbox.add(principal, event, idempotency_key=f"{effective_key}:outbox")
+        self.outbox.add(
+            principal,
+            event,
+            idempotency_key=f"{effective_key}:outbox",
+            message_id=effect_ids.outbox_message_id,
+        )
         tool_trace = TraceEvent(
             run_id=run_id,
             agent_id="personal_assistant",
