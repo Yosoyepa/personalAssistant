@@ -608,7 +608,7 @@ class HttpRuntimeTests(unittest.TestCase):
         client = TestClient(create_app(self.container, settings=settings))
 
         response = client.post(
-            "/webhooks/telegram/secret-1",
+            "/webhooks/telegram",
             headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
             json={
                 "update_id": 10,
@@ -656,13 +656,9 @@ class HttpRuntimeTests(unittest.TestCase):
             },
         }
 
-        first = client.post(
-            "/webhooks/telegram/secret-1", headers=headers, json=payload
-        )
+        first = client.post("/webhooks/telegram", headers=headers, json=payload)
         payload["message"]["text"] = "/recordar recuérdame pagar mañana a las 17"
-        replay = client.post(
-            "/webhooks/telegram/secret-1", headers=headers, json=payload
-        )
+        replay = client.post("/webhooks/telegram", headers=headers, json=payload)
         principal = Principal.for_test(
             principal_id="456",
             tenant_id="tenant-a",
@@ -698,7 +694,7 @@ class HttpRuntimeTests(unittest.TestCase):
         client = TestClient(create_app(container, settings=settings))
 
         response = client.post(
-            "/webhooks/telegram/secret-1",
+            "/webhooks/telegram",
             headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
             json={
                 "update_id": 10,
@@ -784,7 +780,7 @@ class HttpRuntimeTests(unittest.TestCase):
         client = TestClient(create_app(self.container, settings=settings))
 
         response = client.post(
-            "/webhooks/telegram/secret-1",
+            "/webhooks/telegram",
             headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
             json={
                 "update_id": 11,
@@ -892,7 +888,7 @@ class HttpRuntimeTests(unittest.TestCase):
             trace.input_summary["transcription_filename"], "telegram-45.ogg"
         )
 
-    def test_telegram_webhook_rejects_invalid_secret_and_user(self) -> None:
+    def test_telegram_webhook_rejects_missing_or_invalid_secret_and_user(self) -> None:
         settings = AppSettings(
             tenant_id="tenant-a",
             telegram_webhook_secret="secret-1",
@@ -909,11 +905,27 @@ class HttpRuntimeTests(unittest.TestCase):
             },
         }
 
-        wrong_secret = client.post("/webhooks/telegram/wrong", json=payload)
-        wrong_user = client.post("/webhooks/telegram/secret-1", json=payload)
+        missing_secret = client.post("/webhooks/telegram", json=payload)
+        wrong_secret = client.post(
+            "/webhooks/telegram",
+            headers={"X-Telegram-Bot-Api-Secret-Token": "wrong"},
+            json=payload,
+        )
+        wrong_user = client.post(
+            "/webhooks/telegram",
+            headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
+            json=payload,
+        )
+        legacy_path = client.post(
+            "/webhooks/telegram/secret-1",
+            headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
+            json=payload,
+        )
 
+        self.assertEqual(missing_secret.status_code, 403)
         self.assertEqual(wrong_secret.status_code, 403)
         self.assertEqual(wrong_user.status_code, 403)
+        self.assertEqual(legacy_path.status_code, 404)
 
     def test_reminder_worker_starts_when_enabled(self) -> None:
         settings = AppSettings(
