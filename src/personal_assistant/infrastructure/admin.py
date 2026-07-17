@@ -9,13 +9,19 @@ from html import escape
 from ipaddress import ip_address, ip_network
 from typing import Any
 
-from personal_assistant.application.dto.events import OutboxMessage, OutboxStatus
+from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
 from personal_assistant.application.ports.calendar import CalendarEventResult
 from personal_assistant.application.ports.scheduler import ScheduledReminder
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
+from personal_assistant.domain.common.privacy import (
+    REDACTED,
+    redact_trace_mapping,
+    redacted_text_metadata,
+    safe_category,
+)
 from personal_assistant.domain.memory.models import MemoryRecord
 from personal_assistant.infrastructure.bootstrap import AppContainer
 
@@ -294,7 +300,7 @@ class AdminDashboard:
         return {
             "total": len(events),
             "counts": dict(Counter(event.type for event in events)),
-            "items": [_model_item(event) for event in events[: clamp_limit(limit)]],
+            "items": [_event_item(event) for event in events[: clamp_limit(limit)]],
         }
 
     def states(self, principal: Principal, *, limit: int = DEFAULT_LIMIT) -> dict[str, Any]:
@@ -1034,7 +1040,7 @@ def _outbox_item(message: OutboxMessage) -> dict[str, Any]:
         "event_id": message.event.id,
         "event_type": message.event.type,
         "event_subject": message.event.subject,
-        "event_data": message.event.data,
+        "event_data": _redacted_admin_payload(message.event.data),
         "idempotency_key": message.idempotency_key,
         "status": message.dispatch_status.value,
         "claim_owner": message.claim_owner,
@@ -1099,7 +1105,7 @@ def _workflow_state_item(state: WorkflowState) -> dict[str, Any]:
         "status": state.status.value,
         "step": state.step,
         "idempotency_key": state.idempotency_key,
-        "data": state.data,
+        "data": _redacted_admin_payload(state.data),
         "created_at": _iso(state.created_at),
         "updated_at": _iso(state.updated_at),
     }
@@ -1144,7 +1150,7 @@ def _workflow_error_item(state: WorkflowState) -> dict[str, Any]:
         "event_type": state.workflow_type,
         "operation": state.step,
         "type": state.workflow_type,
-        "message": state.data.get("error", state.step),
+        "message": _redacted_failure_message(state.data, fallback=state.step),
         "run_id": "",
         "workflow_id": state.workflow_id,
         "agent_id": "",
@@ -1160,7 +1166,7 @@ def _outbox_error_item(message: OutboxMessage) -> dict[str, Any]:
         "event_type": message.event.type,
         "operation": message.event.type,
         "type": message.event.type,
-        "message": message.event.data.get("error", ""),
+        "message": _redacted_failure_message(message.event.data),
         "run_id": "",
         "workflow_id": "",
         "agent_id": "",
@@ -1168,8 +1174,42 @@ def _outbox_error_item(message: OutboxMessage) -> dict[str, Any]:
     }
 
 
-def _model_item(model: Any) -> dict[str, Any]:
-    return model.model_dump(mode="json")
+def _event_item(event: CloudEvent) -> dict[str, Any]:
+    item = event.model_dump(mode="json")
+    item["data"] = _redacted_admin_payload(event.data)
+    return item
+
+
+def _redacted_admin_payload(data: dict[str, Any]) -> dict[str, Any]:
+    safe_data = redact_trace_mapping(data)
+    found, value = _payload_error(data)
+    if found:
+        metadata = redacted_text_metadata(value)
+        safe_data["error_length"] = metadata["message_length"]
+        safe_data["error_sha256"] = metadata["message_sha256"]
+    return safe_data
+
+
+def _redacted_failure_message(
+    data: dict[str, Any], *, fallback: str = ""
+) -> str:
+    found, _ = _payload_error(data)
+    if found:
+        return REDACTED
+    return safe_category(fallback) or ""
+
+
+def _payload_error(data: dict[str, Any]) -> tuple[bool, Any]:
+    for key, value in data.items():
+        if isinstance(key, str):
+            normalized = "".join(
+                character
+                for character in key.casefold()
+                if character.isalnum()
+            )
+            if normalized == "error":
+                return True, value
+    return False, None
 
 
 def _preview(text: str, *, length: int = 160) -> str:
@@ -1277,7 +1317,6 @@ _ERROR_FILTER_SCRIPT = """
 })();
 </script>
 """.strip()
-
 
 _CSS = """
 :root {

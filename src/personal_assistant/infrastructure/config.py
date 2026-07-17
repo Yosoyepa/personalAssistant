@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+from personal_assistant.domain.common.permissions import PermissionTier
 
 
 DEFAULT_MINIMAX_BASE_URL = "https://api.minimax.io/anthropic"
@@ -64,6 +66,18 @@ def _env_bool(name: str, file_values: dict[str, str], default: bool = False) -> 
     return value in {"1", "true", "yes", "y", "on"}
 
 
+def _env_permission_tier(
+    name: str,
+    file_values: dict[str, str],
+    default: PermissionTier,
+) -> PermissionTier:
+    configured = _env(name, file_values, default.value).strip().upper()
+    try:
+        return PermissionTier(configured)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be one of P0-P6") from exc
+
+
 def load_persistence_settings_from_env() -> tuple[str, str | None]:
     file_values = _load_env_file()
     return (
@@ -105,7 +119,9 @@ class AppSettings:
     tts_timeout_seconds: float = 30.0
     tts_max_reply_characters: int = 280
     telegram_audio_reply_mode: str = "disabled"
-    admin_token: str | None = None
+    admin_token: str | None = field(default=None, repr=False)
+    local_auth_principal_id: str = "local-user"
+    local_auth_permission_tier: PermissionTier = PermissionTier.P5
     public_base_url: str | None = None
     reminder_worker_enabled: bool = False
     reminder_worker_interval_seconds: float = 15.0
@@ -119,6 +135,25 @@ class AppSettings:
                 "ASSISTANT_TIMEZONE must be a valid IANA timezone"
             ) from exc
         object.__setattr__(self, "timezone", timezone.key)
+        if (
+            not isinstance(self.local_auth_principal_id, str)
+            or not self.local_auth_principal_id
+            or self.local_auth_principal_id != self.local_auth_principal_id.strip()
+            or len(self.local_auth_principal_id) > 200
+            or not self.local_auth_principal_id.isprintable()
+        ):
+            raise ValueError(
+                "LOCAL_AUTH_PRINCIPAL_ID must be valid non-blank identity text"
+            )
+        try:
+            local_auth_permission_tier = PermissionTier(self.local_auth_permission_tier)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("LOCAL_AUTH_PERMISSION_TIER must be one of P0-P6") from exc
+        object.__setattr__(
+            self,
+            "local_auth_permission_tier",
+            local_auth_permission_tier,
+        )
 
     @classmethod
     def from_env(cls) -> "AppSettings":
@@ -248,6 +283,14 @@ class AppSettings:
             .lower()
             or "disabled",
             admin_token=_optional_env("ADMIN_TOKEN", file_values),
+            local_auth_principal_id=_env(
+                "LOCAL_AUTH_PRINCIPAL_ID", file_values, "local-user"
+            ).strip(),
+            local_auth_permission_tier=_env_permission_tier(
+                "LOCAL_AUTH_PERMISSION_TIER",
+                file_values,
+                PermissionTier.P5,
+            ),
             public_base_url=_optional_env("PUBLIC_BASE_URL", file_values),
             reminder_worker_enabled=_env_bool("REMINDER_WORKER_ENABLED", file_values),
             reminder_worker_interval_seconds=max(float(interval), 1.0),

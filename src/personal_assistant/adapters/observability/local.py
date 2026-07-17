@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from personal_assistant.application.dto.tracing import TraceEvent
-from personal_assistant.domain.common.identity import Principal, require_trusted_principal
+from personal_assistant.domain.common.identity import (
+    Principal,
+    require_trusted_principal,
+)
 
 
 class TraceRecorder:
@@ -13,15 +16,23 @@ class TraceRecorder:
         self._events: list[TraceEvent] = []
 
     def write(self, event: TraceEvent) -> None:
-        self._events.append(event)
+        self._events.append(event.for_persistence())
 
     def list_for_tenant(self, principal: Principal | str) -> list[TraceEvent]:
         tenant_id = _tenant_id_from_principal(principal)
-        return [event for event in self._events if event.tenant_id == tenant_id]
+        return [
+            event.for_persistence()
+            for event in self._events
+            if event.tenant_id == tenant_id
+        ]
 
     def list_for_run(self, principal: Principal | str, run_id: str) -> list[TraceEvent]:
         tenant_id = _tenant_id_from_principal(principal)
-        return [event for event in self._events if event.tenant_id == tenant_id and event.run_id == run_id]
+        return [
+            event.for_persistence()
+            for event in self._events
+            if event.tenant_id == tenant_id and event.run_id == run_id
+        ]
 
 
 def _tenant_id_from_principal(principal: Principal | str) -> str:

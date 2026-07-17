@@ -5,13 +5,24 @@ import json
 import unittest
 from urllib.error import HTTPError
 
-from personal_assistant.adapters.outbound.llm.anthropic import AnthropicCompatibleLLMProvider
+from personal_assistant.adapters.outbound.llm.anthropic import (
+    AnthropicCompatibleLLMProvider,
+)
 from personal_assistant.adapters.outbound.llm.minimax import MiniMaxLLMProvider
-from personal_assistant.adapters.outbound.transcription.openai_compatible import OpenAICompatibleTranscriptionProvider
+from personal_assistant.adapters.outbound.transcription.openai_compatible import (
+    OpenAICompatibleTranscriptionProvider,
+)
 from personal_assistant.adapters.outbound.tts.minimax import MiniMaxTTSProvider
 from personal_assistant.application.dto.context import TokenBudget
-from personal_assistant.application.dto.runtime import AudioSynthesisRequest, AudioTranscriptionRequest, LLMRequest
-from personal_assistant.application.services.prompts import PromptTemplate, StaticPromptCatalog
+from personal_assistant.application.dto.runtime import (
+    AudioSynthesisRequest,
+    AudioTranscriptionRequest,
+    LLMRequest,
+)
+from personal_assistant.application.services.prompts import (
+    PromptTemplate,
+    StaticPromptCatalog,
+)
 from personal_assistant.domain.common.exceptions import AssistantError
 
 
@@ -116,7 +127,9 @@ class LLMAdapterTests(unittest.TestCase):
             budget=TokenBudget(limit=1000),
         )
 
-        self.assertEqual(captured["url"], "https://api.minimax.io/anthropic/v1/messages")
+        self.assertEqual(
+            captured["url"], "https://api.minimax.io/anthropic/v1/messages"
+        )
         headers = captured["headers"]
         self.assertIsInstance(headers, dict)
         self.assertEqual(headers["Authorization"], "Bearer sk-cp-test")
@@ -127,7 +140,7 @@ class LLMAdapterTests(unittest.TestCase):
         self.assertEqual(result.provider, "minimax")
         self.assertEqual(result.data["title"], "comer")
 
-    def test_anthropic_compatible_provider_preserves_http_error_body(self) -> None:
+    def test_anthropic_compatible_provider_redacts_http_error_body(self) -> None:
         def fake_urlopen(req, timeout):
             raise HTTPError(
                 req.full_url,
@@ -151,7 +164,11 @@ class LLMAdapterTests(unittest.TestCase):
                 budget=TokenBudget(limit=1000),
             )
 
-        self.assertIn("invalid api key", str(ctx.exception))
+        self.assertNotIn("invalid api key", str(ctx.exception))
+        self.assertEqual(str(ctx.exception), "internal error")
+        self.assertEqual(
+            len(ctx.exception.response.error.context["message_sha256"]), 64
+        )
 
     def test_openai_compatible_transcription_provider_parses_text(self) -> None:
         captured: dict[str, object] = {}
@@ -187,7 +204,9 @@ class LLMAdapterTests(unittest.TestCase):
         self.assertIn(b"audio-bytes", captured["body"])
         self.assertIn("cita", result.text)
 
-    def test_openai_compatible_transcription_provider_preserves_http_error_body(self) -> None:
+    def test_openai_compatible_transcription_provider_redacts_http_error_body(
+        self,
+    ) -> None:
         def fake_urlopen(req, timeout):
             raise HTTPError(
                 req.full_url,
@@ -214,7 +233,11 @@ class LLMAdapterTests(unittest.TestCase):
                 budget=TokenBudget(limit=1000),
             )
 
-        self.assertIn("unsupported audio format", str(ctx.exception))
+        self.assertNotIn("unsupported audio format", str(ctx.exception))
+        self.assertEqual(str(ctx.exception), "internal error")
+        self.assertEqual(
+            len(ctx.exception.response.error.context["message_sha256"]), 64
+        )
 
     def test_minimax_tts_provider_decodes_hex_audio(self) -> None:
         captured: dict[str, object] = {}

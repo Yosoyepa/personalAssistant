@@ -4,13 +4,13 @@
 
 | Field | Value |
 |---|---|
-| Status | `LOCAL_ACCEPTED` |
+| Status | `MERGED` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
 | Phase branch | `codex/phase-1-reminder-correctness` |
 | Base commit | `ba82d29` |
-| Local acceptance head | `45e5a5e` |
-| Pull request | pending |
-| Merge commit | pending |
+| Local acceptance commit | `e9aa5c3` |
+| Pull request | [#8](https://github.com/Yosoyepa/personalAssistant/pull/8) |
+| Merge commit | `dbc3168` |
 | Date | `2026-07-17` |
 
 ## Objective and acceptance
@@ -88,6 +88,21 @@ The four remaining strict expected failures are owned by later phases:
 4. worker restart after provider acceptance (phase 4).
 
 The former temporal characterization is now a normal passing test.
+
+## Remote evidence
+
+GitHub accepted head `e9aa5c3` after all protected checks completed:
+
+- `quality`: pass;
+- `tests (3.11)`: pass;
+- `tests (3.12)`: pass;
+- `security`: pass;
+- `postgres-integration`: pass.
+
+The pull request was mergeable and clean under branch protection. GitHub
+created merge commit `dbc3168` with parents `ba82d29` and `e9aa5c3`. Merge
+commits remain enabled; squash and rebase remain disabled; force-push and branch
+deletion remain prohibited for `main`.
 
 ## Security, data and migration review
 

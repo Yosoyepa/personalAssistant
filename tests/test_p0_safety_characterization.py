@@ -263,16 +263,13 @@ def test_request_timezone_controls_wall_clock_interpretation() -> None:
     assert event.starts_at.astimezone(UTC) == datetime(2026, 6, 23, 22, tzinfo=UTC)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="P0 auth gap: the HTTP boundary marks caller-controlled identity and permission headers as verified authentication",
-)
 def test_http_runtime_rejects_forged_principal_headers() -> None:
     app = create_app(
         build_container(),
         settings=AppSettings(
-            tenant_id="configured-tenant", reminder_worker_enabled=False
+            tenant_id="configured-tenant",
+            admin_token="test_configured_admin_token",
+            reminder_worker_enabled=False,
         ),
     )
     forged_headers = {
@@ -291,14 +288,15 @@ def test_http_runtime_rejects_forged_principal_headers() -> None:
         "timezone": "America/Bogota",
     }
 
-    with TestClient(app) as client:
+    with TestClient(app, client=("127.0.0.1", 50000)) as client:
         response = client.post(
             "/v1/runtime/reminders", json=payload, headers=forged_headers
         )
 
-    assert response.status_code in {401, 403}, (
+    assert response.status_code == 401, (
         "unverified X-Principal-Id/X-Tenant-Id/X-Permission-Tier headers must never create a trusted principal"
     )
+    assert response.json()["error"]["code"] == "authentication_required"
 
 
 @pytest.mark.xfail(

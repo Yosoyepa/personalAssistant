@@ -293,16 +293,22 @@ class AppSettingsTests(unittest.TestCase):
     "FastAPI optional dependency is not installed",
 )
 class HttpRuntimeTests(unittest.TestCase):
-    headers = {
-        "X-Principal-Id": "user-1",
-        "X-Tenant-Id": "tenant-a",
-        "X-Permission-Tier": "P5",
-    }
+    admin_token = "admin-secret"
+    headers = {"Authorization": f"Bearer {admin_token}"}
 
     def setUp(self) -> None:
         self.container = build_container()
         self.client = TestClient(
-            create_app(self.container, settings=AppSettings(tenant_id="tenant-a"))
+            create_app(
+                self.container,
+                settings=AppSettings(
+                    tenant_id="tenant-a",
+                    admin_token=self.admin_token,
+                    local_auth_principal_id="user-1",
+                    local_auth_permission_tier=PermissionTier.P5,
+                ),
+            ),
+            client=("127.0.0.1", 50000),
         )
 
     def principal(self, tenant_id: str = "tenant-a") -> Principal:
@@ -353,7 +359,7 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(ready.status_code, 200)
         self.assertEqual(ready.json()["checks"]["scheduler"], "ok")
 
-    def test_reminder_requires_principal_headers(self) -> None:
+    def test_reminder_requires_local_bearer_credentials(self) -> None:
         response = self.client.post("/v1/runtime/reminders", json=self.payload())
 
         self.assertEqual(response.status_code, 401)
@@ -471,7 +477,16 @@ class HttpRuntimeTests(unittest.TestCase):
     def test_http_approvals_survive_app_recreation_with_same_container(self) -> None:
         approval_id = self.request_pending_approval()
         recreated_client = TestClient(
-            create_app(self.container, settings=AppSettings(tenant_id="tenant-a"))
+            create_app(
+                self.container,
+                settings=AppSettings(
+                    tenant_id="tenant-a",
+                    admin_token=self.admin_token,
+                    local_auth_principal_id="user-1",
+                    local_auth_permission_tier=PermissionTier.P5,
+                ),
+            ),
+            client=("127.0.0.1", 50000),
         )
 
         approvals = recreated_client.get("/v1/runtime/approvals", headers=self.headers)
@@ -505,9 +520,20 @@ class HttpRuntimeTests(unittest.TestCase):
         tenant_a_traces = self.client.get(
             f"/v1/runtime/traces?run_id={run_id}", headers=self.headers
         )
-        tenant_b_headers = dict(self.headers, **{"X-Tenant-Id": "tenant-b"})
-        tenant_b_workflows = self.client.get(
-            "/v1/runtime/workflows", headers=tenant_b_headers
+        tenant_b_client = TestClient(
+            create_app(
+                self.container,
+                settings=AppSettings(
+                    tenant_id="tenant-b",
+                    admin_token=self.admin_token,
+                    local_auth_principal_id="user-tenant-b",
+                    local_auth_permission_tier=PermissionTier.P5,
+                ),
+            ),
+            client=("127.0.0.1", 50000),
+        )
+        tenant_b_workflows = tenant_b_client.get(
+            "/v1/runtime/workflows", headers=self.headers
         )
 
         self.assertEqual(len(tenant_a_workflows.json()), 1)
@@ -608,7 +634,7 @@ class HttpRuntimeTests(unittest.TestCase):
         client = TestClient(create_app(self.container, settings=settings))
 
         response = client.post(
-            "/webhooks/telegram/secret-1",
+            "/webhooks/telegram",
             headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
             json={
                 "update_id": 10,
@@ -656,13 +682,9 @@ class HttpRuntimeTests(unittest.TestCase):
             },
         }
 
-        first = client.post(
-            "/webhooks/telegram/secret-1", headers=headers, json=payload
-        )
+        first = client.post("/webhooks/telegram", headers=headers, json=payload)
         payload["message"]["text"] = "/recordar recuérdame pagar mañana a las 17"
-        replay = client.post(
-            "/webhooks/telegram/secret-1", headers=headers, json=payload
-        )
+        replay = client.post("/webhooks/telegram", headers=headers, json=payload)
         principal = Principal.for_test(
             principal_id="456",
             tenant_id="tenant-a",
@@ -698,7 +720,7 @@ class HttpRuntimeTests(unittest.TestCase):
         client = TestClient(create_app(container, settings=settings))
 
         response = client.post(
-            "/webhooks/telegram/secret-1",
+            "/webhooks/telegram",
             headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
             json={
                 "update_id": 10,
@@ -741,7 +763,9 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(trace.tool_call["name"], "audio.synthesize")
         self.assertEqual(trace.input_summary["stage"], "synthesize")
         self.assertEqual(trace.error["category"], "audio")
-        self.assertIn("tts unavailable", trace.error["message"])
+        self.assertEqual(trace.error["message"], "[REDACTED]")
+        self.assertEqual(trace.error["message_length"], len("tts unavailable"))
+        self.assertEqual(len(trace.error["message_sha256"]), 64)
         errors = AdminDashboard(container).errors(principal, category="audio")
         self.assertEqual(errors["total"], 1)
 
@@ -771,7 +795,11 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(trace.tool_call["name"], "notification.send")
         self.assertEqual(trace.input_summary["stage"], "send")
         self.assertEqual(trace.error["category"], "audio")
-        self.assertIn("provider rejected notification", trace.error["message"])
+        self.assertEqual(trace.error["message"], "[REDACTED]")
+        self.assertEqual(
+            trace.error["message_length"], len("provider rejected notification")
+        )
+        self.assertEqual(len(trace.error["message_sha256"]), 64)
         errors = AdminDashboard(container).errors(principal, category="audio")
         self.assertEqual(errors["total"], 1)
 
@@ -784,7 +812,7 @@ class HttpRuntimeTests(unittest.TestCase):
         client = TestClient(create_app(self.container, settings=settings))
 
         response = client.post(
-            "/webhooks/telegram/secret-1",
+            "/webhooks/telegram",
             headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
             json={
                 "update_id": 11,
@@ -885,14 +913,12 @@ class HttpRuntimeTests(unittest.TestCase):
         trace = container.traces.list_for_tenant("tenant-a")[0]
         self.assertEqual(trace.event_type, TraceEventType.tool_called)
         self.assertEqual(trace.tool_call["name"], "audio.transcribe")
-        self.assertEqual(
-            trace.output_summary["transcript"], "recuérdame pagar arriendo en 2 minutos"
-        )
-        self.assertEqual(
-            trace.input_summary["transcription_filename"], "telegram-45.ogg"
-        )
+        self.assertEqual(trace.output_summary["transcript"], "[REDACTED]")
+        self.assertEqual(trace.output_summary["text_length"], len(transcribed.text))
+        self.assertEqual(len(trace.output_summary["transcript_sha256"]), 64)
+        self.assertEqual(trace.input_summary["transcription_filename"], "[REDACTED]")
 
-    def test_telegram_webhook_rejects_invalid_secret_and_user(self) -> None:
+    def test_telegram_webhook_rejects_missing_or_invalid_secret_and_user(self) -> None:
         settings = AppSettings(
             tenant_id="tenant-a",
             telegram_webhook_secret="secret-1",
@@ -909,11 +935,27 @@ class HttpRuntimeTests(unittest.TestCase):
             },
         }
 
-        wrong_secret = client.post("/webhooks/telegram/wrong", json=payload)
-        wrong_user = client.post("/webhooks/telegram/secret-1", json=payload)
+        missing_secret = client.post("/webhooks/telegram", json=payload)
+        wrong_secret = client.post(
+            "/webhooks/telegram",
+            headers={"X-Telegram-Bot-Api-Secret-Token": "wrong"},
+            json=payload,
+        )
+        wrong_user = client.post(
+            "/webhooks/telegram",
+            headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
+            json=payload,
+        )
+        legacy_path = client.post(
+            "/webhooks/telegram/secret-1",
+            headers={"X-Telegram-Bot-Api-Secret-Token": "secret-1"},
+            json=payload,
+        )
 
+        self.assertEqual(missing_secret.status_code, 403)
         self.assertEqual(wrong_secret.status_code, 403)
         self.assertEqual(wrong_user.status_code, 403)
+        self.assertEqual(legacy_path.status_code, 404)
 
     def test_reminder_worker_starts_when_enabled(self) -> None:
         settings = AppSettings(
@@ -938,7 +980,12 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertFalse(thread.is_alive())
 
     def test_admin_endpoints_use_default_settings_tenant(self) -> None:
-        settings = AppSettings(tenant_id="tenant-a")
+        settings = AppSettings(
+            tenant_id="tenant-a",
+            admin_token=self.admin_token,
+            local_auth_principal_id="user-1",
+            local_auth_permission_tier=PermissionTier.P5,
+        )
         client = TestClient(
             create_app(self.container, settings=settings), client=("127.0.0.1", 50000)
         )
@@ -954,9 +1001,9 @@ class HttpRuntimeTests(unittest.TestCase):
         )
         self.assertEqual(approved.status_code, 200, approved.text)
 
-        page = client.get("/admin")
-        snapshot = client.get("/admin/snapshot")
-        health = client.get("/admin/health")
+        page = client.get("/admin", headers=self.headers)
+        snapshot = client.get("/admin/snapshot", headers=self.headers)
+        health = client.get("/admin/health", headers=self.headers)
         admin_paths = {
             route.path
             for route in client.app.routes
@@ -999,7 +1046,7 @@ class HttpRuntimeTests(unittest.TestCase):
         for path in sorted(
             admin_paths - {"/admin", "/admin/snapshot", "/admin/health"}
         ):
-            response = client.get(path)
+            response = client.get(path, headers=self.headers)
             self.assertEqual(response.status_code, 200, response.text)
             section = path.rsplit("/", 1)[-1]
             self.assertEqual(response.json(), snapshot_body[section])
@@ -1014,15 +1061,15 @@ class HttpRuntimeTests(unittest.TestCase):
         bearer = client.get(
             "/admin/health", headers={"Authorization": "Bearer admin-secret"}
         )
-        custom_header = client.get(
+        legacy_header = client.get(
             "/admin/health", headers={"X-Admin-Token": "admin-secret"}
         )
-        wrong = client.get("/admin/health", headers={"X-Admin-Token": "wrong"})
+        wrong = client.get("/admin/health", headers={"Authorization": "Bearer wrong"})
 
-        self.assertEqual(missing.status_code, 403, missing.text)
-        self.assertEqual(wrong.status_code, 403, wrong.text)
+        self.assertEqual(missing.status_code, 401, missing.text)
+        self.assertEqual(wrong.status_code, 401, wrong.text)
         self.assertEqual(bearer.status_code, 200, bearer.text)
-        self.assertEqual(custom_header.status_code, 200, custom_header.text)
+        self.assertEqual(legacy_header.status_code, 401, legacy_header.text)
 
 
 if __name__ == "__main__":

@@ -97,6 +97,17 @@ Input invariants:
 - `channel` must equal `telegram` for the MVP.
 - `principal.tenant_id` must be present and non-empty.
 - `principal.auth_source` must equal `telegram`.
+- The only Telegram ingress route is `POST /webhooks/telegram`; a path-secret
+  route is not registered.
+- The Telegram wrapper requires `X-Telegram-Bot-Api-Secret-Token` and compares
+  it to configured authority with `secrets.compare_digest`; a missing or empty
+  configured secret fails closed.
+- `principal.telegram_user_id` comes only from Telegram user `from.id` data.
+  `message.chat_id` is never an actor fallback, and an update without a
+  verifiable actor is rejected before agent invocation.
+- Telegram actor authorization is default-deny. An empty allowlist permits no
+  actors, and denied updates reach no commands, approvals, workflow state,
+  events, outbox, Telegram reply, transcription, or TTS path.
 - `tenant_id` must not be accepted from `message.text`, attachment content, LLM output, or tool arguments.
 - Attachment size must be within the small-document limit defined by the document module.
 - Reminder idempotency identity is the versioned tuple `(tenant_id, channel, principal_id, conversation_id, source_event_id)`; tenant and principal come from the trusted principal.
@@ -295,12 +306,17 @@ Output invariants:
 | AC-41 | A matching identity with changed payload fails before effects. | Unit test `test_same_identity_with_changed_payload_conflicts_before_effects`. |
 | AC-42 | Concurrent in-memory registrations elect one executor. | Unit test `test_register_or_replay_is_atomic_under_concurrency`. |
 | AC-43 | A waiting-approval replay with a legitimate grant resumes the workflow. | Unit test `test_waiting_approval_replay_with_legitimate_grant_resumes`. |
+| AC-44 | Telegram registers only the header-authenticated `POST /webhooks/telegram` route. | Static integration test `test_only_header_authenticated_telegram_route_is_registered`. |
+| AC-45 | A missing, mismatched, or unconfigured Telegram secret header is rejected before normalization or agent work. | Adversarial integration test `test_denied_updates_stop_before_commands_state_or_external_work` secret cases. |
+| AC-46 | An empty Telegram actor allowlist denies every update. | Adversarial integration test `test_denied_updates_stop_before_commands_state_or_external_work[empty-allowlist]`. |
+| AC-47 | Telegram never derives actor identity from `chat.id`. | Unit test `test_normalizer_never_derives_actor_from_chat`. |
+| AC-48 | Every Telegram ingress denial precedes commands, approvals, state, events, outbox, reply, transcription, and TTS work. | Adversarial integration test `test_denied_updates_stop_before_commands_state_or_external_work`. |
 
 ## 11. Failure Modes
 
 | ID | Failure mode | Detection | Required behavior |
 |---|---|---|---|
-| FM-01 | Telegram user cannot be mapped to a principal. | `identity.assert_principal` fails. | Return `failed` with `missing_principal`; write audit trace; do not route intent. |
+| FM-01 | Telegram update lacks `from.id` or its actor is not allowlisted. | Ingress actor verification or default-deny allowlist fails. | Return HTTP 403 before agent invocation; do not route intent or create state/effects. |
 | FM-02 | User asks "tomorrow" but no timezone is known. | Date parser lacks timezone. | Return `needs_clarification`; do not create reminder/calendar item. |
 | FM-03 | Telegram retries the same webhook after a timeout. | Existing `idempotency_key` found. | Return prior result or resume; do not duplicate state or outbox rows. |
 | FM-04 | User says "cancel my appointment" and multiple candidates match. | Target resolver returns more than one candidate. | Ask for clarification with candidate references. |
@@ -317,6 +333,7 @@ Output invariants:
 | FM-15 | A tool call attempts `mcp.search` or `a2a.delegate`. | Tool allowlist check fails. | Fail closed and record policy violation. |
 | FM-16 | The same reminder source-event identity arrives with a changed canonical payload. | Stored payload fingerprint differs from the candidate fingerprint. | Raise typed `ReminderIdempotencyConflict` with key/version metadata only; do not overwrite state or execute effects. |
 | FM-17 | A matching replay arrives while its elected executor is still `running`. | Atomic registration returns a matching running state. | Return a non-executing replay result; do not duplicate effects. |
+| FM-18 | Telegram secret header is missing/mismatched or no webhook secret is configured. | Constant-time ingress comparison fails. | Return HTTP 403 before update normalization; do not expose either secret or invoke agent/provider work. |
 
 ## 12. Escalation Rules
 
@@ -386,4 +403,17 @@ Required event types:
 - `outbox.appended` when side-effect intents are created;
 - `agent.completed`, `agent.declined`, `agent.escalated`, or `agent.failed`.
 
-Logs must not include raw OAuth tokens, secrets, full document bodies, or raw Telegram transcript dumps. Sensitive fields are redacted before trace write.
+Trace and structured-error privacy is enforced at the shared DTO/store boundary,
+not by individual callers. The in-memory and Postgres trace recorders must
+materialize the same sanitized representation before persistence, and trace
+serialization must reapply the policy after any mutable-field change.
+
+Persisted trace metadata is fail-closed: only explicitly classified safe
+identifiers, hashes, sizes/counts, categories, and bounded operational metadata
+are retained. Unknown fields are omitted. Message text, transcripts, prompts,
+document/body/content fields, credentials/tokens/secrets, and sensitive URLs are
+redacted to a marker plus length/hash metadata. Binary and audio content is
+reduced to media kind, byte size, and SHA-256; no bytes are retained. Structured
+errors expose only an explicit public-message allowlist keyed by `ErrorCode`,
+with a generic per-code fallback; a rejected diagnostic message is reduced to
+length and SHA-256.

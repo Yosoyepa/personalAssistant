@@ -111,8 +111,12 @@ Expected output criteria:
 
 ## Current Runtime API Smoke Test
 
-The runtime API accepts trusted local HTTP headers and runtime-shaped JSON. It
-does not accept raw Telegram Update JSON.
+The runtime API is loopback-only and accepts runtime-shaped JSON; it does not
+accept raw Telegram Update JSON. Every `/v1/runtime/*` request requires
+`Authorization: Bearer <ADMIN_TOKEN>`. The server fixes tenant, principal, and
+permission tier from `ASSISTANT_TENANT_ID`, `LOCAL_AUTH_PRINCIPAL_ID`, and
+`LOCAL_AUTH_PERMISSION_TIER`; identity headers and query parameters do not
+grant or alter authority.
 
 Install API dependencies:
 
@@ -138,22 +142,28 @@ curl -sS http://127.0.0.1:8000/readyz | python3 -m json.tool
 Create a reminder request. This should return `202` with a pending approval and
 no calendar side effect yet:
 
-```bash
-curl -sS -X POST http://127.0.0.1:8000/v1/runtime/reminders \
-  -H "Content-Type: application/json" \
-  -H "X-Principal-Id: user-local" \
-  -H "X-Tenant-Id: tenant-local" \
-  -H "X-Permission-Tier: P5" \
-  -d '{
-    "message_id": "telegram-message-1",
-    "conversation_id": "telegram-chat-1",
-    "text": "recuerdame clase el martes a las 5",
-    "channel": "telegram",
-    "recipient": "telegram-chat-1",
-    "now": "2026-06-20T12:00:00+00:00",
-    "timezone": "America/Bogota"
-  }' \
-  | python3 -m json.tool
+```powershell
+# Read from ignored .env into this PowerShell process; do not print the value.
+$adminLines = @(Get-Content .env | Where-Object {
+  $_ -match '^ADMIN_TOKEN="[^"]+"$'
+})
+if ($adminLines.Count -ne 1) { throw 'Expected exactly one non-empty ADMIN_TOKEN.' }
+$adminToken = ([regex]::Match(
+  $adminLines[0], '^ADMIN_TOKEN="(?<value>[^"]+)"$')).Groups['value'].Value
+$headers = @{ Authorization = "Bearer $adminToken" }
+$body = @{
+  message_id = 'telegram-message-1'
+  conversation_id = 'telegram-chat-1'
+  text = 'recuerdame clase el martes a las 5'
+  channel = 'telegram'
+  recipient = 'telegram-chat-1'
+  now = '2026-06-20T12:00:00+00:00'
+  timezone = 'America/Bogota'
+} | ConvertTo-Json
+Invoke-RestMethod -Method Post `
+  -Uri 'http://127.0.0.1:8000/v1/runtime/reminders' `
+  -Headers $headers -ContentType 'application/json' -Body $body |
+  ConvertTo-Json -Depth 10
 ```
 
 Pass criteria:
@@ -165,16 +175,12 @@ Pass criteria:
 
 Approve the pending action:
 
-```bash
-APPROVAL_ID="<approval id from previous response>"
-
-curl -sS -X POST "http://127.0.0.1:8000/v1/runtime/approvals/${APPROVAL_ID}/approve" \
-  -H "Content-Type: application/json" \
-  -H "X-Principal-Id: user-local" \
-  -H "X-Tenant-Id: tenant-local" \
-  -H "X-Permission-Tier: P5" \
-  -d '{}' \
-  | python3 -m json.tool
+```powershell
+$approvalId = '<approval id from previous response>'
+Invoke-RestMethod -Method Post `
+  -Uri "http://127.0.0.1:8000/v1/runtime/approvals/$approvalId/approve" `
+  -Headers $headers -ContentType 'application/json' -Body '{}' |
+  ConvertTo-Json -Depth 10
 ```
 
 Pass criteria:
@@ -187,29 +193,24 @@ Pass criteria:
 
 Inspect runtime traces:
 
-```bash
-curl -sS http://127.0.0.1:8000/v1/runtime/traces \
-  -H "X-Principal-Id: user-local" \
-  -H "X-Tenant-Id: tenant-local" \
-  -H "X-Permission-Tier: P5" \
-  | python3 -m json.tool
+```powershell
+Invoke-RestMethod -Method Get `
+  -Uri 'http://127.0.0.1:8000/v1/runtime/traces' -Headers $headers |
+  ConvertTo-Json -Depth 10
 ```
+
+After the local smoke test, run `Remove-Variable adminToken, headers` in that
+PowerShell session.
 
 ## Current Local Admin Dashboard
 
 The dashboard/admin surface is documented in
 `docs/runbook/admin-dashboard.md`. The admin app is local-only, rejects
-non-loopback clients, and is read-only. When `ADMIN_TOKEN` is configured, admin
-routes require a matching Bearer token or `X-Admin-Token` header; do not expose
-these routes outside loopback.
+non-loopback clients, and is read-only. Admin routes always require
+`Authorization: Bearer <ADMIN_TOKEN>`; `X-Admin-Token` is not an alternative.
+Do not expose these routes outside loopback.
 
 ```bash
-export ADMIN_TOKEN="$(python3 - <<'PY'
-import secrets
-print(secrets.token_urlsafe(32))
-PY
-)"
-
 PYTHONPATH=src python3 -m uvicorn personal_assistant.infrastructure.http:app \
   --host 127.0.0.1 \
   --port 8000
@@ -218,24 +219,24 @@ PYTHONPATH=src python3 -m uvicorn personal_assistant.infrastructure.http:app \
 Open:
 
 ```text
-http://127.0.0.1:8000/admin?tenant_id=tenant-local&principal_id=user-local
+http://127.0.0.1:8000/admin
 ```
 
 Useful JSON endpoints:
 
 ```text
-http://127.0.0.1:8000/admin/snapshot?tenant_id=tenant-local&principal_id=user-local
-http://127.0.0.1:8000/admin/health?tenant_id=tenant-local&principal_id=user-local
-http://127.0.0.1:8000/admin/approvals?tenant_id=tenant-local&principal_id=user-local
-http://127.0.0.1:8000/admin/traces?tenant_id=tenant-local&principal_id=user-local
-http://127.0.0.1:8000/admin/outbox?tenant_id=tenant-local&principal_id=user-local
-http://127.0.0.1:8000/admin/scheduler?tenant_id=tenant-local&principal_id=user-local
-http://127.0.0.1:8000/admin/agenda?tenant_id=tenant-local&principal_id=user-local
-http://127.0.0.1:8000/admin/reminders?tenant_id=tenant-local&principal_id=user-local
-http://127.0.0.1:8000/admin/errors?tenant_id=tenant-local&principal_id=user-local
-http://127.0.0.1:8000/admin/events?tenant_id=tenant-local&principal_id=user-local
-http://127.0.0.1:8000/admin/states?tenant_id=tenant-local&principal_id=user-local
-http://127.0.0.1:8000/admin/memory?tenant_id=tenant-local&principal_id=user-local
+http://127.0.0.1:8000/admin/snapshot
+http://127.0.0.1:8000/admin/health
+http://127.0.0.1:8000/admin/approvals
+http://127.0.0.1:8000/admin/traces
+http://127.0.0.1:8000/admin/outbox
+http://127.0.0.1:8000/admin/scheduler
+http://127.0.0.1:8000/admin/agenda
+http://127.0.0.1:8000/admin/reminders
+http://127.0.0.1:8000/admin/errors
+http://127.0.0.1:8000/admin/events
+http://127.0.0.1:8000/admin/states
+http://127.0.0.1:8000/admin/memory
 ```
 
 Dashboard criteria:
@@ -256,8 +257,6 @@ worker variables below.
 |---|---|---:|---|
 | `APP_ENV_FILE=.env` | Local runtime startup | No | Optional env file loaded by `AppSettings`; use empty value to disable file loading in tests. |
 | `PYTHONPATH=src` | Local commands without editable install | No | Makes the package importable. |
-| `APP_HOST=127.0.0.1` | Uvicorn shell command | No | Local bind host; consumed by shell command, not `AppSettings`. |
-| `APP_PORT=8000` | Uvicorn shell command | No | Local bind port for runtime API or ngrok upstream. |
 | `ASSISTANT_TENANT_ID=personal` | Telegram bridge/runtime config | No | Trusted tenant default. Must not come from message text. |
 | `ASSISTANT_TIMEZONE=America/Bogota` | Runtime request construction | No | Default timezone for local scheduling. |
 | `ASSISTANT_REPLY_LOCALE=es` | Runtime replies | No | Locale catalog used for user-facing command and workflow copy. |
@@ -265,9 +264,9 @@ worker variables below.
 | `TELEGRAM_WEBHOOK_SECRET` | Setting and validating webhook | Yes | Expected `X-Telegram-Bot-Api-Secret-Token` value. |
 | `PUBLIC_BASE_URL` | Setting webhook | No | Public HTTPS ngrok/domain base URL. |
 | `TELEGRAM_WEBHOOK_URL` | Local shell convenience | No | Public HTTPS URL plus webhook path for `setWebhook`. |
-| `TELEGRAM_ALLOWED_USER_IDS` | Future Telegram auth mapping | No | Comma-separated Telegram user IDs allowed in local/dev. |
+| `TELEGRAM_ALLOWED_USER_IDS` | Accepting Telegram updates | No | Comma-separated Telegram user IDs allowed in local/dev. Empty means deny everyone. |
 | `NGROK_AUTHTOKEN` | Configuring ngrok agent | Yes | Used by `ngrok config add-authtoken`; do not commit. |
-| `ADMIN_TOKEN` | Local admin hardening | Yes | Optional. When configured, admin routes require a matching Bearer token or `X-Admin-Token` header in addition to loopback access. |
+| `ADMIN_TOKEN` | Local runtime/admin access | Yes | Required for `/v1/runtime/*`, `/admin`, and `/admin/*`; send only as `Authorization: Bearer <ADMIN_TOKEN>` over loopback. |
 | `REMINDER_WORKER_ENABLED=true` | Reminder notification dispatch | No | Starts the FastAPI background worker that sends due reminder notifications. |
 | `REMINDER_WORKER_INTERVAL_SECONDS=15` | Worker loop config | No | Minimum interval is clamped to 1 second. |
 | `REMINDER_MINUTES_BEFORE=30` | Event reminder scheduling | No | Minutes before a calendar event when the bot should notify. Relative reminders like `recuérdame en 2 minutos...` notify at the requested time instead. |
@@ -354,11 +353,14 @@ ngrok help
 ngrok config add-authtoken "$NGROK_AUTHTOKEN"
 ```
 
-Start the current runtime API on `APP_PORT`, then expose it for manual HTTP
-testing:
+Start the runtime with explicit `--host 127.0.0.1 --port 8000`, then configure ngrok (or another
+HTTPS edge) to forward **only** `POST /webhooks/telegram`. Do not use an
+unrestricted tunnel to port 8000: that would publish health, runtime, and admin
+routes. The exact allowlist and verification checklist are in
+`docs/runbook/hardened-local-deployment.md`.
 
 ```bash
-ngrok http 8000
+<configure an HTTPS edge with only POST /webhooks/telegram allowed>
 ```
 
 Copy the public HTTPS forwarding URL from the ngrok terminal output. Keep the
@@ -370,30 +372,38 @@ http://localhost:4040
 
 ngrok inspection criteria:
 
-- A manual request produces a `POST` request to the configured runtime path.
+- A Telegram request produces a `POST /webhooks/telegram` request only.
 - Request body is JSON.
 - Upstream response is a `2xx`.
 - Replaying the request against the local server does not duplicate state when a
   stable idempotency key is used.
 
 Do not point BotFather at `/v1/runtime/reminders`: that endpoint expects trusted
-runtime headers and a runtime request body, not raw Telegram Update JSON.
+loopback admin authentication and a runtime request body, not raw Telegram
+Update JSON.
 
 ## Telegram Bridge Contract
 
 The Bot API bridge route is:
 
 ```text
-POST /webhooks/telegram/{TELEGRAM_WEBHOOK_SECRET}
+POST /webhooks/telegram
 Header: X-Telegram-Bot-Api-Secret-Token: <TELEGRAM_WEBHOOK_SECRET>
 Body: Telegram Update JSON
 ```
 
 Wrapper responsibilities:
 
-- Validate the Telegram secret-token header before parsing the request.
-- Map Telegram user/chat to a known `Principal` and tenant from trusted config.
-- Reject unknown Telegram users before intent routing.
+- Require the Telegram secret-token header and validate it with
+  `secrets.compare_digest` before update normalization.
+- Derive the actor only from Telegram user `from.id` data. Never use `chat.id`
+  as an actor fallback.
+- Reject updates without a verifiable actor and reject actors absent from the
+  configured allowlist. An empty allowlist denies everyone.
+- Perform every denial before transcription, command routing, approvals,
+  workflow state, domain events, outbox writes, Telegram replies, or TTS.
+- Map the verified Telegram user to a known `Principal` and tenant from trusted
+  config.
 - Call `normalize_telegram_webhook(payload, tenant_id=trusted_tenant_id)`.
 - Route normalized commands through `container.commands.handle(...)` with a
   trusted clock and timezone.
@@ -415,73 +425,161 @@ The wrapper must not:
 
 Source: <https://core.telegram.org/bots/api#setwebhook>
 
-After the runtime is running and ngrok is forwarding to it:
+After the loopback runtime and the restricted HTTPS edge are running, save the
+following helper as an ignored local file, for example
+`telegram-webhook.local.ps1`. It reads `.env` into process memory and prints
+only sanitized status/metadata. The Bot API requires the bot token in its
+request URL, but the helper builds that URL only inside the process: it never
+appears in argv, a process listing, terminal output, or the public webhook URL.
+Do not add this local helper or `.env` to git.
 
-```bash
-export TELEGRAM_WEBHOOK_SECRET="$(python3 - <<'PY'
-import secrets
-print(secrets.token_urlsafe(32).replace("-", "_")[:64])
-PY
-)"
-export TELEGRAM_WEBHOOK_URL="https://your-ngrok-domain.example/webhooks/telegram/${TELEGRAM_WEBHOOK_SECRET}"
+```powershell
+param(
+  [Parameter(Mandatory)]
+  [ValidateSet('set', 'info', 'delete')]
+  [string]$Action,
+  [string]$EnvFile = '.env'
+)
 
-curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
-  -H "Content-Type: application/json" \
-  -d @- <<JSON
-{
-  "url": "${TELEGRAM_WEBHOOK_URL}",
-  "secret_token": "${TELEGRAM_WEBHOOK_SECRET}",
-  "allowed_updates": ["message", "edited_message"],
-  "drop_pending_updates": true
+$values = @{}
+Get-Content -LiteralPath $EnvFile -ErrorAction Stop | ForEach-Object {
+  if ($_ -match '^\s*([A-Z0-9_]+)="?([^"#]*)"?\s*$') {
+    $values[$matches[1]] = $matches[2]
+  }
 }
-JSON
+foreach ($name in 'TELEGRAM_BOT_TOKEN') {
+  if ([string]::IsNullOrWhiteSpace($values[$name])) {
+    throw "Missing setting: $name"
+  }
+}
+
+$endpoint = 'https://api.telegram.org/bot' + $values.TELEGRAM_BOT_TOKEN
+if ($Action -eq 'set') {
+  foreach ($name in 'TELEGRAM_WEBHOOK_SECRET', 'PUBLIC_BASE_URL') {
+    if ([string]::IsNullOrWhiteSpace($values[$name])) {
+      throw "Missing setting: $name"
+    }
+  }
+  $publicBase = $null
+  if (-not [Uri]::TryCreate(
+      $values.PUBLIC_BASE_URL,
+      [UriKind]::Absolute,
+      [ref]$publicBase)) {
+    throw 'PUBLIC_BASE_URL must be an absolute HTTPS origin.'
+  }
+  if ($publicBase.Scheme -ne [Uri]::UriSchemeHttps -or
+      $publicBase.UserInfo -or
+      $publicBase.Query -or
+      $publicBase.Fragment -or
+      ($publicBase.AbsolutePath -ne '/' -and $publicBase.AbsolutePath -ne '')) {
+    $message = 'PUBLIC_BASE_URL must be an HTTPS origin without userinfo, '
+    throw ($message + 'query, fragment, or path.')
+  }
+  $origin = $publicBase.GetLeftPart([UriPartial]::Authority)
+  $webhookUrl = $origin + '/webhooks/telegram'
+  $body = @{
+    url = $webhookUrl
+    secret_token = $values.TELEGRAM_WEBHOOK_SECRET
+    allowed_updates = @('message', 'edited_message')
+    drop_pending_updates = $true
+  } | ConvertTo-Json -Compress
+}
+try {
+  switch ($Action) {
+    'set' {
+      $response = Invoke-RestMethod -Method Post -Uri ($endpoint + '/setWebhook') `
+        -ContentType 'application/json' -Body $body
+    }
+    'info' {
+      $response = Invoke-RestMethod -Method Get `
+        -Uri ($endpoint + '/getWebhookInfo')
+    }
+    'delete' {
+      $body = @{ drop_pending_updates = $true } | ConvertTo-Json -Compress
+      $response = Invoke-RestMethod -Method Post `
+        -Uri ($endpoint + '/deleteWebhook') `
+        -ContentType 'application/json' -Body $body
+    }
+  }
+} catch {
+  # Do not surface the original error: it can include Telegram's tokenized URL.
+  $Error.Clear()
+  throw "Telegram $Action request failed."
+} finally {
+  $endpoint = $null
+  $body = $null
+  $webhookUrl = $null
+  $matches = $null
+  if ($null -ne $values) { $values.Clear() }
+}
+if (-not $response.ok) {
+  $Error.Clear()
+  throw "Telegram $Action failed."
+}
+
+Write-Output "action=$Action ok=true"
+if ($Action -eq 'info') {
+  $uri = [Uri]$response.result.url
+  $metadata = 'webhook_host={0} webhook_path={1} pending_updates={2} ' +
+    'has_last_error={3}'
+  Write-Output ($metadata -f $uri.Host, $uri.AbsolutePath,
+    $response.result.pending_update_count,
+    [bool]$response.result.last_error_message)
+}
 ```
 
-Verification:
+On failure, keep only the helper's generic error. Do not print `$Error`, the
+original exception, request diagnostics, or a stack trace: any of them could
+contain the tokenized Bot API URL.
 
-```bash
-curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe" \
-  | python3 -m json.tool
+Run the local helper without credentials in arguments:
 
-curl -sS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo" \
-  | python3 -m json.tool
+```powershell
+.\telegram-webhook.local.ps1 -Action set
+.\telegram-webhook.local.ps1 -Action info
 ```
 
 Pass criteria:
 
-- `getMe.ok` is `true`.
 - `getWebhookInfo.ok` is `true`.
-- `getWebhookInfo.result.url` equals `TELEGRAM_WEBHOOK_URL`.
+- The sanitized `webhook_host` and `webhook_path` match the intended public
+  HTTPS webhook URL; no secret appears in the URL.
 - `pending_update_count` returns to `0` after test messages are processed.
 - `last_error_message` is absent or stale from before this setup.
 - ngrok inspection shows Telegram `POST` requests reaching the local route.
 - Local traces include the expected lifecycle events and no secrets.
 
-Remove the webhook when the local server or ngrok tunnel stops:
+Remove the webhook when the local server or restricted HTTPS edge stops:
 
-```bash
-curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook" \
-  -H "Content-Type: application/json" \
-  -d '{"drop_pending_updates": true}' \
-  | python3 -m json.tool
+```powershell
+.\telegram-webhook.local.ps1 -Action delete
 ```
 
 ## Troubleshooting
 
-| Symptom | Likely Cause | Check |
-|---|---|---|
-| `getWebhookInfo.result.url` is empty | Webhook was not set or was deleted | Re-run `setWebhook` and inspect response. |
-| `last_error_message` mentions connection refused | Local server stopped or ngrok points at wrong port | Confirm server listens on `APP_PORT`; restart `ngrok http APP_PORT`. |
-| Telegram keeps retrying the same update | Webhook route returns non-2xx or times out | Check ngrok `http://localhost:4040` response status and latency. |
-| Duplicate reminders appear | Idempotency key is not stable across retries | Verify key includes principal tenant, Telegram message ID, and text. |
-| Tenant leakage in local test | Principal mapping uses untrusted data | Ensure `tenant_id` comes only from authenticated channel config. |
-| Secret appears in logs | Wrapper logs raw headers or env | Redact `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, OAuth tokens, and API keys. |
+- `getWebhookInfo.result.url` is empty: the webhook was not set or was
+  deleted. Re-run the local helper with `-Action set` and inspect its sanitized
+  response.
+- `last_error_message` mentions connection refused: confirm that the server
+  listens on `127.0.0.1:8000`, then restore the edge's exact
+  `POST /webhooks/telegram` allowlist. Do not replace it with an unrestricted
+  tunnel.
+- Telegram retries the same update: the webhook route returned non-2xx or
+  timed out. Check the restricted-edge status and latency.
+- Duplicate reminders appear: verify that the idempotency key includes
+  principal tenant, Telegram message ID, and text.
+- Tenant leakage in a local test: ensure `tenant_id` comes only from trusted
+  channel configuration.
+- A secret appears in logs: redact `TELEGRAM_BOT_TOKEN`,
+  `TELEGRAM_WEBHOOK_SECRET`, OAuth tokens, and API keys.
 
 ## Release Criteria For Telegram Local MVP
 
 - The required local gate passes.
 - A Telegram update normalizes into `NormalizedMessage` without tenant authority.
 - Unknown Telegram users are rejected before workflow routing.
+- Missing or invalid secret headers, empty allowlists, and updates without a
+  Telegram `from.id` are rejected before any state or external work.
 - A reminder message without approval escalates and creates no side effect.
 - A reminder message with valid approval creates exactly one local calendar event,
   one scheduled reminder, one event-store event, and one outbox event.

@@ -9,6 +9,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
+from personal_assistant.adapters.inbound.channels.telegram import (
+    TelegramActorNotVerifiableError,
+)
 from personal_assistant.application.dto.runtime import AgentStatus
 from personal_assistant.application.use_cases.reminders import reminder_idempotency_key
 from personal_assistant.domain.common.identity import Principal
@@ -18,7 +21,7 @@ from personal_assistant.infrastructure.config import AppSettings
 from personal_assistant.infrastructure.http import create_app
 
 
-WEBHOOK_PATH_SEGMENT = "test_webhook_path_segment"
+WEBHOOK_SECRET = "test_webhook_secret"
 
 
 class _NoNetworkNotificationProvider:
@@ -28,10 +31,22 @@ class _NoNetworkNotificationProvider:
         raise AssertionError("Telegram boundary tests must not send notifications")
 
 
+class _NoTranscriptionProvider:
+    def transcribe(self, request, *, budget):  # type: ignore[no-untyped-def]
+        raise AssertionError("Denied Telegram updates must not be transcribed")
+
+
+class _NoTTSProvider:
+    def synthesize(self, request, *, budget):  # type: ignore[no-untyped-def]
+        raise AssertionError("Denied Telegram updates must not be synthesized")
+
+
 def _container() -> AppContainer:
     return build_container(
         llm=None,
         notifications=_NoNetworkNotificationProvider(),
+        transcription=_NoTranscriptionProvider(),
+        tts=_NoTTSProvider(),
     )
 
 
@@ -47,7 +62,7 @@ def _client(
             settings=AppSettings(
                 tenant_id=tenant_id,
                 timezone=timezone,
-                telegram_webhook_secret=WEBHOOK_PATH_SEGMENT,
+                telegram_webhook_secret=WEBHOOK_SECRET,
                 telegram_allowed_user_ids=frozenset({"456", "789"}),
                 reminder_worker_enabled=False,
             ),
@@ -106,8 +121,8 @@ def _post_at(
 
     with patch("personal_assistant.infrastructure.http.datetime", _FrozenDateTime):
         return client.post(
-            f"/webhooks/telegram/{WEBHOOK_PATH_SEGMENT}",
-            headers={"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_PATH_SEGMENT},
+            "/webhooks/telegram",
+            headers={"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET},
             json=payload,
         )
 
@@ -122,6 +137,234 @@ def test_normalizer_uses_update_id_as_source_and_keeps_message_reference() -> No
     assert normalized.message_id == "42"
     assert normalized.source_event_id != normalized.message_id
     assert normalized.idempotency_key == "telegram:777"
+
+
+def test_normalizer_never_derives_actor_from_chat() -> None:
+    payload = _payload(actor_id="456")
+    message = payload["message"]
+    assert isinstance(message, dict)
+    message.pop("from")
+
+    with pytest.raises(
+        TelegramActorNotVerifiableError,
+        match="no verifiable actor",
+    ):
+        normalize_telegram_webhook(payload, tenant_id="tenant-a")
+
+
+def test_callback_never_derives_actor_from_referenced_message() -> None:
+    payload = {
+        "update_id": 901,
+        "callback_query": {
+            "id": "callback-901",
+            "data": "/help",
+            "message": {
+                "message_id": 42,
+                "chat": {"id": "456"},
+                "from": {"id": "456"},
+            },
+        },
+    }
+
+    with pytest.raises(
+        TelegramActorNotVerifiableError,
+        match="no verifiable actor",
+    ):
+        normalize_telegram_webhook(payload, tenant_id="tenant-a")
+
+
+def test_only_header_authenticated_telegram_route_is_registered() -> None:
+    app = create_app(
+        _container(),
+        settings=AppSettings(
+            tenant_id="tenant-a",
+            telegram_webhook_secret=WEBHOOK_SECRET,
+            telegram_allowed_user_ids=frozenset({"456"}),
+        ),
+    )
+
+    telegram_post_paths = {
+        route.path
+        for route in app.routes
+        if route.path.startswith("/webhooks/telegram")
+        and "POST" in (route.methods or set())
+    }
+    openapi = app.openapi()
+    operation = openapi["paths"]["/webhooks/telegram"]["post"]
+    security_scheme = openapi["components"]["securitySchemes"]["TelegramWebhookSecret"]
+
+    assert telegram_post_paths == {"/webhooks/telegram"}
+    assert operation["security"] == [{"TelegramWebhookSecret": []}]
+    assert security_scheme == {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Telegram-Bot-Api-Secret-Token",
+    }
+
+
+def test_webhook_secret_is_compared_with_compare_digest() -> None:
+    client = _client(_container())
+
+    with patch(
+        "personal_assistant.infrastructure.http.secrets.compare_digest",
+        return_value=True,
+    ) as compare_digest:
+        response = client.post(
+            "/webhooks/telegram",
+            headers={"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET},
+            json=_payload(text="/help"),
+        )
+
+    assert response.status_code == 200, response.text
+    compare_digest.assert_called_once_with(
+        WEBHOOK_SECRET.encode("utf-8"),
+        WEBHOOK_SECRET.encode("utf-8"),
+    )
+
+
+@pytest.mark.parametrize(
+    ("configured_secret", "headers"),
+    [
+        pytest.param(WEBHOOK_SECRET, {}, id="missing-secret-header"),
+        pytest.param(
+            WEBHOOK_SECRET,
+            {"X-Telegram-Bot-Api-Secret-Token": "wrong-secret"},
+            id="wrong-secret-header",
+        ),
+        pytest.param(
+            "",
+            {"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET},
+            id="unconfigured-secret",
+        ),
+    ],
+)
+def test_secret_denial_precedes_update_normalization(
+    configured_secret: str,
+    headers: dict[str, str],
+) -> None:
+    client = TestClient(
+        create_app(
+            _container(),
+            settings=AppSettings(
+                tenant_id="tenant-a",
+                telegram_webhook_secret=configured_secret,
+                telegram_allowed_user_ids=frozenset({"456"}),
+            ),
+        )
+    )
+
+    with patch(
+        "personal_assistant.infrastructure.http.normalize_telegram_webhook",
+        side_effect=AssertionError("Secret denial must precede normalization"),
+    ):
+        response = client.post(
+            "/webhooks/telegram",
+            headers=headers,
+            json=_payload(),
+        )
+
+    assert response.status_code == 403, response.text
+    assert response.json()["error"]["message"] == "permission denied"
+    assert WEBHOOK_SECRET not in response.text
+
+
+@pytest.mark.parametrize(
+    ("configured_secret", "allowlist", "headers", "actor_id"),
+    [
+        pytest.param(
+            WEBHOOK_SECRET,
+            frozenset({"456"}),
+            {},
+            "456",
+            id="missing-secret-header",
+        ),
+        pytest.param(
+            WEBHOOK_SECRET,
+            frozenset({"456"}),
+            {"X-Telegram-Bot-Api-Secret-Token": "wrong-secret"},
+            "456",
+            id="wrong-secret-header",
+        ),
+        pytest.param(
+            "",
+            frozenset({"456"}),
+            {"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET},
+            "456",
+            id="unconfigured-secret",
+        ),
+        pytest.param(
+            WEBHOOK_SECRET,
+            frozenset(),
+            {"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET},
+            "456",
+            id="empty-allowlist",
+        ),
+        pytest.param(
+            WEBHOOK_SECRET,
+            frozenset({"456"}),
+            {"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET},
+            "999",
+            id="actor-not-allowlisted",
+        ),
+        pytest.param(
+            WEBHOOK_SECRET,
+            frozenset({"456"}),
+            {"X-Telegram-Bot-Api-Secret-Token": WEBHOOK_SECRET},
+            None,
+            id="missing-actor-with-chat-id",
+        ),
+    ],
+)
+def test_denied_updates_stop_before_commands_state_or_external_work(
+    configured_secret: str,
+    allowlist: frozenset[str],
+    headers: dict[str, str],
+    actor_id: str | None,
+) -> None:
+    container = _container()
+    settings = AppSettings(
+        tenant_id="tenant-a",
+        telegram_webhook_secret=configured_secret,
+        telegram_bot_token="000000:test-token",
+        telegram_allowed_user_ids=allowlist,
+        telegram_audio_reply_mode="always",
+    )
+    client = TestClient(create_app(container, settings=settings))
+    message: dict[str, object] = {
+        "message_id": 42,
+        "chat": {"id": "456"},
+        "voice": {
+            "file_id": "voice-file-1",
+            "mime_type": "audio/ogg",
+            "file_size": 2048,
+        },
+    }
+    if actor_id is not None:
+        message["from"] = {"id": actor_id}
+    payload = {"update_id": 900, "message": message}
+    principal = _principal()
+
+    with patch(
+        "personal_assistant.application.use_cases.commands."
+        "ConversationCommandService.handle",
+        side_effect=AssertionError("Denied Telegram updates must not reach commands"),
+    ):
+        response = client.post(
+            "/webhooks/telegram",
+            headers=headers,
+            json=payload,
+        )
+
+    assert response.status_code == 403, response.text
+    assert response.json()["error"]["code"] == "permission_denied"
+    assert container.approvals.list_for_tenant(principal) == []
+    assert container.states.list_for_tenant(principal) == []
+    assert container.event_store.list_for_tenant(principal) == []
+    assert container.outbox.list_for_tenant(principal) == []
+    assert container.calendar.list_events(principal) == []
+    assert container.scheduler.list_for_tenant(principal) == []
+    assert container.memory.list_for_tenant(principal) == []
+    assert container.traces.list_for_tenant(principal) == []
 
 
 def test_telegram_midnight_survives_pending_approval_with_update_identity() -> None:
