@@ -4,13 +4,14 @@
 
 | Field | Value |
 |---|---|
-| Status | `LOCAL_ACCEPTED` |
+| Status | `MERGED` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
 | Phase branch | `codex/phase-3-atomic-persistence` |
 | Base commit | `0925425` |
 | Accepted implementation head | `fe2c27e` |
-| Pull request | pending |
-| Merge commit | pending |
+| Local acceptance commit | `905d04e` |
+| Pull request | [#10](https://github.com/Yosoyepa/personalAssistant/pull/10) |
+| Merge commit | `a0117ec` |
 | Date | `2026-07-17` |
 
 ## Objective and acceptance
@@ -133,6 +134,22 @@ remaining strict expected failures are Phase 4 ownership:
 2. restarting after provider acceptance but before `mark_sent` can redeliver.
 
 The Phase 3 atomic-recovery characterization is now a normal passing test.
+
+## Remote evidence
+
+GitHub accepted head `905d04e` after every protected check completed:
+
+- `quality`: pass;
+- `tests (3.11)`: pass with PostgreSQL 16;
+- `tests (3.12)`: pass with PostgreSQL 16 and the 90% changed-line gate;
+- `security`: pass;
+- `postgres-integration`: pass.
+
+The final PR was mergeable and clean under branch protection. GitHub created
+merge commit `a0117ec` with parents `0925425` and `905d04e`, then deleted the
+remote phase branch. Required checks and resolved conversations remain
+enforced; force-push and deletion remain prohibited for `main`. The repository
+continues to allow merge commits while squash and rebase are disabled.
 
 ## Recovery evidence
 
