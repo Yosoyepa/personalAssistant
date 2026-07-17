@@ -86,12 +86,12 @@ class Principal(DomainModel):
             return frozenset()
         return frozenset(PermissionGrant.model_validate(item) for item in value)
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def actor_id(self) -> str:
         return self.principal_id
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def is_trusted(self) -> bool:
         return self._trusted_source is not None
