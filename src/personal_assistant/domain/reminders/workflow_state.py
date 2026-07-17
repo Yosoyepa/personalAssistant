@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import Field, field_validator
 
@@ -22,23 +23,34 @@ class ReminderWorkflowStep(str, Enum):
 
 class ReminderDraft(DomainModel):
     title: str = Field(min_length=1)
+    timezone: str = Field(min_length=1)
     starts_at: datetime
     notify_at: datetime | None = None
     confidence: float = Field(ge=0, le=1)
 
+    @field_validator("timezone")
+    @classmethod
+    def require_iana_timezone(cls, value: str) -> str:
+        try:
+            zone = ZoneInfo(value)
+        except (ValueError, ZoneInfoNotFoundError) as exc:
+            raise ValueError("timezone must be a valid IANA timezone") from exc
+        return zone.key
+
     @field_validator("starts_at", "notify_at")
     @classmethod
-    def require_aware_datetime(cls, value: datetime | None) -> datetime | None:
+    def canonicalize_datetime(cls, value: datetime | None) -> datetime | None:
         if value is None:
             return None
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("reminder datetimes must be timezone-aware")
-        return value
+        return value.astimezone(UTC)
 
     @classmethod
     def from_extraction(cls, extraction: ReminderExtraction) -> "ReminderDraft":
         return cls(
             title=extraction.title,
+            timezone=extraction.timezone,
             starts_at=extraction.starts_at,
             notify_at=extraction.notify_at,
             confidence=extraction.confidence,
@@ -49,6 +61,7 @@ class ReminderDraft(DomainModel):
         return cls.model_validate(
             {
                 "title": data["title"],
+                "timezone": data.get("timezone", "UTC"),
                 "starts_at": data["starts_at"],
                 "notify_at": data.get("notify_at"),
                 "confidence": data.get("confidence", 0.86),
@@ -58,6 +71,7 @@ class ReminderDraft(DomainModel):
     def to_extraction(self) -> ReminderExtraction:
         return ReminderExtraction(
             title=self.title,
+            timezone=self.timezone,
             starts_at=self.starts_at,
             notify_at=self.notify_at,
             confidence=self.confidence,
@@ -66,7 +80,10 @@ class ReminderDraft(DomainModel):
     def to_workflow_data(self) -> dict[str, str | float | None]:
         return {
             "title": self.title,
+            "timezone": self.timezone,
             "starts_at": self.starts_at.isoformat(),
-            "notify_at": self.notify_at.isoformat() if self.notify_at is not None else None,
+            "notify_at": self.notify_at.isoformat()
+            if self.notify_at is not None
+            else None,
             "confidence": self.confidence,
         }
