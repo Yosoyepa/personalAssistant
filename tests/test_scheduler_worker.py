@@ -35,11 +35,21 @@ class PartiallyFailingNotificationTool:
         result = NotificationResult(
             notification_id=f"ok-{request.idempotency_key}",
             channel=request.channel,
-            recipient=request.recipient,
             idempotency_key=request.idempotency_key,
         )
         self.sent.append(result)
         return result
+
+
+class TypedFailureNotificationTool:
+    def send(
+        self, principal, request: NotificationRequest, *, approval=None
+    ) -> NotificationResult:
+        return NotificationResult(
+            channel=request.channel,
+            idempotency_key=request.idempotency_key,
+            outcome="unknown-outcome",
+        )
 
 
 class SchedulerWorkerTests(unittest.TestCase):
@@ -109,6 +119,27 @@ class SchedulerWorkerTests(unittest.TestCase):
         self.assertEqual(tick.skipped_reminder_ids, (reminder_id,))
         self.assertEqual(len(self.scheduler.due(self.principal, self.now)), 1)
         self.assertEqual(self.notifications.list_sent(self.principal), [])
+
+    def test_typed_failure_is_not_marked_sent(self) -> None:
+        reminder_id = self.schedule_due(self.principal, "notify-unknown")
+        dispatcher = DispatchDueReminders(
+            scheduler=self.scheduler,
+            notifications=TypedFailureNotificationTool(),
+        )
+        worker = ReminderWorker(
+            dispatcher=dispatcher,
+            approval_policy=RuntimeNotificationApprovalPolicy(
+                approve_notifications=True
+            ),
+            clock=lambda: self.now,
+            sleep=lambda _: None,
+        )
+
+        tick = worker.run_once(self.principal, now=self.now)
+
+        self.assertEqual(tick.sent_count, 0)
+        self.assertEqual(tick.skipped_reminder_ids, (reminder_id,))
+        self.assertEqual(len(self.scheduler.due(self.principal, self.now)), 1)
 
     def test_run_once_issues_one_approval_per_due_reminder(self) -> None:
         self.schedule_due(self.principal, "notify-a")
