@@ -8,7 +8,7 @@
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
 | Phase branch | `codex/phase-3-atomic-persistence` |
 | Base commit | `0925425` |
-| Accepted implementation head | `ddd3c71` |
+| Accepted implementation head | `fe2c27e` |
 | Pull request | pending |
 | Merge commit | pending |
 | Date | `2026-07-17` |
@@ -36,6 +36,7 @@ development adapter and by PostgreSQL 16.
 | P3-A4 | Implement one-connection PostgreSQL UoW, conflict classification, and unknown-commit recovery | `92d242d`, `7ccce45` | accepted after both transaction exceptions became process-safe |
 | P3-A5 | Prove rollback, replay, and multiprocess uniqueness with fault injection | `771ea05` | accepted |
 | P3-A5 gate rework | Restore differential coverage without production exclusions | `5b89e3a` | accepted after diff coverage rose from 83% to 91% |
+| P3-A5 CI rework | Run the coverage matrix against the same PostgreSQL corpus used by local acceptance | `7225e04` | accepted without moving or lowering the gate |
 
 Every implementation was reviewed as an unstaged diff before explicit-path
 staging. Accepted branches were integrated with merge commits; no branch was
@@ -114,6 +115,14 @@ fake. PostgreSQL checks used an ephemeral PostgreSQL `16.14` container.
 | Gitleaks `v8.28.0` read-only container scan | no leaks in 80 commits / approximately 1.96 MB |
 | `git diff --check` | pass |
 | migration smoke | `status -> apply 0001+0002 -> apply no-op -> status ready`; acceptance schema removed |
+
+The first PR run exposed a CI-environment mismatch: four required checks,
+including `postgres-integration`, passed, but `tests (3.12)` omitted every real
+PostgreSQL test because its matrix job had no database service. That reduced
+remote differential coverage to 77% even though the same accepted head reached
+91% locally with `TEST_POSTGRES_DSN`. Commit `7225e04` adds PostgreSQL 16 and
+only that test DSN to the Python test matrix. It does not move, exclude, or
+lower the changed-line gate, and the dedicated integration job remains intact.
 
 The two allowlisted skips are compatibility probes for optional module-level
 SQL constants and record-serializer helpers that this adapter intentionally
