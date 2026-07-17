@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import json
 import sys
 import unittest
@@ -791,6 +791,229 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertNotIn("workflow_type =", update_clause)
         self.assertNotIn("payload_fingerprint =", update_clause)
         self.assertEqual(saved.status, WorkflowStatus.waiting_approval)
+
+    def test_legacy_calendar_without_any_timezone_is_rejected(self) -> None:
+        with self.assertRaisesRegex(ValueError, "missing timezone"):
+            postgres._upgrade_legacy_calendar_result(
+                {
+                    "event_id": "cal-legacy",
+                    "title": "Legacy",
+                    "starts_at": datetime(2026, 7, 17, 15, tzinfo=UTC),
+                    "idempotency_key": "calendar-legacy",
+                },
+                {},
+            )
+
+        with self.assertRaisesRegex(ValueError, "provide only one"):
+            postgres._PostgresDatabase(
+                dsn="postgresql://example.invalid/db",
+                connection=RecordingConnection(),
+            )
+
+    def test_event_and_outbox_postgres_paths_preserve_tenant_and_conflicts(
+        self,
+    ) -> None:
+        principal = self.principal()
+        foreign_event = self.cloud_event(
+            Principal.for_test(
+                principal_id="user-2",
+                tenant_id="tenant-b",
+                permission_tier=PermissionTier.P5,
+            )
+        )
+        with self.assertRaises(AssistantError) as event_tenant:
+            postgres.PostgresEventStore(connection=RecordingConnection()).append(
+                principal, foreign_event
+            )
+        self.assertEqual(event_tenant.exception.code, ErrorCode.PERMISSION_DENIED)
+
+        with self.assertRaises(AssistantError) as outbox_tenant:
+            postgres.PostgresOutbox(connection=RecordingConnection()).add(
+                principal,
+                foreign_event,
+                idempotency_key="outbox-foreign",
+            )
+        self.assertEqual(outbox_tenant.exception.code, ErrorCode.PERMISSION_DENIED)
+
+        event = self.cloud_event(principal)
+        list_connection = RecordingConnection(
+            fetchall_results=[[{"payload": event.model_dump(mode="json")}]]
+        )
+        listed = postgres.PostgresEventStore(
+            connection=list_connection
+        ).list_for_tenant(principal)
+        self.assertEqual(listed, [event])
+
+        for existing, expected_code in (
+            (None, ErrorCode.INTERNAL_ERROR),
+            (
+                {
+                    "payload": event.model_dump(mode="json"),
+                    "fingerprint": "different-fingerprint",
+                },
+                ErrorCode.CONFLICT,
+            ),
+        ):
+            connection = RecordingConnection(fetchone_results=[None, existing])
+            with self.assertRaises(AssistantError) as captured:
+                postgres.PostgresEventStore(connection=connection).append(
+                    principal, event
+                )
+            self.assertEqual(captured.exception.code, expected_code)
+
+        returned_message = OutboxMessage(
+            tenant_id=principal.tenant_id,
+            event=event,
+            idempotency_key="outbox-key",
+        )
+        created = postgres.PostgresOutbox(
+            connection=RecordingConnection(
+                fetchone_results=[{"payload": returned_message.model_dump(mode="json")}]
+            )
+        ).add(principal, event, idempotency_key="outbox-key")
+        self.assertEqual(created.idempotency_key, "outbox-key")
+
+        for existing, expected_code in (
+            (None, ErrorCode.INTERNAL_ERROR),
+            (
+                {
+                    "payload": returned_message.model_dump(mode="json"),
+                    "fingerprint": "different-fingerprint",
+                },
+                ErrorCode.CONFLICT,
+            ),
+        ):
+            connection = RecordingConnection(fetchone_results=[None, existing])
+            with self.assertRaises(AssistantError) as captured:
+                postgres.PostgresOutbox(connection=connection).add(
+                    principal, event, idempotency_key="outbox-key"
+                )
+            self.assertEqual(captured.exception.code, expected_code)
+
+    def test_calendar_postgres_replay_handles_legacy_conflict_and_missing_row(
+        self,
+    ) -> None:
+        principal = self.principal()
+        request = CalendarEventRequest(
+            title="Cita legacy",
+            starts_at=datetime(2026, 7, 17, 15, tzinfo=UTC),
+            timezone="America/Bogota",
+            idempotency_key="calendar-replay",
+            source_event_id="event-calendar-replay",
+            payload_fingerprint="f" * 64,
+        )
+        approval = ApprovalGrant.issue(
+            principal=principal,
+            action="calendar.create_event",
+            resource=request.idempotency_key,
+            tier=PermissionTier.P3,
+            approval_id="apr-calendar-replay",
+        )
+        legacy_result = CalendarEventResult(
+            event_id="cal-legacy",
+            title=request.title,
+            starts_at=request.starts_at,
+            timezone=request.timezone,
+            idempotency_key=request.idempotency_key,
+        ).model_dump(mode="json")
+        legacy_result.pop("timezone")
+        request_payload = request.model_dump(mode="json")
+        replay_row = {
+            "payload": legacy_result,
+            "request_fingerprint": postgres._fingerprint(request_payload),
+            "request_payload": request_payload,
+        }
+
+        replayed = postgres.PostgresCalendarStore(
+            connection=RecordingConnection(fetchone_results=[None, replay_row])
+        ).create_event(principal, request, approval=approval)
+        self.assertTrue(replayed.reused)
+        self.assertEqual(replayed.timezone, request.timezone)
+        self.assertEqual(replayed.source_event_id, request.source_event_id)
+
+        conflict_row = {**replay_row, "request_fingerprint": "different"}
+        with self.assertRaises(AssistantError) as conflict:
+            postgres.PostgresCalendarStore(
+                connection=RecordingConnection(fetchone_results=[None, conflict_row])
+            ).create_event(principal, request, approval=approval)
+        self.assertEqual(conflict.exception.code, ErrorCode.CONFLICT)
+
+        with self.assertRaises(AssistantError) as missing:
+            postgres.PostgresCalendarStore(
+                connection=RecordingConnection(fetchone_results=[None, None])
+            ).create_event(principal, request, approval=approval)
+        self.assertEqual(missing.exception.code, ErrorCode.INTERNAL_ERROR)
+
+    def test_scheduler_postgres_replay_upgrades_legacy_and_detects_conflict(
+        self,
+    ) -> None:
+        principal = self.principal()
+        starts_at = datetime(2026, 7, 17, 15, tzinfo=UTC)
+        arguments = {
+            "calendar_event_id": "cal-1",
+            "starts_at": starts_at,
+            "channel": "telegram",
+            "recipient": "chat-1",
+            "body": "Recordatorio",
+            "timezone": "America/Bogota",
+            "source_event_id": "event-1",
+            "payload_fingerprint": "a" * 64,
+            "minutes_before": 30,
+            "idempotency_key": "scheduler-replay",
+        }
+        stored = ScheduledReminder(
+            reminder_id="rem-stored",
+            tenant_id=principal.tenant_id,
+            calendar_event_id="cal-1",
+            notify_at=starts_at - timedelta(minutes=30),
+            channel="telegram",
+            recipient="chat-1",
+            body="Recordatorio",
+            timezone="America/Bogota",
+            source_event_id="event-1",
+            payload_fingerprint="a" * 64,
+            idempotency_key="scheduler-replay",
+        )
+        legacy = stored.model_dump(mode="json")
+        legacy.pop("timezone")
+        legacy.pop("source_event_id")
+        legacy.pop("payload_fingerprint")
+
+        inserted_legacy = postgres.PostgresReminderScheduler(
+            connection=RecordingConnection(fetchone_results=[{"payload": legacy}])
+        ).schedule_before_event(principal, **arguments)
+        self.assertEqual(inserted_legacy.timezone, "UTC")
+        self.assertEqual(inserted_legacy.source_event_id, "legacy:scheduler-replay")
+
+        replayed = postgres.PostgresReminderScheduler(
+            connection=RecordingConnection(
+                fetchone_results=[None, {"payload": stored.model_dump(mode="json")}]
+            )
+        ).schedule_before_event(principal, **arguments)
+        self.assertEqual(replayed, stored)
+
+        conflicting = stored.model_copy(update={"body": "Contenido diferente"})
+        with self.assertRaises(AssistantError) as conflict:
+            postgres.PostgresReminderScheduler(
+                connection=RecordingConnection(
+                    fetchone_results=[
+                        None,
+                        {"payload": conflicting.model_dump(mode="json")},
+                    ]
+                )
+            ).schedule_before_event(principal, **arguments)
+        self.assertEqual(conflict.exception.code, ErrorCode.CONFLICT)
+
+        with self.assertRaises(AssistantError) as missing:
+            postgres.PostgresReminderScheduler(
+                connection=RecordingConnection(fetchone_results=[None, None])
+            ).schedule_before_event(principal, **arguments)
+        self.assertEqual(missing.exception.code, ErrorCode.INTERNAL_ERROR)
+
+        due = postgres.PostgresReminderScheduler(
+            connection=RecordingConnection(fetchall_results=[[{"payload": legacy}]])
+        ).due(principal, datetime(2026, 7, 17, 16, tzinfo=UTC))
+        self.assertEqual(due[0].source_event_id, "legacy:scheduler-replay")
 
 
 if __name__ == "__main__":
