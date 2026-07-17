@@ -12,7 +12,11 @@ from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
 from personal_assistant.application.dto.runtime import LLMResult
 from personal_assistant.application.services.replies import AssistantReplies
-from personal_assistant.application.services.prompts import LLM_JSON_SYSTEM_PROMPT_ID, PromptTemplate, StaticPromptCatalog
+from personal_assistant.application.services.prompts import (
+    LLM_JSON_SYSTEM_PROMPT_ID,
+    PromptTemplate,
+    StaticPromptCatalog,
+)
 from personal_assistant.application.use_cases.runtime import LocalAgentRuntime
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
@@ -42,7 +46,9 @@ def _message(text: str, message_id: str = "42") -> NormalizedMessage:
     )
 
 
-def _write_prompt_registry(root: Path, prompt_id: str, *, version: str, template: str) -> None:
+def _write_prompt_registry(
+    root: Path, prompt_id: str, *, version: str, template: str
+) -> None:
     prompt_path = root / prompt_id / f"{version}.md"
     prompt_path.parent.mkdir(parents=True)
     prompt_path.write_text(template, encoding="utf-8")
@@ -62,7 +68,9 @@ def _write_prompt_registry(root: Path, prompt_id: str, *, version: str, template
     )
 
 
-def _catalog_with(prompt_id: str, template: str, *required_variables: str) -> StaticPromptCatalog:
+def _catalog_with(
+    prompt_id: str, template: str, *required_variables: str
+) -> StaticPromptCatalog:
     return StaticPromptCatalog(
         {
             prompt_id: PromptTemplate(
@@ -85,7 +93,10 @@ def test_static_prompt_catalog_renders_injected_default_template() -> None:
 
     rendered = catalog.render(
         "conversation_intent",
-        {"text": "recordame pagar", "allowed_intents": ["reminder.create", "unsupported"]},
+        {
+            "text": "recordame pagar",
+            "allowed_intents": ["reminder.create", "unsupported"],
+        },
     )
 
     assert rendered.prompt_id == "conversation_intent"
@@ -110,7 +121,9 @@ def test_filesystem_prompt_catalog_loads_versioned_prompt_files(tmp_path: Path) 
         template="FROM_VERSIONED_FILE\ntext=$text",
     )
 
-    rendered = build_prompt_catalog(tmp_path).render("conversation_intent", {"text": "hola"})
+    rendered = build_prompt_catalog(tmp_path).render(
+        "conversation_intent", {"text": "hola"}
+    )
 
     assert rendered.prompt_id == "conversation_intent"
     assert rendered.version == "v7"
@@ -145,7 +158,9 @@ def test_repository_prompt_registry_covers_runtime_llm_prompts() -> None:
         },
     )
     transcription = catalog.render("telegram_voice_transcription", {})
-    json_system = catalog.render(LLM_JSON_SYSTEM_PROMPT_ID, {"schema_name": "reminder_extraction"})
+    json_system = catalog.render(
+        LLM_JSON_SYSTEM_PROMPT_ID, {"schema_name": "reminder_extraction"}
+    )
 
     assert intent.version == "v1"
     assert "recordame pagar" in intent.text
@@ -164,14 +179,25 @@ def test_repository_reply_catalog_loads_user_facing_copy_from_locale_file() -> N
 
     assert replies.start() == raw_catalog["start"]
     assert replies.help() == "\n".join(raw_catalog["help"])
-    assert replies.status(pending_count=1, state_count=2, event_count=3, outbox_count=4) == raw_catalog[
-        "status"
-    ].format(pending_count=1, state_count=2, event_count=3, outbox_count=4)
-    assert replies.reminder_needs_approval("clase") == raw_catalog["reminder_needs_approval"].format(title="clase")
+    assert replies.status(
+        pending_count=1, state_count=2, event_count=3, outbox_count=4
+    ) == raw_catalog["status"].format(
+        pending_count=1, state_count=2, event_count=3, outbox_count=4
+    )
+    assert replies.reminder_needs_approval("clase") == raw_catalog[
+        "reminder_needs_approval"
+    ].format(title="clase")
     assert replies.runtime_request_received() == raw_catalog["runtime_request_received"]
-    assert replies.approval_command_hint("apr-1") == raw_catalog["approval_command_hint"].format(approval_id="apr-1")
-    assert replies.approval_reason_calendar_create_event() == raw_catalog["approval_reason_calendar_create_event"]
-    assert replies.reminder_notification_body("clase") == raw_catalog["reminder_notification_body"].format(title="clase")
+    assert replies.approval_command_hint("apr-1") == raw_catalog[
+        "approval_command_hint"
+    ].format(approval_id="apr-1")
+    assert (
+        replies.approval_reason_calendar_create_event()
+        == raw_catalog["approval_reason_calendar_create_event"]
+    )
+    assert replies.reminder_notification_body("clase") == raw_catalog[
+        "reminder_notification_body"
+    ].format(title="clase")
     assert replies.approval_failed() == raw_catalog["approval_failed"]
     assert replies.approval_cancel_failed() == raw_catalog["approval_cancel_failed"]
 
@@ -221,7 +247,10 @@ def test_command_router_uses_injected_approval_hint() -> None:
     )
 
     assert result.approval_id is not None
-    assert f"APPROVAL_HINT_FROM_INJECTED_REPLY_DEFAULTS:{result.approval_id}" in result.reply
+    assert (
+        f"APPROVAL_HINT_FROM_INJECTED_REPLY_DEFAULTS:{result.approval_id}"
+        in result.reply
+    )
 
 
 def test_local_agent_runtime_uses_injected_reply_defaults() -> None:
@@ -259,7 +288,6 @@ def test_reminder_workflow_uses_injected_reply_defaults() -> None:
             text="recordame pagar",
             recipient="chat-1",
             now=NOW,
-            idempotency_key="reply-defaults:missing-time",
             approval=None,
         ),
     )
@@ -271,13 +299,14 @@ def test_reminder_workflow_uses_injected_reply_defaults() -> None:
             text="recordame clase el martes a las 5",
             recipient="chat-1",
             now=NOW,
-            idempotency_key="reply-defaults:needs-approval",
             approval=None,
         ),
     )
 
     assert needs_datetime.reply == "NEEDS_DATETIME_FROM_INJECTED_REPLY_DEFAULTS"
-    assert needs_approval.reply.startswith("NEEDS_APPROVAL_FROM_INJECTED_REPLY_DEFAULTS:")
+    assert needs_approval.reply.startswith(
+        "NEEDS_APPROVAL_FROM_INJECTED_REPLY_DEFAULTS:"
+    )
 
 
 class CapturingIntentLLM:
@@ -358,7 +387,6 @@ def test_reminder_workflow_renders_extraction_prompt_from_injected_catalog() -> 
             text="deja lo de almorzar con Ana a las tres treinta y tres",
             recipient="chat-1",
             now=NOW,
-            idempotency_key="prompt-catalog:llm-catalog",
             approval=None,
         ),
     )

@@ -128,7 +128,7 @@ worker lease fields are typed columns.
 
 | Table | Purpose | Required Uniqueness / Indexes |
 |---|---|---|
-| `assistant_workflow_states` | Durable-lite state for reminder and command workflows. | Primary `(tenant_id, idempotency_key)`; unique `(tenant_id, workflow_id)`; index `(tenant_id, status, updated_at)`. |
+| `assistant_workflow_states` | Durable-lite state for reminder and command workflows; `payload_fingerprint` is stored separately from the replay key. | Primary `(tenant_id, idempotency_key)`; unique `(tenant_id, workflow_id)`; index `(tenant_id, status, updated_at)`. |
 | `assistant_events` | CloudEvents-style append store for tenant-scoped domain/application events. | Primary `(tenant_id, event_id)`; index `(tenant_id, occurred_at)`. |
 | `assistant_outbox` | Transactional outbox records awaiting dispatch. | Primary `(tenant_id, idempotency_key)`; unique `(tenant_id, message_id)`; index `(tenant_id, dispatch_status, claimed_until, next_attempt_at, created_at)`. |
 | `assistant_approvals` | Pending, approved, and cancelled P3+ approvals. | Primary `(tenant_id, approval_id)`; unique `(tenant_id, principal_id, workflow_kind, idempotency_key)`; index `(tenant_id, principal_id, status, created_at)`. |
@@ -148,9 +148,17 @@ Expected behavior by store:
   existing event; same key with a different payload raises conflict.
 - Outbox: `(tenant_id, idempotency_key)` is idempotent. The fingerprint is the
   serialized event payload. A changed event for the same key raises conflict.
-- Workflow state: `(tenant_id, idempotency_key)` is the replay key. Terminal
-  `completed` or `failed` states are immutable; attempted mutation raises
-  conflict.
+- Reminder workflow state: the key is `reminder:v2:<full SHA-256>` over
+  versioned canonical JSON containing tenant, channel, principal, conversation,
+  and source event. The independent `payload_fingerprint` hashes canonical
+  `text`, `recipient`, and `timezone`; it is compared before replay and can
+  never be changed or removed by `upsert`.
+- Reminder registration uses atomic insert-or-replay. Same key and fingerprint
+  returns persisted state; same key and changed fingerprint raises typed
+  conflict without overwriting. A validated approval can atomically resume the
+  matching `waiting_approval` step; only the winner transitions to `running`.
+- Terminal workflow states (`completed` or `failed`) are immutable; attempted
+  lifecycle mutation raises conflict.
 - Approval requests: `(tenant_id, principal_id, workflow_kind,
   idempotency_key)` is idempotent. Same request returns the existing approval;
   different approval details raise conflict.
