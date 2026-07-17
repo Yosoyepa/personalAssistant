@@ -7,11 +7,12 @@ from personal_assistant.adapters.persistence.postgres import (
     PostgresMemoryStore,
     PostgresOutbox,
     PostgresPersistence,
+    PostgresReminderTransaction,
+    PostgresReminderUnitOfWork,
     PostgresReminderScheduler,
     PostgresTraceRecorder,
     PostgresWorkflowStateStore,
     build_postgres_persistence,
-    ensure_schema,
 )
 
 __all__ = [
@@ -21,9 +22,10 @@ __all__ = [
     "PostgresMemoryStore",
     "PostgresOutbox",
     "PostgresPersistence",
+    "PostgresReminderTransaction",
+    "PostgresReminderUnitOfWork",
     "PostgresReminderScheduler",
     "PostgresTraceRecorder",
     "PostgresWorkflowStateStore",
     "build_postgres_persistence",
-    "ensure_schema",
 ]

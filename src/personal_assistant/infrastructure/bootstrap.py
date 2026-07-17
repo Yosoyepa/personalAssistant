@@ -8,18 +8,30 @@ from typing import Any
 
 from personal_assistant.adapters.observability.local import TraceRecorder
 from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
-from personal_assistant.adapters.outbound.llm.anthropic import AnthropicCompatibleLLMProvider
+from personal_assistant.adapters.outbound.llm.anthropic import (
+    AnthropicCompatibleLLMProvider,
+)
 from personal_assistant.adapters.outbound.llm.minimax import MiniMaxLLMProvider
-from personal_assistant.adapters.outbound.notifications.local import LocalNotificationTool
+from personal_assistant.adapters.outbound.notifications.local import (
+    LocalNotificationTool,
+)
 from personal_assistant.adapters.outbound.scheduler.local import ReminderScheduler
-from personal_assistant.adapters.outbound.transcription.openai_compatible import OpenAICompatibleTranscriptionProvider
+from personal_assistant.adapters.outbound.transcription.openai_compatible import (
+    OpenAICompatibleTranscriptionProvider,
+)
 from personal_assistant.adapters.outbound.tts.minimax import MiniMaxTTSProvider
+from personal_assistant.adapters.persistence.in_memory_uow import (
+    InMemoryReminderUnitOfWork,
+)
 from personal_assistant.application.ports.approvals import ApprovalStorePort
 from personal_assistant.application.ports.calendar import CalendarPort
 from personal_assistant.application.ports.events import EventStorePort, OutboxPort
 from personal_assistant.application.ports.notifications import NotificationPort
 from personal_assistant.application.ports.observability import TraceRecorderPort
 from personal_assistant.application.ports.prompts import PromptCatalogPort
+from personal_assistant.application.ports.reminder_unit_of_work import (
+    ReminderUnitOfWork,
+)
 from personal_assistant.application.ports.scheduler import ReminderSchedulerWorkerPort
 from personal_assistant.application.ports.services import (
     AudioSynthesisProvider,
@@ -31,7 +43,9 @@ from personal_assistant.application.ports.workflow_state import WorkflowStateSto
 from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.use_cases.commands import ConversationCommandService
 from personal_assistant.application.use_cases.documents import DocumentService
-from personal_assistant.application.use_cases.reminder_notifications import DispatchDueReminders
+from personal_assistant.application.use_cases.reminder_notifications import (
+    DispatchDueReminders,
+)
 from personal_assistant.application.use_cases.reminders import ReminderWorkflow
 from personal_assistant.adapters.persistence.in_memory import (
     InMemoryApprovalStore,
@@ -40,9 +54,16 @@ from personal_assistant.adapters.persistence.in_memory import (
     InMemoryWorkflowStateStore,
 )
 from personal_assistant.adapters.persistence.memory import TenantMemoryStore
-from personal_assistant.infrastructure.config import AppSettings, load_persistence_settings_from_env
+from personal_assistant.infrastructure.config import (
+    AppSettings,
+    load_database_settings_from_env,
+    load_persistence_settings_from_env,
+)
 from personal_assistant.infrastructure.prompts import build_prompt_catalog
-from personal_assistant.infrastructure.worker import ReminderWorker, RuntimeNotificationApprovalPolicy
+from personal_assistant.infrastructure.worker import (
+    ReminderWorker,
+    RuntimeNotificationApprovalPolicy,
+)
 
 
 @dataclass(slots=True)
@@ -55,6 +76,7 @@ class PersistenceAdapters:
     scheduler: ReminderSchedulerWorkerPort
     states: WorkflowStateStorePort
     traces: TraceRecorderPort
+    reminder_uow: ReminderUnitOfWork | None = None
 
 
 @dataclass(slots=True)
@@ -70,6 +92,7 @@ class AppContainer:
     outbox: OutboxPort
     prompt_catalog: PromptCatalogPort
     reminder_notifications: DispatchDueReminders
+    reminder_uow: ReminderUnitOfWork | None
     reminder_worker: ReminderWorker
     reminder_workflow: ReminderWorkflow
     scheduler: ReminderSchedulerWorkerPort
@@ -84,6 +107,7 @@ def build_persistence_adapters(
     settings: AppSettings | None = None,
     persistence_backend: str | None = None,
     database_url: str | None = None,
+    database_schema: str | None = None,
 ) -> PersistenceAdapters:
     env_backend = "memory"
     env_database_url: str | None = None
@@ -92,33 +116,63 @@ def build_persistence_adapters(
 
     selected_backend = persistence_backend
     if selected_backend is None:
-        selected_backend = settings.persistence_backend if settings is not None else env_backend
+        selected_backend = (
+            settings.persistence_backend if settings is not None else env_backend
+        )
     selected_database_url = database_url
     if selected_database_url is None:
-        selected_database_url = settings.database_url if settings is not None else env_database_url
+        selected_database_url = (
+            settings.database_url if settings is not None else env_database_url
+        )
+    selected_database_schema = database_schema
+    if selected_database_schema is None:
+        selected_database_schema = (
+            settings.database_schema if settings is not None else None
+        )
 
     backend = selected_backend.strip().lower() or "memory"
     if backend == "memory":
         return _build_in_memory_persistence()
     if backend == "postgres":
-        return _build_postgres_persistence(selected_database_url)
+        if selected_database_schema is None:
+            _, selected_database_schema = load_database_settings_from_env()
+        return _build_postgres_persistence(
+            selected_database_url,
+            schema=selected_database_schema,
+        )
     raise ValueError(f"unsupported PERSISTENCE_BACKEND: {selected_backend}")
 
 
 def _build_in_memory_persistence() -> PersistenceAdapters:
+    calendar = LocalCalendarTool()
+    event_store = InMemoryEventStore()
+    outbox = InMemoryOutbox()
+    scheduler = ReminderScheduler()
+    states = InMemoryWorkflowStateStore()
     return PersistenceAdapters(
         approvals=InMemoryApprovalStore(),
-        calendar=LocalCalendarTool(),
-        event_store=InMemoryEventStore(),
+        calendar=calendar,
+        event_store=event_store,
         memory=TenantMemoryStore(),
-        outbox=InMemoryOutbox(),
-        scheduler=ReminderScheduler(),
-        states=InMemoryWorkflowStateStore(),
+        outbox=outbox,
+        scheduler=scheduler,
+        states=states,
         traces=TraceRecorder(),
+        reminder_uow=InMemoryReminderUnitOfWork(
+            calendar=calendar,
+            scheduler=scheduler,
+            event_store=event_store,
+            outbox=outbox,
+            states=states,
+        ),
     )
 
 
-def _build_postgres_persistence(database_url: str | None) -> PersistenceAdapters:
+def _build_postgres_persistence(
+    database_url: str | None,
+    *,
+    schema: str,
+) -> PersistenceAdapters:
     if database_url is None or not database_url.strip():
         raise ValueError("DATABASE_URL is required when PERSISTENCE_BACKEND=postgres")
     try:
@@ -139,15 +193,20 @@ def _build_postgres_persistence(database_url: str | None) -> PersistenceAdapters
 
     factory = getattr(module, "build_postgres_persistence", None)
     if callable(factory):
-        return _coerce_persistence_adapters(factory(database_url=database_url))
+        return _coerce_persistence_adapters(
+            factory(database_url=database_url, schema=schema)
+        )
 
     persistence_class = getattr(module, "PostgresPersistence", None)
     if callable(persistence_class):
-        return _coerce_persistence_adapters(persistence_class(database_url=database_url))
+        return _coerce_persistence_adapters(
+            persistence_class(dsn=database_url, schema=schema)
+        )
 
     raise RuntimeError(
         "personal_assistant.adapters.persistence.postgres must expose "
-        "build_postgres_persistence(database_url=...) or PostgresPersistence(database_url=...)"
+        "build_postgres_persistence(database_url=..., schema=...) or "
+        "PostgresPersistence(dsn=..., schema=...)"
     )
 
 
@@ -161,6 +220,7 @@ def _coerce_persistence_adapters(candidate: Any) -> PersistenceAdapters:
         scheduler=_persistence_member(candidate, "scheduler"),
         states=_persistence_member(candidate, "states"),
         traces=_persistence_member(candidate, "traces"),
+        reminder_uow=_optional_persistence_member(candidate, "reminder_uow"),
     )
 
 
@@ -171,6 +231,12 @@ def _persistence_member(candidate: Any, name: str) -> Any:
     elif hasattr(candidate, name):
         return getattr(candidate, name)
     raise RuntimeError(f"Postgres persistence adapter is missing {name!r}")
+
+
+def _optional_persistence_member(candidate: Any, name: str) -> Any | None:
+    if isinstance(candidate, dict):
+        return candidate.get(name)
+    return getattr(candidate, name, None)
 
 
 def build_llm_provider(
@@ -189,7 +255,11 @@ def build_llm_provider(
             model=settings.llm_model or "",
             timeout_seconds=settings.llm_timeout_seconds,
         )
-    if settings.llm_provider not in {"anthropic_compatible", "anthropic-compatible", "aerolink"}:
+    if settings.llm_provider not in {
+        "anthropic_compatible",
+        "anthropic-compatible",
+        "aerolink",
+    }:
         raise ValueError(f"unsupported LLM_PROVIDER: {settings.llm_provider}")
     return AnthropicCompatibleLLMProvider(
         api_key=settings.llm_api_key or "",
@@ -202,11 +272,18 @@ def build_llm_provider(
     )
 
 
-def build_transcription_provider(settings: AppSettings) -> AudioTranscriptionProvider | None:
+def build_transcription_provider(
+    settings: AppSettings,
+) -> AudioTranscriptionProvider | None:
     if settings.transcription_provider in {"", "disabled", "none"}:
         return None
-    if settings.transcription_provider not in {"openai_compatible", "openai-compatible"}:
-        raise ValueError(f"unsupported TRANSCRIPTION_PROVIDER: {settings.transcription_provider}")
+    if settings.transcription_provider not in {
+        "openai_compatible",
+        "openai-compatible",
+    }:
+        raise ValueError(
+            f"unsupported TRANSCRIPTION_PROVIDER: {settings.transcription_provider}"
+        )
     return OpenAICompatibleTranscriptionProvider(
         api_key=settings.transcription_api_key or "",
         base_url=settings.transcription_base_url or "",
@@ -235,6 +312,7 @@ def build_container(
     settings: AppSettings | None = None,
     persistence_backend: str | None = None,
     database_url: str | None = None,
+    database_schema: str | None = None,
     llm: LLMProvider | None = None,
     notifications: NotificationPort | None = None,
     transcription: AudioTranscriptionProvider | None = None,
@@ -246,11 +324,17 @@ def build_container(
     """Build application adapters for local development, tests, and runtime startup."""
     notification_adapter = notifications or LocalNotificationTool()
     prompts = prompt_catalog or build_prompt_catalog()
-    replies = AssistantReplies(locale=settings.reply_locale) if settings is not None else AssistantReplies()
+    replies = (
+        AssistantReplies(locale=settings.reply_locale)
+        if settings is not None
+        else AssistantReplies()
+    )
     persistence = build_persistence_adapters(
         settings=settings,
-        persistence_backend=persistence_backend or ("memory" if settings is None else None),
+        persistence_backend=persistence_backend
+        or ("memory" if settings is None else None),
         database_url=database_url,
+        database_schema=database_schema,
     )
     approvals = persistence.approvals
     calendar = persistence.calendar
@@ -259,7 +343,9 @@ def build_container(
     scheduler = persistence.scheduler
     states = persistence.states
     traces = persistence.traces
-    reminder_notifications = DispatchDueReminders(scheduler=scheduler, notifications=notification_adapter)
+    reminder_notifications = DispatchDueReminders(
+        scheduler=scheduler, notifications=notification_adapter
+    )
     reminder_workflow = ReminderWorkflow(
         calendar=calendar,
         scheduler=scheduler,
@@ -271,6 +357,7 @@ def build_container(
         prompt_catalog=prompts,
         replies=replies,
         reminder_minutes_before=reminder_minutes_before,
+        unit_of_work=persistence.reminder_uow,
     )
     commands = ConversationCommandService(
         approvals=approvals,
@@ -296,6 +383,7 @@ def build_container(
         outbox=outbox,
         prompt_catalog=prompts,
         reminder_notifications=reminder_notifications,
+        reminder_uow=persistence.reminder_uow,
         reminder_worker=ReminderWorker(
             dispatcher=reminder_notifications,
             approval_policy=RuntimeNotificationApprovalPolicy(

@@ -13,6 +13,7 @@ from personal_assistant.domain.common.permissions import ApprovalGrant
 
 
 class CalendarEventRequest(BaseModel):
+    event_id: str | None = Field(default=None, min_length=1)
     title: str = Field(min_length=1)
     starts_at: datetime
     ends_at: datetime | None = None

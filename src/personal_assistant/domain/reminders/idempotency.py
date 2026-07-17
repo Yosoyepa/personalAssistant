@@ -17,6 +17,13 @@ REMINDER_IDEMPOTENCY_VERSION = 2
 REMINDER_IDEMPOTENCY_KEY_PREFIX = "reminder:v2:"
 _IDENTITY_SCHEMA = "personal-assistant.reminder-idempotency-identity"
 _PAYLOAD_SCHEMA = "personal-assistant.reminder-idempotency-payload"
+_EFFECT_ID_SCHEMA = "personal-assistant.reminder-effect-id"
+
+_CALENDAR_EVENT_ID_PREFIX = "cal_v2_"
+_REMINDER_ID_PREFIX = "rem_v2_"
+_REMINDER_CREATED_EVENT_ID_PREFIX = "evt_reminder_created_v2_"
+_NOTIFICATION_REQUESTED_EVENT_ID_PREFIX = "evt_notification_requested_v2_"
+_OUTBOX_MESSAGE_ID_PREFIX = "out_v2_"
 
 __all__ = [
     "REMINDER_IDEMPOTENCY_KEY_PREFIX",
@@ -24,8 +31,10 @@ __all__ = [
     "ReminderIdempotency",
     "ReminderIdempotencyConflict",
     "ReminderIdempotencyIdentity",
+    "ReminderEffectIds",
     "ReminderPayload",
     "ReminderReplayConflict",
+    "reminder_effect_ids",
     "reminder_idempotency_key",
 ]
 
@@ -105,6 +114,48 @@ class ReminderIdempotencyIdentity(DomainModel):
         return f"{REMINDER_IDEMPOTENCY_KEY_PREFIX}{_sha256(self.canonical_json())}"
 
 
+class ReminderEffectIds(DomainModel):
+    """Domain-separated IDs for every durable effect of one v2 identity.
+
+    The readable prefix is not the namespace boundary: each digest also hashes
+    the effect namespace and the complete canonical identity document.  That
+    keeps IDs stable across processes while retaining the full SHA-256 collision
+    resistance independently for every write.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    calendar_event_id: str
+    reminder_id: str
+    reminder_created_event_id: str
+    notification_requested_event_id: str
+    outbox_message_id: str
+
+    @classmethod
+    def from_identity(cls, identity: ReminderIdempotencyIdentity) -> ReminderEffectIds:
+        def derive(namespace: str, prefix: str) -> str:
+            document: dict[str, Any] = {
+                "identity": identity.canonical_document(),
+                "namespace": namespace,
+                "schema": _EFFECT_ID_SCHEMA,
+                "version": REMINDER_IDEMPOTENCY_VERSION,
+            }
+            return f"{prefix}{_sha256(_canonical_json(document))}"
+
+        return cls(
+            calendar_event_id=derive("calendar.event", _CALENDAR_EVENT_ID_PREFIX),
+            reminder_id=derive("scheduler.reminder", _REMINDER_ID_PREFIX),
+            reminder_created_event_id=derive(
+                "event.reminder.created", _REMINDER_CREATED_EVENT_ID_PREFIX
+            ),
+            notification_requested_event_id=derive(
+                "event.notification.requested",
+                _NOTIFICATION_REQUESTED_EVENT_ID_PREFIX,
+            ),
+            outbox_message_id=derive("outbox.message", _OUTBOX_MESSAGE_ID_PREFIX),
+        )
+
+
 class ReminderPayload(DomainModel):
     """Canonical, effect-relevant payload fingerprinted separately from identity.
 
@@ -158,6 +209,10 @@ class ReminderIdempotency(DomainModel):
     def payload_fingerprint(self) -> str:
         return self.payload.fingerprint
 
+    @property
+    def effect_ids(self) -> ReminderEffectIds:
+        return ReminderEffectIds.from_identity(self.identity)
+
 
 class ReminderIdempotencyConflict(AssistantError):
     """The same canonical event identity was observed with a changed payload."""
@@ -177,6 +232,14 @@ class ReminderIdempotencyConflict(AssistantError):
 
 # Readable alias for transport/application integration code.
 ReminderReplayConflict = ReminderIdempotencyConflict
+
+
+def reminder_effect_ids(
+    identity: ReminderIdempotencyIdentity,
+) -> ReminderEffectIds:
+    """Derive all durable effect IDs from one validated v2 identity."""
+
+    return ReminderEffectIds.from_identity(identity)
 
 
 def reminder_idempotency_key(

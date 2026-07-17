@@ -16,7 +16,8 @@ import hashlib
 import importlib
 import json
 import re
-from typing import Any
+from types import TracebackType
+from typing import Any, Literal
 from uuid import uuid4
 
 from personal_assistant.application.dto.commands import (
@@ -37,8 +38,20 @@ from personal_assistant.application.dto.workflows import (
 from personal_assistant.application.ports.calendar import (
     CalendarEventRequest,
     CalendarEventResult,
+    CalendarPort,
 )
-from personal_assistant.application.ports.scheduler import ScheduledReminder
+from personal_assistant.application.ports.events import EventStorePort, OutboxPort
+from personal_assistant.application.ports.reminder_unit_of_work import (
+    ReminderCommitOutcomeUnknown,
+    ReminderTransaction,
+    ReminderTransactionConflict,
+    ReminderTransactionConflictKind,
+)
+from personal_assistant.application.ports.scheduler import (
+    ReminderSchedulerPort,
+    ScheduledReminder,
+)
+from personal_assistant.application.ports.workflow_state import WorkflowStateStorePort
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import (
     Principal,
@@ -218,6 +231,58 @@ def _rollback(connection: Any) -> None:
         rollback()
 
 
+_POSTGRES_CONFLICTS = {
+    "40001": ReminderTransactionConflictKind.serialization_failure,
+    "40P01": ReminderTransactionConflictKind.deadlock_detected,
+    "23505": ReminderTransactionConflictKind.unique_violation,
+}
+
+
+def _sqlstate(error: BaseException) -> str | None:
+    """Read a SQLSTATE without including driver diagnostics in public errors."""
+
+    seen: set[int] = set()
+    current: BaseException | None = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        value = getattr(current, "sqlstate", None) or getattr(current, "pgcode", None)
+        if isinstance(value, str):
+            return value
+        diagnostics = getattr(current, "diag", None)
+        value = getattr(diagnostics, "sqlstate", None)
+        if isinstance(value, str):
+            return value
+        current = current.__cause__ or current.__context__
+    return None
+
+
+def _transaction_conflict(
+    error: BaseException,
+) -> ReminderTransactionConflict | None:
+    state = _sqlstate(error)
+    kind = _POSTGRES_CONFLICTS.get(state) if state is not None else None
+    return ReminderTransactionConflict(kind) if kind is not None else None
+
+
+def _is_ambiguous_commit_error(error: BaseException) -> bool:
+    """Return whether a driver error can hide a successfully applied commit."""
+
+    seen: set[int] = set()
+    current: BaseException | None = error
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        for error_type in type(current).__mro__:
+            if error_type.__module__.split(".", maxsplit=1)[
+                0
+            ] == "psycopg" and error_type.__name__ in {
+                "OperationalError",
+                "InterfaceError",
+            }:
+                return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
 @dataclass(slots=True)
 class _PostgresDatabase:
     dsn: str | None = None
@@ -281,12 +346,6 @@ class _PostgresDatabase:
                 finally:
                     _close(cursor_cm)
 
-    def ensure_schema(self) -> None:
-        statements = _schema_statements(self)
-        with self.cursor() as cursor:
-            for statement in statements:
-                cursor.execute(statement)
-
 
 class _PostgresStore:
     def __init__(
@@ -305,28 +364,8 @@ class _PostgresStore:
             schema=schema,
         )
 
-    def ensure_schema(self) -> None:
-        self._db.ensure_schema()
-
     def _table(self, name: str) -> str:
         return self._db.table(name)
-
-
-def ensure_schema(
-    *,
-    dsn: str | None = None,
-    connection_factory: ConnectionFactory | None = None,
-    connection: Any | None = None,
-    schema: str = "public",
-) -> None:
-    """Create all Postgres persistence tables if they do not already exist."""
-
-    _PostgresDatabase(
-        dsn=dsn,
-        connection_factory=connection_factory,
-        connection=connection,
-        schema=schema,
-    ).ensure_schema()
 
 
 class PostgresEventStore(_PostgresStore):
@@ -407,7 +446,13 @@ class PostgresEventStore(_PostgresStore):
 
 class PostgresOutbox(_PostgresStore):
     def add(
-        self, principal: Principal, event: CloudEvent, *, idempotency_key: str
+        self,
+        principal: Principal,
+        event: CloudEvent,
+        *,
+        idempotency_key: str,
+        next_attempt_at: datetime | None = None,
+        message_id: str | None = None,
     ) -> OutboxMessage:
         require_trusted_principal(principal)
         if event.tenant_id != principal.tenant_id:
@@ -417,11 +462,28 @@ class PostgresOutbox(_PostgresStore):
                 tenant_id=principal.tenant_id,
             )
 
+        if next_attempt_at is not None:
+            if next_attempt_at.tzinfo is None or next_attempt_at.utcoffset() is None:
+                raise ValueError("next_attempt_at must be timezone-aware")
+            next_attempt_at = next_attempt_at.astimezone(UTC)
         event_payload = event.model_dump(mode="json")
-        event_fingerprint = _fingerprint(event_payload)
-        message = OutboxMessage(
-            tenant_id=principal.tenant_id, event=event, idempotency_key=idempotency_key
-        )
+        fingerprint_payload: object = event_payload
+        if next_attempt_at is not None or message_id is not None:
+            fingerprint_payload = {
+                "event": event_payload,
+                "next_attempt_at": next_attempt_at,
+                "message_id": message_id,
+            }
+        event_fingerprint = _fingerprint(fingerprint_payload)
+        message_data: dict[str, object] = {
+            "tenant_id": principal.tenant_id,
+            "event": event,
+            "idempotency_key": idempotency_key,
+            "next_attempt_at": next_attempt_at,
+        }
+        if message_id is not None:
+            message_data["id"] = message_id
+        message = OutboxMessage.model_validate(message_data)
         message_payload = message.model_dump(mode="json")
         with self._db.cursor() as cursor:
             cursor.execute(
@@ -433,7 +495,7 @@ class PostgresOutbox(_PostgresStore):
                         created_at, published_at, event_payload, fingerprint, payload
                     )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s::jsonb)
-                ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+                ON CONFLICT DO NOTHING
                 RETURNING payload
                 """,
                 (
@@ -468,6 +530,22 @@ class PostgresOutbox(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is None:
+                cursor.execute(
+                    f"""
+                    SELECT idempotency_key
+                    FROM {self._table("outbox")}
+                    WHERE tenant_id = %s
+                      AND (message_id = %s OR event_id = %s)
+                    """,
+                    (principal.tenant_id, message.id, event.id),
+                )
+                collision = cursor.fetchone()
+                if collision is not None:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "outbox durable id conflict",
+                        tenant_id=principal.tenant_id,
+                    )
                 raise AssistantError(
                     ErrorCode.INTERNAL_ERROR,
                     "outbox insert failed",
@@ -1193,9 +1271,15 @@ class PostgresCalendarStore(_PostgresStore):
             resource=request.idempotency_key,
         )
         request_payload = request.model_dump(mode="json")
-        request_fingerprint = _fingerprint(request_payload)
+        request_fingerprint = _fingerprint(
+            request.model_dump(mode="json", exclude={"event_id"})
+        )
+        compatible_request_fingerprints = {
+            request_fingerprint,
+            _fingerprint(request_payload),
+        }
         result = CalendarEventResult(
-            event_id=f"cal_{uuid4().hex}",
+            event_id=request.event_id or f"cal_{uuid4().hex}",
             title=request.title,
             starts_at=request.starts_at,
             timezone=request.timezone,
@@ -1213,7 +1297,7 @@ class PostgresCalendarStore(_PostgresStore):
                         request_fingerprint, request_payload, payload
                     )
                 VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)
-                ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+                ON CONFLICT DO NOTHING
                 RETURNING payload
                 """,
                 (
@@ -1241,12 +1325,29 @@ class PostgresCalendarStore(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is None:
+                cursor.execute(
+                    f"""
+                    SELECT idempotency_key
+                    FROM {self._table("calendar_events")}
+                    WHERE tenant_id = %s AND event_id = %s
+                    """,
+                    (principal.tenant_id, result.event_id),
+                )
+                if cursor.fetchone() is not None:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "calendar event id conflict",
+                        tenant_id=principal.tenant_id,
+                    )
                 raise AssistantError(
                     ErrorCode.INTERNAL_ERROR,
                     "calendar insert failed",
                     tenant_id=principal.tenant_id,
                 )
-            if _row_value(existing, "request_fingerprint", 1) != request_fingerprint:
+            if (
+                _row_value(existing, "request_fingerprint", 1)
+                not in compatible_request_fingerprints
+            ):
                 raise AssistantError(
                     ErrorCode.CONFLICT,
                     "calendar idempotency conflict",
@@ -1299,22 +1400,26 @@ class PostgresReminderScheduler(_PostgresStore):
         payload_fingerprint: str,
         minutes_before: int = 30,
         idempotency_key: str,
+        reminder_id: str | None = None,
     ) -> ScheduledReminder:
         require_trusted_principal(principal)
         _require_aware(starts_at, "starts_at")
         notify_at = starts_at - timedelta(minutes=minutes_before)
-        job = ScheduledReminder(
-            tenant_id=principal.tenant_id,
-            calendar_event_id=calendar_event_id,
-            notify_at=notify_at,
-            timezone=timezone,
-            source_event_id=source_event_id,
-            payload_fingerprint=payload_fingerprint,
-            channel=channel,
-            recipient=recipient,
-            body=body,
-            idempotency_key=idempotency_key,
-        )
+        job_data: dict[str, object] = {
+            "tenant_id": principal.tenant_id,
+            "calendar_event_id": calendar_event_id,
+            "notify_at": notify_at,
+            "timezone": timezone,
+            "source_event_id": source_event_id,
+            "payload_fingerprint": payload_fingerprint,
+            "channel": channel,
+            "recipient": recipient,
+            "body": body,
+            "idempotency_key": idempotency_key,
+        }
+        if reminder_id is not None:
+            job_data["reminder_id"] = reminder_id
+        job = ScheduledReminder.model_validate(job_data)
         payload = job.model_dump(mode="json")
         with self._db.cursor() as cursor:
             cursor.execute(
@@ -1325,7 +1430,7 @@ class PostgresReminderScheduler(_PostgresStore):
                         notify_at, channel, recipient, sent, payload
                     )
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
-                ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
+                ON CONFLICT DO NOTHING
                 RETURNING payload
                 """,
                 (
@@ -1356,6 +1461,20 @@ class PostgresReminderScheduler(_PostgresStore):
             )
             existing = cursor.fetchone()
             if existing is None:
+                cursor.execute(
+                    f"""
+                    SELECT idempotency_key
+                    FROM {self._table("scheduled_reminders")}
+                    WHERE tenant_id = %s AND reminder_id = %s
+                    """,
+                    (principal.tenant_id, job.reminder_id),
+                )
+                if cursor.fetchone() is not None:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "scheduled reminder id conflict",
+                        tenant_id=principal.tenant_id,
+                    )
                 raise AssistantError(
                     ErrorCode.INTERNAL_ERROR,
                     "reminder schedule failed",
@@ -1704,6 +1823,208 @@ def _tenant_id_from_principal(principal: Principal | str) -> str:
     return principal.tenant_id
 
 
+class PostgresReminderTransaction:
+    """One tenant-bound PostgreSQL transaction for all reminder effects."""
+
+    calendar: CalendarPort
+    scheduler: ReminderSchedulerPort
+    event_store: EventStorePort
+    outbox: OutboxPort
+    states: WorkflowStateStorePort
+
+    def __init__(
+        self,
+        *,
+        principal: Principal,
+        dsn: str | None = None,
+        connection_factory: ConnectionFactory | None = None,
+        connection: Any | None = None,
+        schema: str = "public",
+    ) -> None:
+        sources = (
+            dsn is not None,
+            connection_factory is not None,
+            connection is not None,
+        )
+        if sum(sources) > 1:
+            raise ValueError(
+                "provide only one of dsn, connection_factory, or connection"
+            )
+        _quote_identifier(schema)
+        self.principal = principal
+        self._dsn = dsn
+        self._connection_factory = connection_factory
+        self._configured_connection = connection
+        self._schema = schema
+        self._connection: Any | None = None
+        self._managed_connection = False
+        self._entered = False
+        self._active = False
+        self._commit_requested = False
+        self._committed = False
+        self._rolled_back = False
+
+    def __enter__(self) -> PostgresReminderTransaction:
+        if self._entered:
+            raise RuntimeError("reminder transaction cannot be entered twice")
+        self._entered = True
+        try:
+            connection, managed = self._open_connection()
+            self._connection = connection
+            self._managed_connection = managed
+            self._execute("BEGIN ISOLATION LEVEL SERIALIZABLE")
+            database = _PostgresDatabase(
+                connection=connection,
+                schema=self._schema,
+                commit=False,
+            )
+            self.calendar = PostgresCalendarStore(_database=database)
+            self.scheduler = PostgresReminderScheduler(_database=database)
+            self.event_store = PostgresEventStore(_database=database)
+            self.outbox = PostgresOutbox(_database=database)
+            self.states = PostgresWorkflowStateStore(_database=database)
+            self._active = True
+        except BaseException as error:
+            self._close_managed_connection()
+            conflict = _transaction_conflict(error)
+            if conflict is not None:
+                raise conflict from None
+            raise
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> Literal[False]:
+        try:
+            if exc_value is not None or not self._commit_requested:
+                if not self._rolled_back:
+                    try:
+                        self._physical_rollback()
+                    except BaseException:
+                        if exc_value is None:
+                            raise
+            elif not self._rolled_back:
+                self._physical_commit()
+        except BaseException as error:
+            conflict = _transaction_conflict(error)
+            if conflict is not None:
+                raise conflict from None
+            if exc_value is None and self._commit_requested:
+                if _is_ambiguous_commit_error(error):
+                    raise ReminderCommitOutcomeUnknown() from None
+            raise
+        finally:
+            self._active = False
+            self._close_managed_connection()
+
+        if exc_value is not None:
+            conflict = _transaction_conflict(exc_value)
+            if conflict is not None:
+                raise conflict from None
+        return False
+
+    def commit(self) -> None:
+        """Request commit on clean context exit; do not commit immediately."""
+
+        self._require_active()
+        if self._rolled_back:
+            raise RuntimeError("cannot commit a rolled-back reminder transaction")
+        self._commit_requested = True
+
+    def rollback(self) -> None:
+        self._require_active()
+        if self._rolled_back:
+            return
+        try:
+            self._physical_rollback()
+        except BaseException as error:
+            conflict = _transaction_conflict(error)
+            if conflict is not None:
+                raise conflict from None
+            raise
+
+    def _open_connection(self) -> tuple[Any, bool]:
+        if self._configured_connection is not None:
+            return self._configured_connection, False
+        if self._connection_factory is not None:
+            return self._connection_factory(), True
+        psycopg = _load_psycopg()
+        if self._dsn is not None:
+            return psycopg.connect(self._dsn), True
+        return psycopg.connect(), True
+
+    def _execute(self, statement: str) -> None:
+        assert self._connection is not None
+        cursor_cm = self._connection.cursor()
+        if hasattr(cursor_cm, "__enter__"):
+            with cursor_cm as cursor:
+                cursor.execute(statement)
+            return
+        try:
+            cursor_cm.execute(statement)
+        finally:
+            _close(cursor_cm)
+
+    def _physical_commit(self) -> None:
+        assert self._connection is not None
+        _commit(self._connection)
+        self._committed = True
+
+    def _physical_rollback(self) -> None:
+        assert self._connection is not None
+        _rollback(self._connection)
+        self._rolled_back = True
+        self._commit_requested = False
+
+    def _require_active(self) -> None:
+        if not self._active:
+            raise RuntimeError("reminder transaction is not active")
+
+    def _close_managed_connection(self) -> None:
+        connection = self._connection
+        self._connection = None
+        if connection is not None and self._managed_connection:
+            try:
+                _close(connection)
+            except Exception:
+                pass
+
+
+@dataclass(frozen=True, slots=True)
+class PostgresReminderUnitOfWork:
+    """Creates serializable reminder transactions without eager I/O or DDL."""
+
+    dsn: str | None = None
+    connection_factory: ConnectionFactory | None = None
+    connection: Any | None = None
+    schema: str = "public"
+
+    def __post_init__(self) -> None:
+        sources = (
+            self.dsn is not None,
+            self.connection_factory is not None,
+            self.connection is not None,
+        )
+        if sum(sources) > 1:
+            raise ValueError(
+                "provide only one of dsn, connection_factory, or connection"
+            )
+        _quote_identifier(self.schema)
+
+    def begin(self, principal: Principal) -> ReminderTransaction:
+        require_trusted_principal(principal)
+        return PostgresReminderTransaction(
+            principal=principal,
+            dsn=self.dsn,
+            connection_factory=self.connection_factory,
+            connection=self.connection,
+            schema=self.schema,
+        )
+
+
 class PostgresPersistence:
     """Convenience bundle for sharing one Postgres connection configuration."""
 
@@ -1729,9 +2050,12 @@ class PostgresPersistence:
         self.scheduler = PostgresReminderScheduler(_database=self._db)
         self.states = PostgresWorkflowStateStore(_database=self._db)
         self.traces = PostgresTraceRecorder(_database=self._db)
-
-    def ensure_schema(self) -> None:
-        self._db.ensure_schema()
+        self.reminder_uow = PostgresReminderUnitOfWork(
+            dsn=dsn,
+            connection_factory=connection_factory,
+            connection=connection,
+            schema=schema,
+        )
 
 
 def build_postgres_persistence(
@@ -1739,184 +2063,7 @@ def build_postgres_persistence(
     database_url: str | None = None,
     dsn: str | None = None,
     schema: str = "public",
-    ensure: bool = True,
 ) -> PostgresPersistence:
-    """Build a Postgres persistence bundle for infrastructure bootstrap."""
+    """Build adapters without connecting or modifying the database schema."""
 
-    persistence = PostgresPersistence(dsn=database_url or dsn, schema=schema)
-    if ensure:
-        persistence.ensure_schema()
-    return persistence
-
-
-def _schema_statements(db: _PostgresDatabase) -> tuple[str, ...]:
-    events = db.table("events")
-    outbox = db.table("outbox")
-    workflow_states = db.table("workflow_states")
-    approvals = db.table("approvals")
-    calendar_events = db.table("calendar_events")
-    scheduled_reminders = db.table("scheduled_reminders")
-    memory_records = db.table("memory_records")
-    trace_events = db.table("trace_events")
-    return (
-        f"CREATE SCHEMA IF NOT EXISTS {db.schema}",
-        f"""
-        CREATE TABLE IF NOT EXISTS {events} (
-            tenant_id TEXT NOT NULL,
-            event_id TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            source TEXT NOT NULL,
-            occurred_at TIMESTAMPTZ NOT NULL,
-            fingerprint TEXT NOT NULL,
-            payload JSONB NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            PRIMARY KEY (tenant_id, event_id)
-        )
-        """,
-        f"CREATE INDEX IF NOT EXISTS assistant_events_tenant_time_idx ON {events} (tenant_id, occurred_at)",
-        f"""
-        CREATE TABLE IF NOT EXISTS {outbox} (
-            tenant_id TEXT NOT NULL,
-            idempotency_key TEXT NOT NULL,
-            message_id TEXT NOT NULL,
-            event_id TEXT NOT NULL,
-            dispatch_status TEXT NOT NULL,
-            claim_token TEXT,
-            claim_owner TEXT,
-            claimed_until TIMESTAMPTZ,
-            next_attempt_at TIMESTAMPTZ,
-            attempts INTEGER NOT NULL DEFAULT 0,
-            created_at TIMESTAMPTZ NOT NULL,
-            published_at TIMESTAMPTZ,
-            event_payload JSONB NOT NULL,
-            fingerprint TEXT NOT NULL,
-            payload JSONB NOT NULL,
-            PRIMARY KEY (tenant_id, idempotency_key),
-            UNIQUE (tenant_id, message_id)
-        )
-        """,
-        f"""
-        CREATE INDEX IF NOT EXISTS assistant_outbox_claim_idx
-        ON {outbox} (tenant_id, dispatch_status, claimed_until, next_attempt_at, created_at)
-        """,
-        f"""
-        CREATE TABLE IF NOT EXISTS {workflow_states} (
-            tenant_id TEXT NOT NULL,
-            idempotency_key TEXT NOT NULL,
-            workflow_id TEXT NOT NULL,
-            workflow_type TEXT NOT NULL,
-            status TEXT NOT NULL,
-            step TEXT NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL,
-            updated_at TIMESTAMPTZ NOT NULL,
-            payload_fingerprint TEXT,
-            fingerprint TEXT NOT NULL,
-            payload JSONB NOT NULL,
-            PRIMARY KEY (tenant_id, idempotency_key),
-            UNIQUE (tenant_id, workflow_id)
-        )
-        """,
-        f"""
-        ALTER TABLE {workflow_states}
-        ADD COLUMN IF NOT EXISTS payload_fingerprint TEXT
-        """,
-        f"""
-        CREATE INDEX IF NOT EXISTS assistant_workflow_states_status_idx
-        ON {workflow_states} (tenant_id, status, updated_at)
-        """,
-        f"""
-        CREATE TABLE IF NOT EXISTS {approvals} (
-            tenant_id TEXT NOT NULL,
-            principal_id TEXT NOT NULL,
-            approval_id TEXT NOT NULL,
-            action TEXT NOT NULL,
-            resource TEXT NOT NULL,
-            tier TEXT NOT NULL,
-            workflow_kind TEXT NOT NULL,
-            idempotency_key TEXT NOT NULL,
-            status TEXT NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL,
-            updated_at TIMESTAMPTZ,
-            fingerprint TEXT NOT NULL,
-            payload JSONB NOT NULL,
-            PRIMARY KEY (tenant_id, approval_id),
-            UNIQUE (tenant_id, principal_id, workflow_kind, idempotency_key)
-        )
-        """,
-        f"""
-        CREATE INDEX IF NOT EXISTS assistant_approvals_pending_idx
-        ON {approvals} (tenant_id, principal_id, status, created_at)
-        """,
-        f"""
-        CREATE TABLE IF NOT EXISTS {calendar_events} (
-            tenant_id TEXT NOT NULL,
-            idempotency_key TEXT NOT NULL,
-            event_id TEXT NOT NULL,
-            title TEXT NOT NULL,
-            starts_at TIMESTAMPTZ NOT NULL,
-            request_fingerprint TEXT NOT NULL,
-            request_payload JSONB NOT NULL,
-            payload JSONB NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            PRIMARY KEY (tenant_id, idempotency_key),
-            UNIQUE (tenant_id, event_id)
-        )
-        """,
-        f"CREATE INDEX IF NOT EXISTS assistant_calendar_events_starts_idx ON {calendar_events} (tenant_id, starts_at)",
-        f"""
-        CREATE TABLE IF NOT EXISTS {scheduled_reminders} (
-            tenant_id TEXT NOT NULL,
-            idempotency_key TEXT NOT NULL,
-            reminder_id TEXT NOT NULL,
-            calendar_event_id TEXT NOT NULL,
-            notify_at TIMESTAMPTZ NOT NULL,
-            channel TEXT NOT NULL,
-            recipient TEXT NOT NULL,
-            sent BOOLEAN NOT NULL DEFAULT false,
-            payload JSONB NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            PRIMARY KEY (tenant_id, idempotency_key),
-            UNIQUE (tenant_id, reminder_id)
-        )
-        """,
-        f"""
-        CREATE INDEX IF NOT EXISTS assistant_scheduled_reminders_due_idx
-        ON {scheduled_reminders} (tenant_id, sent, notify_at, reminder_id)
-        """,
-        f"""
-        CREATE TABLE IF NOT EXISTS {memory_records} (
-            tenant_id TEXT NOT NULL,
-            user_id TEXT,
-            memory_id TEXT NOT NULL,
-            kind TEXT NOT NULL,
-            text TEXT NOT NULL,
-            source TEXT NOT NULL,
-            confirmed BOOLEAN NOT NULL DEFAULT false,
-            created_at TIMESTAMPTZ NOT NULL,
-            fingerprint TEXT NOT NULL,
-            payload JSONB NOT NULL,
-            PRIMARY KEY (tenant_id, memory_id)
-        )
-        """,
-        f"""
-        CREATE INDEX IF NOT EXISTS assistant_memory_records_lookup_idx
-        ON {memory_records} (tenant_id, user_id, kind, confirmed, created_at)
-        """,
-        f"""
-        CREATE TABLE IF NOT EXISTS {trace_events} (
-            tenant_id TEXT NOT NULL,
-            trace_id TEXT NOT NULL,
-            run_id TEXT NOT NULL,
-            agent_id TEXT NOT NULL,
-            event_type TEXT NOT NULL,
-            timestamp TIMESTAMPTZ NOT NULL,
-            parent_event_id TEXT,
-            fingerprint TEXT NOT NULL,
-            payload JSONB NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            PRIMARY KEY (tenant_id, trace_id)
-        )
-        """,
-        f"CREATE INDEX IF NOT EXISTS assistant_trace_events_run_idx ON {trace_events} (tenant_id, run_id, timestamp)",
-        f"CREATE INDEX IF NOT EXISTS assistant_trace_events_tenant_idx ON {trace_events} (tenant_id, timestamp)",
-    )
+    return PostgresPersistence(dsn=database_url or dsn, schema=schema)

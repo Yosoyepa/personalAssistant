@@ -18,7 +18,7 @@ script de gobierno y esta guía.
 | `tests (3.11)` | suite completa y cobertura global de líneas en Python 3.11 |
 | `tests (3.12)` | suite completa, cobertura global de líneas y diff coverage en Python 3.12 |
 | `security` | detección de secretos con Gitleaks y auditoría con `pip-audit` |
-| `postgres-integration` | arranque de PostgreSQL 16, creación real del esquema y tests del adaptador |
+| `postgres-integration` | PostgreSQL 16, migraciones explícitas y tests reales del runner/adaptador |
 
 Los workflows usan permisos `contents: read`, instalaciones bloqueadas por
 `uv.lock`, timeouts y cancelación de ejecuciones obsoletas. `Dependabot` agrupa

@@ -8,12 +8,14 @@ from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from personal_assistant.domain.common.permissions import PermissionTier
+from personal_assistant.infrastructure.migrations.validation import validate_identifier
 
 
 DEFAULT_MINIMAX_BASE_URL = "https://api.minimax.io/anthropic"
 DEFAULT_MINIMAX_MODEL = "MiniMax-M3"
 DEFAULT_MINIMAX_TTS_BASE_URL = "https://api.minimax.io"
 DEFAULT_MINIMAX_TTS_MODEL = "speech-2.8-turbo"
+DEFAULT_DATABASE_SCHEMA = "public"
 
 
 def _load_env_file() -> dict[str, str]:
@@ -86,6 +88,20 @@ def load_persistence_settings_from_env() -> tuple[str, str | None]:
     )
 
 
+def load_database_settings_from_env() -> tuple[str | None, str]:
+    """Load only the database settings needed by the migration CLI."""
+
+    file_values = _load_env_file()
+    schema = (
+        _env("DATABASE_SCHEMA", file_values, DEFAULT_DATABASE_SCHEMA).strip()
+        or DEFAULT_DATABASE_SCHEMA
+    )
+    return (
+        _optional_env("DATABASE_URL", file_values),
+        validate_identifier(schema, field="schema"),
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class AppSettings:
     tenant_id: str = "personal"
@@ -93,6 +109,7 @@ class AppSettings:
     reply_locale: str = "es"
     persistence_backend: str = "memory"
     database_url: str | None = None
+    database_schema: str = DEFAULT_DATABASE_SCHEMA
     telegram_webhook_secret: str = ""
     telegram_bot_token: str | None = None
     telegram_allowed_user_ids: frozenset[str] = frozenset()
@@ -128,6 +145,11 @@ class AppSettings:
     reminder_minutes_before: int = 30
 
     def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "database_schema",
+            validate_identifier(self.database_schema, field="schema"),
+        )
         try:
             timezone = ZoneInfo(self.timezone)
         except (ValueError, ZoneInfoNotFoundError) as exc:
@@ -183,6 +205,10 @@ class AppSettings:
             .lower()
             or "memory",
             database_url=_optional_env("DATABASE_URL", file_values),
+            database_schema=_env(
+                "DATABASE_SCHEMA", file_values, DEFAULT_DATABASE_SCHEMA
+            ).strip()
+            or DEFAULT_DATABASE_SCHEMA,
             telegram_webhook_secret=_env(
                 "TELEGRAM_WEBHOOK_SECRET", file_values
             ).strip(),

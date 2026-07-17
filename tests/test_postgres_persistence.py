@@ -136,42 +136,26 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertTrue(hasattr(postgres, "PostgresEventStore"))
         self.assertFalse("psycopg" in sys.modules)
 
-    def test_ensure_schema_is_idempotent_and_uses_jsonb_tables(self) -> None:
+    def test_building_persistence_does_not_execute_schema_ddl(self) -> None:
         connection = RecordingConnection()
 
-        postgres.ensure_schema(connection=connection, schema="assistant_test")
-        postgres.ensure_schema(connection=connection, schema="assistant_test")
-
-        statements = [statement for statement, _ in connection.statements]
-        table_statements = [
-            statement
-            for statement in statements
-            if "CREATE TABLE IF NOT EXISTS" in statement
-        ]
-
-        self.assertEqual(connection.commits, 2)
-        self.assertEqual(len(table_statements), 16)
-        self.assertTrue(all("JSONB" in statement for statement in table_statements))
-        self.assertTrue(
-            all(
-                "IF NOT EXISTS" in statement
-                for statement in statements
-                if "CREATE " in statement
-            )
+        persistence = postgres.PostgresPersistence(
+            connection=connection,
+            schema="assistant_test",
         )
-        self.assertIn('CREATE SCHEMA IF NOT EXISTS "assistant_test"', statements[0])
-        self.assertTrue(
-            any(
-                "ADD COLUMN IF NOT EXISTS payload_fingerprint TEXT" in statement
-                for statement in statements
-            )
-        )
+
+        self.assertIsNotNone(persistence.event_store)
+        self.assertEqual(connection.statements, [])
+        self.assertEqual(connection.commits, 0)
 
     def test_schema_identifier_is_validated_before_sql_is_built(self) -> None:
         connection = RecordingConnection()
 
         with self.assertRaises(ValueError):
-            postgres.ensure_schema(connection=connection, schema="assistant-test")
+            postgres.PostgresPersistence(
+                connection=connection,
+                schema="assistant-test",
+            )
 
         self.assertEqual(connection.statements, [])
 
