@@ -55,7 +55,7 @@ $branchProtection = [ordered]@{
     block_creations                    = $false
     required_conversation_resolution  = $true
     lock_branch                        = $false
-    allow_fork_syncing                 = $true
+    allow_fork_syncing                 = $false
 }
 
 function ConvertTo-JsonDocument {
@@ -101,7 +101,9 @@ function Invoke-GitHubJson {
 
 function Assert-BooleanSetting {
     param(
-        [Parameter(Mandatory = $true)] [System.Collections.Generic.List[string]] $Drift,
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [System.Collections.Generic.List[string]] $Drift,
         [Parameter(Mandatory = $true)] [string] $Name,
         [Parameter(Mandatory = $true)] [bool] $Expected,
         [Parameter(Mandatory = $true)] [bool] $Actual
@@ -152,7 +154,7 @@ function Test-DesiredState {
     Assert-BooleanSetting -Drift $drift -Name 'protection.lock_branch' `
         -Expected $false -Actual ([bool] $currentProtection.lock_branch.enabled)
     Assert-BooleanSetting -Drift $drift -Name 'protection.allow_fork_syncing' `
-        -Expected $true -Actual ([bool] $currentProtection.allow_fork_syncing.enabled)
+        -Expected $false -Actual ([bool] $currentProtection.allow_fork_syncing.enabled)
 
     $reviews = $currentProtection.required_pull_request_reviews
     if ($null -eq $reviews) {
