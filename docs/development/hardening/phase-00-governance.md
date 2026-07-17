@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Status | `PR_OPEN` |
+| Status | `ACCEPTED_FOR_MERGE` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
 | Phase branch | `codex/phase-0-governance` |
 | Base commit | `865dd63` |
@@ -78,10 +78,13 @@ The phase must not be marked `MERGED` until all of the following are recorded:
 
 - [x] phase branch pushed;
 - [x] phase pull request created;
-- [ ] `quality`, `tests (3.11)`, `tests (3.12)`, `security`, and
-      `postgres-integration` green;
-- [ ] desired GitHub governance applied and verified;
+- [x] `quality`, `tests (3.11)`, `tests (3.12)`, `security`, and
+      `postgres-integration` green on code-and-governance head `77418ba`;
+- [x] desired GitHub governance applied and verified;
 - [ ] merge commit recorded.
+
+Branch protection must repeat the required checks for this history-only update
+before the pull request can merge.
 
 ## Risks and rollback
 
