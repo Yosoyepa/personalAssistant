@@ -5,7 +5,11 @@ import json
 from types import SimpleNamespace
 import unittest
 
-from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
+from personal_assistant.application.dto.events import (
+    CloudEvent,
+    OutboxMessage,
+    OutboxStatus,
+)
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
@@ -26,7 +30,9 @@ class PublicOnlyTenantListAdapter:
 
     def __getattribute__(self, name: str) -> object:
         if name.startswith("_") and not (name.startswith("__") and name.endswith("__")):
-            raise AssertionError(f"admin dashboard read private adapter attribute {name}")
+            raise AssertionError(
+                f"admin dashboard read private adapter attribute {name}"
+            )
         return object.__getattribute__(self, name)
 
     def list_for_tenant(self, principal: Principal) -> list[object]:
@@ -45,7 +51,9 @@ class PublicOnlyCalendarAdapter:
 
     def __getattribute__(self, name: str) -> object:
         if name.startswith("_") and not (name.startswith("__") and name.endswith("__")):
-            raise AssertionError(f"admin dashboard read private calendar attribute {name}")
+            raise AssertionError(
+                f"admin dashboard read private calendar attribute {name}"
+            )
         return object.__getattribute__(self, name)
 
     def list_events(self, principal: Principal) -> list[CalendarEventResult]:
@@ -68,10 +76,16 @@ class AdminDashboardTests(unittest.TestCase):
         principal: Principal,
         *,
         message_id: str = "42",
-        text: str = "recuerdame clase el martes a las 5",
+        text: str = "recuerdame clase el martes a las 11 am",
         approved: bool = True,
     ) -> ReminderWorkflowInput:
-        key = reminder_idempotency_key(principal.tenant_id, message_id, text)
+        key = reminder_idempotency_key(
+            tenant_id=principal.tenant_id,
+            channel="telegram",
+            principal_id=principal.principal_id,
+            conversation_id="chat-1",
+            source_event_id=message_id,
+        )
         approval = None
         if approved:
             approval = ApprovalGrant.issue(
@@ -82,6 +96,7 @@ class AdminDashboardTests(unittest.TestCase):
             )
         return ReminderWorkflowInput(
             message_id=message_id,
+            source_event_id=message_id,
             conversation_id="chat-1",
             text=text,
             recipient="chat-1",
@@ -110,7 +125,9 @@ class AdminDashboardTests(unittest.TestCase):
         self.assertEqual(snapshot["outbox"]["total"], 0)
         self.assertEqual(snapshot["scheduler"]["total"], 0)
 
-    def test_completed_run_exposes_outbox_scheduler_events_and_html_structure(self) -> None:
+    def test_completed_run_exposes_outbox_scheduler_events_and_html_structure(
+        self,
+    ) -> None:
         self.container.reminder_workflow.run(
             self.principal,
             self.request(self.principal),
@@ -179,6 +196,9 @@ class AdminDashboardTests(unittest.TestCase):
             recipient="chat-1",
             body="due reminder",
             idempotency_key="due-reminder",
+            timezone="America/Bogota",
+            source_event_id="event-due",
+            payload_fingerprint="a" * 64,
         )
         pending_job = ScheduledReminder(
             reminder_id="rem-pending",
@@ -189,6 +209,9 @@ class AdminDashboardTests(unittest.TestCase):
             recipient="chat-1",
             body="pending reminder",
             idempotency_key="pending-reminder",
+            timezone="America/Bogota",
+            source_event_id="event-pending",
+            payload_fingerprint="b" * 64,
         )
         sent_job = ScheduledReminder(
             reminder_id="rem-sent",
@@ -199,6 +222,9 @@ class AdminDashboardTests(unittest.TestCase):
             recipient="chat-1",
             body="sent reminder",
             idempotency_key="sent-reminder",
+            timezone="America/Bogota",
+            source_event_id="event-sent",
+            payload_fingerprint="c" * 64,
             sent=True,
         )
         agenda_events = [
@@ -207,18 +233,27 @@ class AdminDashboardTests(unittest.TestCase):
                 title="Due reminder event",
                 starts_at=datetime(2026, 6, 23, 16, 35, tzinfo=UTC),
                 idempotency_key="cal-due",
+                timezone="America/Bogota",
+                source_event_id="event-due",
+                payload_fingerprint="a" * 64,
             ),
             CalendarEventResult(
                 event_id="cal-pending",
                 title="Pending reminder event",
                 starts_at=datetime(2026, 6, 23, 18, 0, tzinfo=UTC),
                 idempotency_key="cal-pending",
+                timezone="America/Bogota",
+                source_event_id="event-pending",
+                payload_fingerprint="b" * 64,
             ),
             CalendarEventResult(
                 event_id="cal-past",
                 title="Past agenda event",
                 starts_at=datetime(2026, 6, 23, 15, 0, tzinfo=UTC),
                 idempotency_key="cal-past",
+                timezone="America/Bogota",
+                source_event_id="event-past",
+                payload_fingerprint="d" * 64,
             ),
         ]
         failed_state = WorkflowState(
@@ -264,22 +299,40 @@ class AdminDashboardTests(unittest.TestCase):
         self.assertEqual(snapshot["agenda"]["upcoming_count"], 2)
         self.assertEqual(snapshot["agenda"]["today_count"], 3)
         self.assertEqual(snapshot["agenda"]["past_count"], 1)
-        self.assertEqual(snapshot["scheduler"]["counts"], {"scheduled": 3, "due": 1, "sent": 1, "pending": 1})
-        self.assertEqual(snapshot["reminders"]["counts"], {"scheduled": 3, "due": 1, "sent": 1, "pending": 1})
-        scheduler_by_id = {item["idempotency_key"]: item for item in snapshot["scheduler"]["items"]}
-        reminders_by_id = {item["idempotency_key"]: item for item in snapshot["reminders"]["items"]}
+        self.assertEqual(
+            snapshot["scheduler"]["counts"],
+            {"scheduled": 3, "due": 1, "sent": 1, "pending": 1},
+        )
+        self.assertEqual(
+            snapshot["reminders"]["counts"],
+            {"scheduled": 3, "due": 1, "sent": 1, "pending": 1},
+        )
+        scheduler_by_id = {
+            item["idempotency_key"]: item for item in snapshot["scheduler"]["items"]
+        }
+        reminders_by_id = {
+            item["idempotency_key"]: item for item in snapshot["reminders"]["items"]
+        }
         self.assertEqual(scheduler_by_id["due-reminder"]["status"], "due")
         self.assertTrue(scheduler_by_id["due-reminder"]["due"])
-        self.assertEqual(reminders_by_id["due-reminder"]["event_title"], "Due reminder event")
-        self.assertEqual(scheduler_by_id[pending_job.idempotency_key]["status"], "scheduled")
+        self.assertEqual(
+            reminders_by_id["due-reminder"]["event_title"], "Due reminder event"
+        )
+        self.assertEqual(
+            scheduler_by_id[pending_job.idempotency_key]["status"], "scheduled"
+        )
         self.assertEqual(scheduler_by_id["sent-reminder"]["status"], "sent")
         self.assertEqual(snapshot["outbox"]["counts"]["failed"], 1)
         self.assertEqual(snapshot["events"]["counts"]["reminder.dispatch_failed"], 1)
         self.assertEqual(snapshot["states"]["counts"]["failed"], 1)
         self.assertEqual(snapshot["traces"]["counts"]["agent.failed"], 1)
-        self.assertEqual(snapshot["traces"]["items"][0]["error"]["message"], "telegram unavailable")
+        self.assertEqual(
+            snapshot["traces"]["items"][0]["error"]["message"], "telegram unavailable"
+        )
         self.assertEqual(snapshot["errors"]["total"], 3)
-        self.assertEqual(snapshot["errors"]["counts"], {"trace": 1, "workflow": 1, "outbox": 1})
+        self.assertEqual(
+            snapshot["errors"]["counts"], {"trace": 1, "workflow": 1, "outbox": 1}
+        )
         self.assertEqual(snapshot["errors"]["event_type_counts"]["agent.failed"], 1)
         self.assertIn(
             "telegram unavailable",
@@ -296,7 +349,10 @@ class AdminDashboardTests(unittest.TestCase):
                 tenant_id="tenant-a",
                 timestamp=datetime(2026, 6, 23, 16, 1, tzinfo=UTC),
                 input_summary={"media_kind": "voice", "media_mime_type": "audio/ogg"},
-                error={"type": "TranscriptionError", "message": "unsupported audio format"},
+                error={
+                    "type": "TranscriptionError",
+                    "message": "unsupported audio format",
+                },
             ),
             TraceEvent(
                 trace_id="trace-llm",
@@ -345,7 +401,9 @@ class AdminDashboardTests(unittest.TestCase):
         errors = self.dashboard.errors(self.principal)
         audio_errors = self.dashboard.errors(self.principal, category="audio")
         shared_run = self.dashboard.errors(self.principal, run_id="run-shared")
-        llm_errors = self.dashboard.errors(self.principal, event_type=TraceEventType.llm_called)
+        llm_errors = self.dashboard.errors(
+            self.principal, event_type=TraceEventType.llm_called
+        )
         html = self.dashboard.render_html(self.principal)
 
         self.assertEqual(errors["total"], 4)
@@ -390,7 +448,11 @@ class AdminDashboardTests(unittest.TestCase):
         )
         self.container.reminder_workflow.run(
             tenant_b,
-            self.request(tenant_b, message_id="99", text="recuerdame tenant-b secret el martes a las 5"),
+            self.request(
+                tenant_b,
+                message_id="99",
+                text="recuerdame tenant-b secret el martes a las 11 am",
+            ),
         )
 
         snapshot = self.dashboard.snapshot(self.principal)
@@ -425,7 +487,9 @@ class AdminDashboardTests(unittest.TestCase):
             idempotency_key="wf-public",
             updated_at=now,
         )
-        message = OutboxMessage(tenant_id="tenant-a", event=event, idempotency_key="out-public")
+        message = OutboxMessage(
+            tenant_id="tenant-a", event=event, idempotency_key="out-public"
+        )
         reminder = ScheduledReminder(
             reminder_id="rem-public",
             tenant_id="tenant-a",
@@ -435,12 +499,18 @@ class AdminDashboardTests(unittest.TestCase):
             recipient="chat-1",
             body="recordatorio",
             idempotency_key="rem-public",
+            timezone="America/Bogota",
+            source_event_id="event-public",
+            payload_fingerprint="e" * 64,
         )
         calendar_event = CalendarEventResult(
             event_id="cal-public",
             title="Public calendar event",
             starts_at=now,
             idempotency_key="cal-public",
+            timezone="America/Bogota",
+            source_event_id="event-public",
+            payload_fingerprint="e" * 64,
         )
         memory = self.container.memory.add(
             self.principal,
@@ -472,7 +542,9 @@ class AdminDashboardTests(unittest.TestCase):
         self.assertEqual(snapshot["traces"]["total"], 1)
         for adapter in adapters.values():
             self.assertTrue(adapter.seen_principals)
-            self.assertTrue(all(principal.is_trusted for principal in adapter.seen_principals))
+            self.assertTrue(
+                all(principal.is_trusted for principal in adapter.seen_principals)
+            )
 
     def test_local_client_guard_allows_only_loopback(self) -> None:
         self.assertTrue(is_local_client("127.0.0.1"))

@@ -1,0 +1,36 @@
+{
+  "replies": {
+    "reminder_ambiguous_hour": {
+      "version": "v1",
+      "path": "reminder_ambiguous_hour/v1.md"
+    },
+    "reminder_missing_date": {
+      "version": "v1",
+      "path": "reminder_missing_date/v1.md"
+    },
+    "reminder_missing_time": {
+      "version": "v1",
+      "path": "reminder_missing_time/v1.md"
+    },
+    "reminder_missing_datetime": {
+      "version": "v1",
+      "path": "reminder_missing_datetime/v1.md"
+    },
+    "reminder_nonexistent_local_time": {
+      "version": "v1",
+      "path": "reminder_nonexistent_local_time/v1.md"
+    },
+    "reminder_ambiguous_local_time": {
+      "version": "v1",
+      "path": "reminder_ambiguous_local_time/v1.md"
+    },
+    "reminder_invalid_timezone": {
+      "version": "v1",
+      "path": "reminder_invalid_timezone/v1.md"
+    },
+    "reminder_replay_conflict": {
+      "version": "v1",
+      "path": "reminder_replay_conflict/v1.md"
+    }
+  }
+}

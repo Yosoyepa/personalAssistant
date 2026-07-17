@@ -18,6 +18,12 @@ class NormalizedMessage(BaseModel):
     actor_id: str = Field(min_length=1)
     conversation_id: str = Field(min_length=1)
     message_id: str = Field(min_length=1)
+    source_event_id: str = Field(
+        min_length=1,
+        description=(
+            "Stable provider delivery/event identifier; distinct from the referenced message."
+        ),
+    )
     text: str = Field(min_length=1)
     idempotency_key: str | None = Field(default=None, min_length=1)
     command: str | None = Field(default=None, min_length=1)

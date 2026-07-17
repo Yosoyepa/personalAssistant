@@ -15,7 +15,9 @@ from fastapi.testclient import TestClient
 
 from personal_assistant.adapters.observability.local import TraceRecorder
 from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
-from personal_assistant.adapters.outbound.notifications.telegram import TelegramNotificationTool
+from personal_assistant.adapters.outbound.notifications.telegram import (
+    TelegramNotificationTool,
+)
 from personal_assistant.adapters.outbound.scheduler.local import ReminderScheduler
 from personal_assistant.adapters.persistence.in_memory import (
     InMemoryEventStore,
@@ -26,15 +28,23 @@ from personal_assistant.application.dto.reminders import ReminderWorkflowInput
 from personal_assistant.application.dto.runtime import AgentStatus
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
 from personal_assistant.application.ports.scheduler import ScheduledReminder
-from personal_assistant.application.use_cases.reminder_notifications import DispatchDueReminders
-from personal_assistant.application.use_cases.reminders import ReminderWorkflow, reminder_idempotency_key
+from personal_assistant.application.use_cases.reminder_notifications import (
+    DispatchDueReminders,
+)
+from personal_assistant.application.use_cases.reminders import (
+    ReminderWorkflow,
+    reminder_idempotency_key,
+)
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
 from personal_assistant.infrastructure.config import AppSettings
 from personal_assistant.infrastructure.http import create_app
-from personal_assistant.infrastructure.worker import ReminderWorker, RuntimeNotificationApprovalPolicy
+from personal_assistant.infrastructure.worker import (
+    ReminderWorker,
+    RuntimeNotificationApprovalPolicy,
+)
 
 
 NOW = datetime(2026, 6, 20, 12, tzinfo=UTC)
@@ -117,7 +127,13 @@ def approved_request(
     text: str,
     timezone: str = "UTC",
 ) -> ReminderWorkflowInput:
-    key = reminder_idempotency_key(actor.tenant_id, message_id, text)
+    key = reminder_idempotency_key(
+        tenant_id=actor.tenant_id,
+        channel="telegram",
+        principal_id=actor.principal_id,
+        conversation_id="chat-1",
+        source_event_id=message_id,
+    )
     approval = ApprovalGrant.issue(
         principal=actor,
         action="calendar.create_event",
@@ -126,6 +142,7 @@ def approved_request(
     )
     return ReminderWorkflowInput(
         message_id=message_id,
+        source_event_id=message_id,
         conversation_id="chat-1",
         text=text,
         recipient="chat-1",
@@ -165,6 +182,9 @@ def schedule_due(scheduler: ReminderScheduler, actor: Principal, *, key: str) ->
         body="Recordatorio hermetico",
         minutes_before=0,
         idempotency_key=key,
+        timezone="America/Bogota",
+        source_event_id=f"event-{key}",
+        payload_fingerprint="a" * 64,
     )
 
 
@@ -172,8 +192,8 @@ def schedule_due(scheduler: ReminderScheduler, actor: Principal, *, key: str) ->
     strict=True,
     raises=AssertionError,
     reason=(
-        "P0 atomicity gap: retry after the outbox write creates a new event fingerprint "
-        "and conflicts before terminal workflow state is persisted"
+        "P0 recovery gap: a crash after effects leaves the elected workflow running; "
+        "v2 replay prevents duplicate effects but has no durable lease/recovery path yet"
     ),
 )
 def test_retry_after_crash_between_outbox_and_terminal_state_is_atomic() -> None:
@@ -209,7 +229,9 @@ def test_retry_after_crash_between_outbox_and_terminal_state_is_atomic() -> None
             raise
         retry_conflict = exc
 
-    assert retry_conflict is None, "retry must resume or replay atomically, not conflict with its own outbox event"
+    assert retry_conflict is None, (
+        "retry must resume or replay atomically, not conflict with its own outbox event"
+    )
     assert retry_result is not None
     assert retry_result.status == AgentStatus.completed
     assert len(calendar.list_events(actor)) == 1
@@ -221,11 +243,6 @@ def test_retry_after_crash_between_outbox_and_terminal_state_is_atomic() -> None
     assert terminal.status == WorkflowStatus.completed
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="P0 timezone gap: ReminderWorkflow parses wall-clock text using request.now tzinfo and ignores request.timezone",
-)
 def test_request_timezone_controls_wall_clock_interpretation() -> None:
     actor = principal()
     container = build_container()
@@ -254,7 +271,9 @@ def test_request_timezone_controls_wall_clock_interpretation() -> None:
 def test_http_runtime_rejects_forged_principal_headers() -> None:
     app = create_app(
         build_container(),
-        settings=AppSettings(tenant_id="configured-tenant", reminder_worker_enabled=False),
+        settings=AppSettings(
+            tenant_id="configured-tenant", reminder_worker_enabled=False
+        ),
     )
     forged_headers = {
         "X-Principal-Id": "attacker",
@@ -273,7 +292,9 @@ def test_http_runtime_rejects_forged_principal_headers() -> None:
     }
 
     with TestClient(app) as client:
-        response = client.post("/v1/runtime/reminders", json=payload, headers=forged_headers)
+        response = client.post(
+            "/v1/runtime/reminders", json=payload, headers=forged_headers
+        )
 
     assert response.status_code in {401, 403}, (
         "unverified X-Principal-Id/X-Tenant-Id/X-Permission-Tier headers must never create a trusted principal"
@@ -293,10 +314,14 @@ def test_two_workers_cannot_deliver_the_same_due_reminder() -> None:
     workers = [worker(scheduler, client), worker(scheduler, client)]
 
     with ThreadPoolExecutor(max_workers=2) as pool:
-        futures = [pool.submit(instance.run_once, actor, now=NOW) for instance in workers]
+        futures = [
+            pool.submit(instance.run_once, actor, now=NOW) for instance in workers
+        ]
         ticks = [future.result(timeout=5) for future in futures]
 
-    assert sum(tick.sent_count for tick in ticks) == 1, "only the worker holding the durable claim may send"
+    assert sum(tick.sent_count for tick in ticks) == 1, (
+        "only the worker holding the durable claim may send"
+    )
     assert len(client.messages) == 1, "the provider must observe exactly one delivery"
 
 
@@ -320,6 +345,10 @@ def test_worker_restart_after_provider_send_does_not_redeliver() -> None:
     restarted_tick = worker(scheduler, client).run_once(actor, now=NOW)
 
     if restarted_tick.sent_count > 1:
-        raise RuntimeError("one worker tick reported more than one send for one due reminder")
-    assert len(client.messages) == 1, "a durable idempotency record must survive the worker process"
+        raise RuntimeError(
+            "one worker tick reported more than one send for one due reminder"
+        )
+    assert len(client.messages) == 1, (
+        "a durable idempotency record must survive the worker process"
+    )
     assert scheduler.due(actor, NOW) == []

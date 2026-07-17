@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
@@ -27,6 +28,7 @@ class WorkflowState(BaseModel):
     status: WorkflowStatus = WorkflowStatus.pending
     step: str = "created"
     idempotency_key: str = Field(min_length=1)
+    payload_fingerprint: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     data: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
@@ -49,6 +51,15 @@ class WorkflowState(BaseModel):
                 "updated_at": datetime.now(UTC),
             }
         )
+
+
+@dataclass(frozen=True, slots=True)
+class WorkflowStateRegistration:
+    """Atomic registration result for one workflow idempotency identity."""
+
+    state: WorkflowState
+    replayed: bool
+    resumed: bool = False
 
 
 class RetryPolicy(BaseModel):

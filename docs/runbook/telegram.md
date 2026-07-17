@@ -397,7 +397,7 @@ Wrapper responsibilities:
 - Call `normalize_telegram_webhook(payload, tenant_id=trusted_tenant_id)`.
 - Route normalized commands through `container.commands.handle(...)` with a
   trusted clock and timezone.
-- Derive or pass an idempotency key based on tenant, message ID, and text.
+- Preserve Telegram's message reference as `message_id`, map `update_id` (or the callback event id when an update id is unavailable) to explicit `source_event_id`, and derive the v2 idempotency key from trusted tenant/principal/channel/conversation plus that source event. Text belongs only in the independent payload fingerprint.
 - Return a fast `2xx` after accepting the update.
 - Send replies through the infrastructure `NotificationPort` with a runtime P5
   approval when `TELEGRAM_BOT_TOKEN` is configured; without a token, return the

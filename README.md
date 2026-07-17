@@ -152,6 +152,7 @@ curl -sS -X POST http://127.0.0.1:8000/v1/runtime/reminders \
   -H "X-Permission-Tier: P5" \
   -d '{
     "message_id": "telegram-message-1",
+    "source_event_id": "api-request-1",
     "conversation_id": "telegram-chat-1",
     "text": "recuerdame clase el martes a las 5",
     "channel": "telegram",

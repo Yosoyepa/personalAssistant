@@ -128,7 +128,7 @@ worker lease fields are typed columns.
 
 | Table | Purpose | Required Uniqueness / Indexes |
 |---|---|---|
-| `assistant_workflow_states` | Durable-lite state for reminder and command workflows. | Primary `(tenant_id, idempotency_key)`; unique `(tenant_id, workflow_id)`; index `(tenant_id, status, updated_at)`. |
+| `assistant_workflow_states` | Durable-lite state for reminder and command workflows; `payload_fingerprint` is stored separately from the replay key. | Primary `(tenant_id, idempotency_key)`; unique `(tenant_id, workflow_id)`; index `(tenant_id, status, updated_at)`. |
 | `assistant_events` | CloudEvents-style append store for tenant-scoped domain/application events. | Primary `(tenant_id, event_id)`; index `(tenant_id, occurred_at)`. |
 | `assistant_outbox` | Transactional outbox records awaiting dispatch. | Primary `(tenant_id, idempotency_key)`; unique `(tenant_id, message_id)`; index `(tenant_id, dispatch_status, claimed_until, next_attempt_at, created_at)`. |
 | `assistant_approvals` | Pending, approved, and cancelled P3+ approvals. | Primary `(tenant_id, approval_id)`; unique `(tenant_id, principal_id, workflow_kind, idempotency_key)`; index `(tenant_id, principal_id, status, created_at)`. |
@@ -136,6 +136,14 @@ worker lease fields are typed columns.
 | `assistant_scheduled_reminders` | Jobs due for reminder notifications. | Primary `(tenant_id, idempotency_key)`; unique `(tenant_id, reminder_id)`; index `(tenant_id, sent, notify_at, reminder_id)`. |
 | `assistant_calendar_events` | Local calendar tool state until external calendar sync exists. | Primary `(tenant_id, idempotency_key)`; unique `(tenant_id, event_id)`; index `(tenant_id, starts_at)`. |
 | `assistant_trace_events` | Trace records for admin/runtime inspection. | Primary `(tenant_id, trace_id)`; indexes `(tenant_id, run_id, timestamp)` and `(tenant_id, timestamp)`. |
+
+Pre-P1-A4 JSONB rows are upgraded only while reading: approvals use their
+legacy `message_id` as `source_event_id` and recompute the canonical reminder
+fingerprint; scheduled reminders receive a deterministic legacy source and use
+`UTC` because the original IANA zone was not persisted; calendar results recover
+their timezone and any available identity metadata from the request payload
+stored beside the result. New writes must include the strict fields and never
+use these fallbacks.
 
 ## Idempotency Rules
 
@@ -148,9 +156,17 @@ Expected behavior by store:
   existing event; same key with a different payload raises conflict.
 - Outbox: `(tenant_id, idempotency_key)` is idempotent. The fingerprint is the
   serialized event payload. A changed event for the same key raises conflict.
-- Workflow state: `(tenant_id, idempotency_key)` is the replay key. Terminal
-  `completed` or `failed` states are immutable; attempted mutation raises
-  conflict.
+- Reminder workflow state: the key is `reminder:v2:<full SHA-256>` over
+  versioned canonical JSON containing tenant, channel, principal, conversation,
+  and source event. The independent `payload_fingerprint` hashes canonical
+  `text`, `recipient`, and `timezone`; it is compared before replay and can
+  never be changed or removed by `upsert`.
+- Reminder registration uses atomic insert-or-replay. Same key and fingerprint
+  returns persisted state; same key and changed fingerprint raises typed
+  conflict without overwriting. A validated approval can atomically resume the
+  matching `waiting_approval` step; only the winner transitions to `running`.
+- Terminal workflow states (`completed` or `failed`) are immutable; attempted
+  lifecycle mutation raises conflict.
 - Approval requests: `(tenant_id, principal_id, workflow_kind,
   idempotency_key)` is idempotent. Same request returns the existing approval;
   different approval details raise conflict.
@@ -160,7 +176,9 @@ Expected behavior by store:
 - Notifications: `(tenant_id, idempotency_key)` is idempotent. Same approved
   request returns the existing delivery; changed request raises conflict.
 - Scheduled reminders: `(tenant_id, idempotency_key)` is idempotent. Same key
-  returns the existing job.
+  and effect-relevant payload returns the existing job; changed calendar,
+  instant, timezone, source event, payload fingerprint, channel, recipient, or
+  body raises conflict.
 - Memory records currently do not use an idempotency key. Only explicit,
   tenant/user-scoped memory should be stored; do not dump raw chat transcripts
   into memory.

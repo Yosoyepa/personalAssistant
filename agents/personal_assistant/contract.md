@@ -66,6 +66,7 @@ Required input:
   },
   "message": {
     "message_id": "string",
+    "source_event_id": "stable provider event id",
     "chat_id": "string",
     "text": "string",
     "attachments": [
@@ -98,6 +99,12 @@ Input invariants:
 - `principal.auth_source` must equal `telegram`.
 - `tenant_id` must not be accepted from `message.text`, attachment content, LLM output, or tool arguments.
 - Attachment size must be within the small-document limit defined by the document module.
+- Reminder idempotency identity is the versioned tuple `(tenant_id, channel, principal_id, conversation_id, source_event_id)`; tenant and principal come from the trusted principal.
+- `source_event_id` is the stable provider delivery/event id and is explicit at HTTP, Telegram, and command boundaries; `message.message_id` remains only a message reference. The only compatibility fallback is on reads of persisted pre-P1-A4 approvals, where `source_event_id = message_id` is deterministic and documented.
+- The reminder key is `reminder:v2:<full SHA-256>` over canonical UTF-8 JSON of that identity. Opaque IDs preserve case; values are trimmed and NFC-normalized; channel is additionally case-folded.
+- A caller-supplied reminder key is only an assertion and must equal the derived v2 key; it never selects or narrows identity.
+- The reminder payload fingerprint is a separate full SHA-256 over versioned canonical JSON containing `text`, `recipient`, and `timezone`. Approval, supplied key, and processing clock are excluded replay controls/context.
+- A request timezone is validated by the reminder parser: an invalid value returns `needs_clarification` with `reminder_invalid_timezone/v1` and creates no approval or side effect. An invalid configured `ASSISTANT_TIMEZONE` is different: settings construction fails and runtime startup is blocked.
 
 ## 5. Required Context
 
@@ -281,6 +288,13 @@ Output invariants:
 | AC-34 | Raw Telegram transcripts are not persisted as long-term memory. | Unit test `raw_transcript_not_written_to_memory`. |
 | AC-35 | Free-form LLM text cannot mark a run completed without schema-valid output. | Unit test `free_form_llm_text_cannot_complete_run`. |
 | AC-36 | Targeted memory deletion requires explicit target confirmation. | Unit test `memory_delete_requires_target_confirmation`. |
+| AC-37 | Reminder v2 identity serialization is deterministic and delimiter-safe. | Unit test `test_canonical_json_has_unambiguous_field_boundaries`. |
+| AC-38 | Changing any tenant, channel, principal, conversation, or source-event dimension changes the reminder key. | Unit test `test_each_identity_dimension_prevents_collision`. |
+| AC-39 | The reminder key uses the full SHA-256 digest and `reminder:v2:` prefix. | Unit test `test_identity_key_is_deterministic_versioned_and_uses_full_sha256`. |
+| AC-40 | A matching event and payload reuses the completed result. | Unit test `test_duplicate_webhook_reuses_completed_state`. |
+| AC-41 | A matching identity with changed payload fails before effects. | Unit test `test_same_identity_with_changed_payload_conflicts_before_effects`. |
+| AC-42 | Concurrent in-memory registrations elect one executor. | Unit test `test_register_or_replay_is_atomic_under_concurrency`. |
+| AC-43 | A waiting-approval replay with a legitimate grant resumes the workflow. | Unit test `test_waiting_approval_replay_with_legitimate_grant_resumes`. |
 
 ## 11. Failure Modes
 
@@ -301,6 +315,8 @@ Output invariants:
 | FM-13 | LLM classifies unsupported request as a valid route with low confidence. | Confidence below threshold or route preconditions fail. | Ask clarification or decline; do not execute state changes. |
 | FM-14 | Attachment exceeds small-document limit. | `documents.ingest` precondition fails. | Decline ingestion and explain supported limit. |
 | FM-15 | A tool call attempts `mcp.search` or `a2a.delegate`. | Tool allowlist check fails. | Fail closed and record policy violation. |
+| FM-16 | The same reminder source-event identity arrives with a changed canonical payload. | Stored payload fingerprint differs from the candidate fingerprint. | Raise typed `ReminderIdempotencyConflict` with key/version metadata only; do not overwrite state or execute effects. |
+| FM-17 | A matching replay arrives while its elected executor is still `running`. | Atomic registration returns a matching running state. | Return a non-executing replay result; do not duplicate effects. |
 
 ## 12. Escalation Rules
 

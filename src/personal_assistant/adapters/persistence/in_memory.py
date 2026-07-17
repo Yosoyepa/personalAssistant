@@ -5,14 +5,35 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import UTC, datetime, timedelta
+from threading import RLock
 from uuid import uuid4
 
-from personal_assistant.application.dto.commands import PendingApproval, PendingApprovalStatus
-from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
-from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
+from personal_assistant.application.dto.commands import (
+    PendingApproval,
+    PendingApprovalStatus,
+)
+from personal_assistant.application.dto.workflows import (
+    WorkflowState,
+    WorkflowStateRegistration,
+    WorkflowStatus,
+)
+from personal_assistant.application.dto.events import (
+    CloudEvent,
+    OutboxMessage,
+    OutboxStatus,
+)
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-from personal_assistant.domain.common.identity import Principal, require_trusted_principal
-from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionRequest, PermissionTier, require_permission
+from personal_assistant.domain.common.identity import (
+    Principal,
+    require_trusted_principal,
+)
+from personal_assistant.domain.common.permissions import (
+    ApprovalGrant,
+    PermissionRequest,
+    PermissionTier,
+    require_permission,
+)
+from personal_assistant.domain.reminders.idempotency import ReminderIdempotencyConflict
 
 
 def _fingerprint(value: object) -> str:
@@ -32,10 +53,13 @@ def _approval_hash(approval: PendingApproval) -> str:
             "workflow_kind": approval.workflow_kind,
             "idempotency_key": approval.idempotency_key,
             "message_id": approval.message_id,
+            "source_event_id": approval.source_event_id,
             "conversation_id": approval.conversation_id,
             "channel": approval.channel,
             "recipient": approval.recipient,
             "request_text": approval.request_text,
+            "timezone": approval.timezone,
+            "payload_fingerprint": approval.payload_fingerprint,
         }
     )
 
@@ -48,13 +72,21 @@ class InMemoryEventStore:
     def append(self, principal: Principal, event: CloudEvent) -> CloudEvent:
         require_trusted_principal(principal)
         if event.tenant_id != principal.tenant_id:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "event tenant mismatch", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "event tenant mismatch",
+                tenant_id=principal.tenant_id,
+            )
         key = (principal.tenant_id, event.id)
         event_fingerprint = _fingerprint(event.model_dump(mode="json"))
         existing = self._events_by_key.get(key)
         if existing is not None:
             if self._fingerprints[key] != event_fingerprint:
-                raise AssistantError(ErrorCode.CONFLICT, "event idempotency conflict", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "event idempotency conflict",
+                    tenant_id=principal.tenant_id,
+                )
             return existing
         self._events_by_key[key] = event
         self._fingerprints[key] = event_fingerprint
@@ -62,7 +94,11 @@ class InMemoryEventStore:
 
     def list_for_tenant(self, principal: Principal) -> list[CloudEvent]:
         require_trusted_principal(principal)
-        return [event for (tenant_id, _), event in self._events_by_key.items() if tenant_id == principal.tenant_id]
+        return [
+            event
+            for (tenant_id, _), event in self._events_by_key.items()
+            if tenant_id == principal.tenant_id
+        ]
 
 
 class InMemoryOutbox:
@@ -70,16 +106,26 @@ class InMemoryOutbox:
         self._messages_by_key: dict[tuple[str, str], OutboxMessage] = {}
         self._fingerprints: dict[tuple[str, str], str] = {}
 
-    def add(self, principal: Principal, event: CloudEvent, *, idempotency_key: str) -> OutboxMessage:
+    def add(
+        self, principal: Principal, event: CloudEvent, *, idempotency_key: str
+    ) -> OutboxMessage:
         require_trusted_principal(principal)
         if event.tenant_id != principal.tenant_id:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "outbox tenant mismatch", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "outbox tenant mismatch",
+                tenant_id=principal.tenant_id,
+            )
         key = (principal.tenant_id, idempotency_key)
         existing = self._messages_by_key.get(key)
         event_fingerprint = _fingerprint(event.model_dump(mode="json"))
         if existing is not None:
             if self._fingerprints[key] != event_fingerprint:
-                raise AssistantError(ErrorCode.CONFLICT, "outbox idempotency conflict", tenant_id=principal.tenant_id)
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "outbox idempotency conflict",
+                    tenant_id=principal.tenant_id,
+                )
             return existing
         message = OutboxMessage(
             tenant_id=principal.tenant_id,
@@ -90,7 +136,14 @@ class InMemoryOutbox:
         self._fingerprints[key] = event_fingerprint
         return message
 
-    def claim(self, principal: Principal, limit: int = 10, *, owner: str = "local-worker", lease_seconds: int = 60) -> list[OutboxMessage]:
+    def claim(
+        self,
+        principal: Principal,
+        limit: int = 10,
+        *,
+        owner: str = "local-worker",
+        lease_seconds: int = 60,
+    ) -> list[OutboxMessage]:
         require_trusted_principal(principal)
         now = datetime.now(UTC)
         claimed: list[OutboxMessage] = []
@@ -114,14 +167,20 @@ class InMemoryOutbox:
                 break
         return claimed
 
-    def mark_published(self, principal: Principal, message_id: str, *, claim_token: str) -> OutboxMessage:
+    def mark_published(
+        self, principal: Principal, message_id: str, *, claim_token: str
+    ) -> OutboxMessage:
         require_trusted_principal(principal)
         for key, message in list(self._messages_by_key.items()):
             if key[0] == principal.tenant_id and message.id == message_id:
                 if message.published:
                     return message
                 if not message.claimed or message.claim_token != claim_token:
-                    raise AssistantError(ErrorCode.PERMISSION_DENIED, "invalid outbox claim token", tenant_id=principal.tenant_id)
+                    raise AssistantError(
+                        ErrorCode.PERMISSION_DENIED,
+                        "invalid outbox claim token",
+                        tenant_id=principal.tenant_id,
+                    )
                 updated = message.model_copy(
                     update={
                         "dispatch_status": OutboxStatus.published,
@@ -133,14 +192,24 @@ class InMemoryOutbox:
                 )
                 self._messages_by_key[key] = updated
                 return updated
-        raise AssistantError(ErrorCode.NOT_FOUND, "outbox message not found", tenant_id=principal.tenant_id)
+        raise AssistantError(
+            ErrorCode.NOT_FOUND,
+            "outbox message not found",
+            tenant_id=principal.tenant_id,
+        )
 
-    def release(self, principal: Principal, message_id: str, *, claim_token: str) -> OutboxMessage:
+    def release(
+        self, principal: Principal, message_id: str, *, claim_token: str
+    ) -> OutboxMessage:
         require_trusted_principal(principal)
         for key, message in list(self._messages_by_key.items()):
             if key[0] == principal.tenant_id and message.id == message_id:
                 if message.claim_token != claim_token:
-                    raise AssistantError(ErrorCode.PERMISSION_DENIED, "invalid outbox claim token", tenant_id=principal.tenant_id)
+                    raise AssistantError(
+                        ErrorCode.PERMISSION_DENIED,
+                        "invalid outbox claim token",
+                        tenant_id=principal.tenant_id,
+                    )
                 updated = message.model_copy(
                     update={
                         "dispatch_status": OutboxStatus.pending,
@@ -151,7 +220,11 @@ class InMemoryOutbox:
                 )
                 self._messages_by_key[key] = updated
                 return updated
-        raise AssistantError(ErrorCode.NOT_FOUND, "outbox message not found", tenant_id=principal.tenant_id)
+        raise AssistantError(
+            ErrorCode.NOT_FOUND,
+            "outbox message not found",
+            tenant_id=principal.tenant_id,
+        )
 
     def list_for_tenant(self, principal: Principal) -> list[OutboxMessage]:
         require_trusted_principal(principal)
@@ -165,28 +238,144 @@ class InMemoryOutbox:
 class InMemoryWorkflowStateStore:
     def __init__(self) -> None:
         self._states_by_key: dict[tuple[str, str], WorkflowState] = {}
+        self._key_by_workflow_id: dict[tuple[str, str], str] = {}
+        self._lock = RLock()
+
+    def register_or_replay(
+        self,
+        principal: Principal,
+        state: WorkflowState,
+        *,
+        resume_from_step: str | None = None,
+    ) -> WorkflowStateRegistration:
+        """Atomically elect one executor for a canonical event identity."""
+
+        require_trusted_principal(principal)
+        self._require_matching_tenant(principal, state)
+        if state.payload_fingerprint is None:
+            raise ValueError(
+                "payload_fingerprint is required for workflow registration"
+            )
+
+        key = (principal.tenant_id, state.idempotency_key)
+        workflow_id_key = (principal.tenant_id, state.workflow_id)
+        with self._lock:
+            existing = self._states_by_key.get(key)
+            if existing is not None:
+                self._raise_if_payload_conflicts(principal, existing, state)
+                if existing.workflow_type != state.workflow_type:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "workflow identity is immutable",
+                        tenant_id=principal.tenant_id,
+                    )
+                if (
+                    resume_from_step is not None
+                    and existing.status == WorkflowStatus.waiting_approval
+                    and existing.step == resume_from_step
+                ):
+                    resumed = existing.transition(status=WorkflowStatus.running)
+                    self._states_by_key[key] = resumed
+                    return WorkflowStateRegistration(
+                        state=resumed.model_copy(deep=True),
+                        replayed=False,
+                        resumed=True,
+                    )
+                return WorkflowStateRegistration(
+                    state=existing.model_copy(deep=True), replayed=True
+                )
+
+            existing_key = self._key_by_workflow_id.get(workflow_id_key)
+            if existing_key is not None and existing_key != state.idempotency_key:
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "workflow identity is immutable",
+                    tenant_id=principal.tenant_id,
+                )
+
+            saved = state.model_copy(deep=True)
+            self._states_by_key[key] = saved
+            self._key_by_workflow_id[workflow_id_key] = state.idempotency_key
+            return WorkflowStateRegistration(
+                state=saved.model_copy(deep=True), replayed=False
+            )
 
     def upsert(self, principal: Principal, state: WorkflowState) -> WorkflowState:
         require_trusted_principal(principal)
-        if state.tenant_id != principal.tenant_id:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "workflow tenant mismatch", tenant_id=principal.tenant_id)
+        self._require_matching_tenant(principal, state)
         key = (principal.tenant_id, state.idempotency_key)
-        existing = self._states_by_key.get(key)
-        if existing is not None and existing.status in {WorkflowStatus.completed, WorkflowStatus.failed}:
-            if state.status != existing.status or _fingerprint(state.model_dump(mode="json")) != _fingerprint(
-                existing.model_dump(mode="json")
-            ):
-                raise AssistantError(ErrorCode.CONFLICT, "terminal workflow state is immutable", tenant_id=principal.tenant_id)
-        self._states_by_key[key] = state
-        return state
+        workflow_id_key = (principal.tenant_id, state.workflow_id)
+        with self._lock:
+            existing_key = self._key_by_workflow_id.get(workflow_id_key)
+            if existing_key is not None and existing_key != state.idempotency_key:
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "workflow identity is immutable",
+                    tenant_id=principal.tenant_id,
+                )
+            existing = self._states_by_key.get(key)
+            if existing is not None:
+                if (
+                    existing.workflow_id != state.workflow_id
+                    or existing.workflow_type != state.workflow_type
+                ):
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "workflow identity is immutable",
+                        tenant_id=principal.tenant_id,
+                    )
+                self._raise_if_payload_conflicts(principal, existing, state)
+                if existing.status in {WorkflowStatus.completed, WorkflowStatus.failed}:
+                    if state.status != existing.status or _fingerprint(
+                        state.model_dump(mode="json")
+                    ) != _fingerprint(existing.model_dump(mode="json")):
+                        raise AssistantError(
+                            ErrorCode.CONFLICT,
+                            "terminal workflow state is immutable",
+                            tenant_id=principal.tenant_id,
+                        )
+            saved = state.model_copy(deep=True)
+            self._states_by_key[key] = saved
+            self._key_by_workflow_id[workflow_id_key] = state.idempotency_key
+            return saved.model_copy(deep=True)
 
-    def get_by_idempotency_key(self, principal: Principal, idempotency_key: str) -> WorkflowState | None:
+    def get_by_idempotency_key(
+        self, principal: Principal, idempotency_key: str
+    ) -> WorkflowState | None:
         require_trusted_principal(principal)
-        return self._states_by_key.get((principal.tenant_id, idempotency_key))
+        with self._lock:
+            state = self._states_by_key.get((principal.tenant_id, idempotency_key))
+            return state.model_copy(deep=True) if state is not None else None
 
     def list_for_tenant(self, principal: Principal) -> list[WorkflowState]:
         require_trusted_principal(principal)
-        return [state for (tenant_id, _), state in self._states_by_key.items() if tenant_id == principal.tenant_id]
+        with self._lock:
+            return [
+                state.model_copy(deep=True)
+                for (tenant_id, _), state in self._states_by_key.items()
+                if tenant_id == principal.tenant_id
+            ]
+
+    @staticmethod
+    def _require_matching_tenant(principal: Principal, state: WorkflowState) -> None:
+        if state.tenant_id != principal.tenant_id:
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "workflow tenant mismatch",
+                tenant_id=principal.tenant_id,
+            )
+
+    @staticmethod
+    def _raise_if_payload_conflicts(
+        principal: Principal,
+        existing: WorkflowState,
+        candidate: WorkflowState,
+    ) -> None:
+        if existing.payload_fingerprint != candidate.payload_fingerprint:
+            raise ReminderIdempotencyConflict(
+                tenant_id=principal.tenant_id,
+                idempotency_key=existing.idempotency_key,
+            )
 
 
 class InMemoryApprovalStore:
@@ -195,10 +384,19 @@ class InMemoryApprovalStore:
         self._approval_id_by_key: dict[tuple[str, str, str, str], str] = {}
         self._fingerprints: dict[tuple[str, str], str] = {}
 
-    def create(self, principal: Principal, approval: PendingApproval) -> PendingApproval:
+    def create(
+        self, principal: Principal, approval: PendingApproval
+    ) -> PendingApproval:
         require_trusted_principal(principal)
-        if approval.tenant_id != principal.tenant_id or approval.principal_id != principal.principal_id:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "approval principal mismatch", tenant_id=principal.tenant_id)
+        if (
+            approval.tenant_id != principal.tenant_id
+            or approval.principal_id != principal.principal_id
+        ):
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "approval principal mismatch",
+                tenant_id=principal.tenant_id,
+            )
         tier = PermissionTier(approval.tier)
         if tier.rank < PermissionTier.P3.rank:
             raise AssistantError(
@@ -251,17 +449,23 @@ class InMemoryApprovalStore:
         return [
             approval.model_copy(deep=True)
             for (tenant_id, _), approval in self._approvals_by_id.items()
-            if tenant_id == principal.tenant_id and approval.principal_id == principal.principal_id
+            if tenant_id == principal.tenant_id
+            and approval.principal_id == principal.principal_id
         ]
 
     def mark_approved(self, principal: Principal, approval_id: str) -> PendingApproval:
         approval = self.get(principal, approval_id)
         if approval is None:
-            raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id
+            )
         if approval.status != PendingApprovalStatus.pending:
             return approval
         updated = approval.model_copy(
-            update={"status": PendingApprovalStatus.approved, "updated_at": datetime.now(UTC)}
+            update={
+                "status": PendingApprovalStatus.approved,
+                "updated_at": datetime.now(UTC),
+            }
         )
         self._approvals_by_id[(principal.tenant_id, approval_id)] = updated
         return updated
@@ -269,13 +473,21 @@ class InMemoryApprovalStore:
     def approve(self, principal: Principal, approval_id: str) -> ApprovalGrant:
         approval = self.get(principal, approval_id)
         if approval is None:
-            raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id
+            )
         if approval.status == PendingApprovalStatus.cancelled:
-            raise AssistantError(ErrorCode.PERMISSION_DENIED, "approval was cancelled", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "approval was cancelled",
+                tenant_id=principal.tenant_id,
+            )
         tier = PermissionTier(approval.tier)
         require_permission(
             principal,
-            PermissionRequest(action=approval.action, resource=approval.resource, required_tier=tier),
+            PermissionRequest(
+                action=approval.action, resource=approval.resource, required_tier=tier
+            ),
         )
         if approval.status == PendingApprovalStatus.pending:
             approval = self.mark_approved(principal, approval_id)
@@ -291,13 +503,22 @@ class InMemoryApprovalStore:
     def cancel(self, principal: Principal, approval_id: str) -> PendingApproval:
         approval = self.get(principal, approval_id)
         if approval is None:
-            raise AssistantError(ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.NOT_FOUND, "approval not found", tenant_id=principal.tenant_id
+            )
         if approval.status == PendingApprovalStatus.approved:
-            raise AssistantError(ErrorCode.CONFLICT, "approved approval cannot be cancelled", tenant_id=principal.tenant_id)
+            raise AssistantError(
+                ErrorCode.CONFLICT,
+                "approved approval cannot be cancelled",
+                tenant_id=principal.tenant_id,
+            )
         if approval.status == PendingApprovalStatus.cancelled:
             return approval
         updated = approval.model_copy(
-            update={"status": PendingApprovalStatus.cancelled, "updated_at": datetime.now(UTC)}
+            update={
+                "status": PendingApprovalStatus.cancelled,
+                "updated_at": datetime.now(UTC),
+            }
         )
         self._approvals_by_id[(principal.tenant_id, approval_id)] = updated
         return updated
