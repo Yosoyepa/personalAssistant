@@ -12,39 +12,29 @@ Install the optional API dependencies:
 python -m pip install -e '.[api,test]'
 ```
 
-Start FastAPI on loopback. `ADMIN_TOKEN` is optional; when set, every admin
-request must include it as `Authorization: Bearer <token>` or `X-Admin-Token:
-<token>`. Keep it in the local process environment or an ignored `.env` file:
+Start FastAPI on loopback. `ADMIN_TOKEN` is required: every admin request must
+include it only as `Authorization: Bearer <ADMIN_TOKEN>`. Keep it in an ignored
+local `.env` file or a secret manager; `X-Admin-Token` is not accepted.
 
 ```bash
-export ADMIN_TOKEN="$(python3 - <<'PY'
-import secrets
-print(secrets.token_urlsafe(32))
-PY
-)"
-
 PYTHONPATH=src python3 -m uvicorn personal_assistant.infrastructure.http:app \
   --host 127.0.0.1 \
   --port 8000
 ```
 
-The active boundary is loopback-only client validation, optional admin token
-validation, and tenant-scoped reads. Do not expose the admin app through ngrok,
-a reverse proxy, or a public interface.
+The active boundary is loopback-only client validation, required bearer-token
+validation, and server-fixed tenant-scoped reads. Do not expose the admin app
+through a tunnel, reverse proxy, or public interface.
 
 Open the HTML dashboard:
 
 ```text
-http://127.0.0.1:8000/admin?tenant_id=tenant-local&principal_id=user-local&limit=50
+http://127.0.0.1:8000/admin
 ```
 
-Query parameters:
-
-| Parameter | Default | Notes |
-|---|---|---|
-| `tenant_id` | `ASSISTANT_TENANT_ID` / `personal` | Selects the tenant to inspect. |
-| `principal_id` | `local-admin` | Display principal for the local admin boundary. |
-| `limit` | `50` | Clamped to `1..200` for list endpoints and dashboard tables. |
+The optional `limit` parameter is clamped to `1..200` for list endpoints and
+dashboard tables. Legacy `tenant_id` and `principal_id` query parameters are
+ignored: they cannot filter, impersonate, or otherwise change authority.
 
 ## Available Endpoints
 
@@ -68,12 +58,22 @@ All routes are `GET`, local-only, and read-only:
 
 Example JSON check:
 
-```bash
-curl -sS \
-  -H "Authorization: Bearer ${ADMIN_TOKEN}" \
-  'http://127.0.0.1:8000/admin/snapshot?tenant_id=tenant-local&principal_id=user-local&limit=25' \
-  | python3 -m json.tool
+```powershell
+# Read from ignored .env into this PowerShell process; do not print the value.
+$adminLines = @(Get-Content .env | Where-Object {
+  $_ -match '^ADMIN_TOKEN="[^"]+"$'
+})
+if ($adminLines.Count -ne 1) { throw 'Expected exactly one non-empty ADMIN_TOKEN.' }
+$adminToken = ([regex]::Match(
+  $adminLines[0], '^ADMIN_TOKEN="(?<value>[^"]+)"$')).Groups['value'].Value
+$headers = @{ Authorization = "Bearer $adminToken" }
+Invoke-RestMethod -Method Get `
+  -Uri 'http://127.0.0.1:8000/admin/snapshot?limit=25' -Headers $headers |
+  ConvertTo-Json -Depth 10
 ```
+
+After the local check, run `Remove-Variable adminToken, headers` in that
+PowerShell session.
 
 ## Signals Shown
 
@@ -97,12 +97,14 @@ curl -sS \
 
 ## Security Limits
 
-- The admin app accepts only loopback clients: `127.0.0.0/8`, `::1`, and
-  `localhost`.
-- If `ADMIN_TOKEN` is configured, requests without the matching Bearer token or
-  `X-Admin-Token` header are denied.
-- Admin reads are tenant-scoped by the selected `tenant_id`; cross-tenant data
-  must not appear in a snapshot.
+- The admin app accepts only numeric loopback peers: `127.0.0.0/8` and `::1`.
+  `localhost` may appear in a human-facing URL, but it is not a separately
+  accepted peer identity.
+- Requests without the matching `Authorization: Bearer <ADMIN_TOKEN>` header
+  are denied, even from loopback. `X-Admin-Token` is not an alternative.
+- Server authority is fixed by `ASSISTANT_TENANT_ID`,
+  `LOCAL_AUTH_PRINCIPAL_ID`, and `LOCAL_AUTH_PERMISSION_TIER`. Identity headers
+  and `tenant_id`/`principal_id` query parameters cannot impersonate it.
 - The dashboard is read-only. Approve or reject runtime approvals through the
   runtime API (`/v1/runtime/approvals/...`) or the Telegram command flow, not
   through admin endpoints.
@@ -111,6 +113,7 @@ curl -sS \
   into public issues.
 - `ADMIN_TOKEN`, bot tokens, webhook secrets, provider API keys, database URLs,
   and OAuth credentials must stay out of git and out of traces.
-- This is not a production trace dashboard. Add real authentication,
-  authorization, audit logging, redaction, transport security, and deployment
-  hardening before exposing it outside a local developer machine.
+- This is not a production trace dashboard. Never expose it outside loopback;
+  the public HTTPS edge must allow only `POST /webhooks/telegram`. See
+  `docs/runbook/hardened-local-deployment.md` for the exact proxy allowlist and
+  secret-rotation procedure.
