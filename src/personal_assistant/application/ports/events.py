@@ -17,7 +17,14 @@ class EventStorePort(Protocol):
 
 
 class OutboxPort(Protocol):
-    def add(self, principal: Principal, event: CloudEvent, *, idempotency_key: str) -> OutboxMessage:
+    def add(
+        self,
+        principal: Principal,
+        event: CloudEvent,
+        *,
+        idempotency_key: str,
+        message_id: str | None = None,
+    ) -> OutboxMessage:
         """Add an event to the transactional outbox idempotently."""
 
     def claim(
@@ -30,10 +37,14 @@ class OutboxPort(Protocol):
     ) -> list[OutboxMessage]:
         """Claim pending or expired messages for one tenant."""
 
-    def mark_published(self, principal: Principal, message_id: str, *, claim_token: str) -> OutboxMessage:
+    def mark_published(
+        self, principal: Principal, message_id: str, *, claim_token: str
+    ) -> OutboxMessage:
         """Mark a claimed outbox message as published."""
 
-    def release(self, principal: Principal, message_id: str, *, claim_token: str) -> OutboxMessage:
+    def release(
+        self, principal: Principal, message_id: str, *, claim_token: str
+    ) -> OutboxMessage:
         """Release a claimed outbox message back to pending."""
 
     def list_for_tenant(self, principal: Principal) -> list[OutboxMessage]:
