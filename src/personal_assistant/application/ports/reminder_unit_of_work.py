@@ -28,6 +28,13 @@ class ReminderTransactionConflict(RuntimeError):
         self.kind = kind
         super().__init__(f"reminder transaction conflict: {kind.value}")
 
+    def __reduce__(
+        self,
+    ) -> tuple[
+        type[ReminderTransactionConflict], tuple[ReminderTransactionConflictKind]
+    ]:
+        return type(self), (self.kind,)
+
 
 class ReminderCommitOutcomeUnknown(RuntimeError):
     """The connection was lost before the result of commit was known.
@@ -39,6 +46,11 @@ class ReminderCommitOutcomeUnknown(RuntimeError):
 
     def __init__(self) -> None:
         super().__init__("reminder transaction commit outcome is unknown")
+
+    def __reduce__(
+        self,
+    ) -> tuple[type[ReminderCommitOutcomeUnknown], tuple[()]]:
+        return type(self), ()
 
 
 class ReminderTransaction(Protocol):
