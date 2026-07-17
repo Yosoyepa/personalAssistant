@@ -341,6 +341,10 @@ Forbidden by contract:
 - `docs/architecture/build-vs-frameworks.md` - why the MVP uses a small local
   harness instead of OpenClaw, HermeAgent/Hermes Agent, or OpenHands as the core
   runtime.
+- `docs/development/maintainer-workflow.md` - executable single-maintainer
+  workflow for `codex/` branches, worktrees, review, commits, phase PRs,
+  rollback, gates, and Definition of Done;
+  `docs/development/hardening-log.md` is its evidence template.
 - `docs/public/` - public written artifacts.
 
 ## Test Map
