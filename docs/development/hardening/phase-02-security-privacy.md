@@ -4,13 +4,14 @@
 
 | Field | Value |
 |---|---|
-| Status | `LOCAL_ACCEPTED` |
+| Status | `MERGED` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
 | Phase branch | `codex/phase-2-security-privacy` |
 | Base commit | `dbc3168` |
 | Accepted implementation head | `dfd90c8` |
-| Pull request | pending |
-| Merge commit | pending |
+| Local acceptance commit | `fb7fe56` |
+| Pull request | [#9](https://github.com/Yosoyepa/personalAssistant/pull/9) |
+| Merge commit | `0925425` |
 | Date | `2026-07-17` |
 
 ## Objective and acceptance
@@ -97,6 +98,22 @@ The three remaining strict expected failures are owned by later phases:
    sent (phase 4).
 
 The forged-header characterization is now a normal passing test.
+
+## Remote evidence
+
+GitHub accepted head `fb7fe56` after every protected check completed:
+
+- `quality`: pass;
+- `tests (3.11)`: pass;
+- `tests (3.12)`: pass;
+- `security`: pass;
+- `postgres-integration`: pass.
+
+The pull request was mergeable and clean under branch protection. GitHub
+created merge commit `0925425` with parents `dbc3168` and `fb7fe56`. Required
+PR checks and resolved conversations remain enforced; force-push and deletion
+remain prohibited for `main`. Merge commits remain enabled while squash and
+rebase remain disabled.
 
 ## Data and migration review
 
