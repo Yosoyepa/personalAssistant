@@ -4,6 +4,7 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 import os
+import pickle
 import secrets
 from typing import Any
 
@@ -179,6 +180,28 @@ def test_known_postgres_conflicts_are_distinguishable_and_sanitized(
 
     assert captured.value.kind is kind
     assert secret not in str(captured.value)
+
+
+@pytest.mark.parametrize("kind", list(ReminderTransactionConflictKind))
+def test_transaction_conflict_pickle_roundtrip_preserves_kind_and_safe_message(
+    kind: ReminderTransactionConflictKind,
+) -> None:
+    original = ReminderTransactionConflict(kind)
+
+    restored = pickle.loads(pickle.dumps(original))
+
+    assert isinstance(restored, ReminderTransactionConflict)
+    assert restored.kind is kind
+    assert str(restored) == str(original)
+
+
+def test_commit_outcome_unknown_pickle_roundtrip_preserves_safe_message() -> None:
+    original = ReminderCommitOutcomeUnknown()
+
+    restored = pickle.loads(pickle.dumps(original))
+
+    assert isinstance(restored, ReminderCommitOutcomeUnknown)
+    assert str(restored) == str(original)
 
 
 def test_ambiguous_commit_is_typed_sanitized_and_never_retried() -> None:
