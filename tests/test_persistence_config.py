@@ -62,7 +62,9 @@ def _maybe_setting(settings: AppSettings, *names: str) -> Any:
 def _setting_or_skip(settings: AppSettings, *names: str) -> Any:
     value = _maybe_setting(settings, *names)
     if value is None:
-        pytest.skip(f"persistence config contract not present; missing one of: {', '.join(names)}")
+        pytest.skip(
+            f"persistence config contract not present; missing one of: {', '.join(names)}"
+        )
     return value
 
 
@@ -122,36 +124,9 @@ def _persistence_builder() -> Callable[..., Any] | None:
     return None
 
 
-def _call_with_settings_or_url(candidate: Callable[..., Any], settings: AppSettings) -> Any:
-    signature = inspect.signature(candidate)
-    kwargs: dict[str, Any] = {}
-    args: list[Any] = []
-    required_positional: list[inspect.Parameter] = []
-    for name, parameter in signature.parameters.items():
-        if name in {"self", "cls"}:
-            continue
-        if parameter.kind in {inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD}:
-            continue
-        if name == "settings":
-            kwargs[name] = settings
-        elif name in {"database_url", "dsn", "url", "connection_string"}:
-            kwargs[name] = POSTGRES_DSN
-        elif parameter.default is inspect.Parameter.empty and parameter.kind in {
-            inspect.Parameter.POSITIONAL_ONLY,
-            inspect.Parameter.POSITIONAL_OR_KEYWORD,
-        }:
-            required_positional.append(parameter)
-
-    if required_positional and not kwargs:
-        first = required_positional[0]
-        if first.name in {"database_url", "dsn", "url", "connection_string"}:
-            args.append(POSTGRES_DSN)
-        else:
-            args.append(settings)
-    return candidate(*args, **kwargs)
-
-
-def _call_with_settings_only(candidate: Callable[..., Any], settings: AppSettings) -> Any:
+def _call_with_settings_only(
+    candidate: Callable[..., Any], settings: AppSettings
+) -> Any:
     signature = inspect.signature(candidate)
     parameters = signature.parameters
     if "settings" in parameters:
@@ -179,22 +154,6 @@ def _postgres_module_or_skip() -> Any:
     return importlib.import_module(POSTGRES_MODULE)
 
 
-def _postgres_constructor(module: Any) -> Callable[..., Any] | None:
-    for name in (
-        "PostgresPersistenceBackend",
-        "PostgresPersistenceAdapter",
-        "PostgresAdapter",
-        "PostgresStores",
-        "PostgresEventStore",
-        "PostgresOutbox",
-        "PostgresWorkflowStateStore",
-    ):
-        candidate = getattr(module, name, None)
-        if inspect.isclass(candidate):
-            return candidate
-    return None
-
-
 def _clear_module(module_name: str) -> None:
     for loaded in list(sys.modules):
         if loaded == module_name or loaded.startswith(f"{module_name}."):
@@ -206,19 +165,13 @@ def _block_import(monkeypatch: pytest.MonkeyPatch, module_name: str) -> None:
 
     def blocked_import(name: str, *args: Any, **kwargs: Any) -> Any:
         if name == module_name or name.startswith(f"{module_name}."):
-            raise ModuleNotFoundError(f"No module named {module_name!r}", name=module_name)
+            raise ModuleNotFoundError(
+                f"No module named {module_name!r}", name=module_name
+            )
         return original_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", blocked_import)
     _clear_module(module_name)
-
-
-def _force_initialization(candidate: Any) -> None:
-    for method_name in ("connect", "open", "ensure_schema", "initialize", "setup", "migrate"):
-        method = getattr(candidate, method_name, None)
-        if callable(method):
-            method()
-            return
 
 
 def _sql_constants(module: Any) -> list[str]:
@@ -227,7 +180,9 @@ def _sql_constants(module: Any) -> list[str]:
         if not isinstance(value, str):
             continue
         compact = value.strip().lower()
-        if re.search(r"\b(select|insert|update|delete|create table|alter table)\b", compact):
+        if re.search(
+            r"\b(select|insert|update|delete|create table|alter table)\b", compact
+        ):
             statements.append(value)
     return statements
 
@@ -266,13 +221,15 @@ def test_container_uses_in_memory_persistence_by_default() -> None:
     assert isinstance(container.traces, TraceRecorder)
 
 
-def test_postgres_backend_factory_requires_complete_persistence_bundle(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_postgres_backend_factory_requires_complete_persistence_bundle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     sentinel = object()
 
     def fake_import(module_name: str) -> Any:
         assert module_name == POSTGRES_MODULE
         return SimpleNamespace(
-            build_postgres_persistence=lambda *, database_url: SimpleNamespace(
+            build_postgres_persistence=lambda *, database_url, schema: SimpleNamespace(
                 approvals=sentinel,
                 calendar=sentinel,
                 event_store=sentinel,
@@ -286,7 +243,9 @@ def test_postgres_backend_factory_requires_complete_persistence_bundle(monkeypat
 
     monkeypatch.setattr(bootstrap, "import_module", fake_import)
 
-    persistence = bootstrap.build_persistence_adapters(persistence_backend="postgres", database_url=POSTGRES_DSN)
+    persistence = bootstrap.build_persistence_adapters(
+        persistence_backend="postgres", database_url=POSTGRES_DSN
+    )
 
     assert persistence.approvals is sentinel
     assert persistence.calendar is sentinel
@@ -298,25 +257,39 @@ def test_postgres_backend_factory_requires_complete_persistence_bundle(monkeypat
     assert persistence.traces is sentinel
 
 
-def test_persistence_backend_defaults_to_memory_when_config_contract_exists(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_persistence_backend_defaults_to_memory_when_config_contract_exists(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     settings = _settings_from_env(monkeypatch)
 
-    backend = _setting_or_skip(settings, "persistence_backend", "storage_backend", "database_backend")
+    backend = _setting_or_skip(
+        settings, "persistence_backend", "storage_backend", "database_backend"
+    )
 
     assert _normalized(backend) in {"memory", "in_memory", "local", "ephemeral"}
 
 
-def test_persistence_backend_selects_postgres_and_preserves_database_url(monkeypatch: pytest.MonkeyPatch) -> None:
-    settings = _settings_from_env(monkeypatch, PERSISTENCE_BACKEND="postgres", DATABASE_URL=POSTGRES_DSN)
+def test_persistence_backend_selects_postgres_and_preserves_database_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = _settings_from_env(
+        monkeypatch, PERSISTENCE_BACKEND="postgres", DATABASE_URL=POSTGRES_DSN
+    )
 
-    backend = _setting_or_skip(settings, "persistence_backend", "storage_backend", "database_backend")
-    database_url = _setting_or_skip(settings, "database_url", "persistence_database_url", "postgres_dsn")
+    backend = _setting_or_skip(
+        settings, "persistence_backend", "storage_backend", "database_backend"
+    )
+    database_url = _setting_or_skip(
+        settings, "database_url", "persistence_database_url", "postgres_dsn"
+    )
 
     assert _normalized(backend) == "postgres"
     assert database_url == POSTGRES_DSN
 
 
-def test_postgres_backend_requires_database_url_with_clear_error(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_postgres_backend_requires_database_url_with_clear_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     try:
         settings = _settings_from_env(monkeypatch, PERSISTENCE_BACKEND="postgres")
     except Exception as exc:
@@ -326,15 +299,23 @@ def test_postgres_backend_requires_database_url_with_clear_error(monkeypatch: py
         )
         return
 
-    backend = _setting_or_skip(settings, "persistence_backend", "storage_backend", "database_backend")
+    backend = _setting_or_skip(
+        settings, "persistence_backend", "storage_backend", "database_backend"
+    )
     if _normalized(backend) != "postgres":
         pytest.fail(f"PERSISTENCE_BACKEND=postgres was not honored; got {backend!r}")
-    if _maybe_setting(settings, "database_url", "persistence_database_url", "postgres_dsn"):
-        pytest.fail("postgres backend unexpectedly has a database URL when DATABASE_URL is absent")
+    if _maybe_setting(
+        settings, "database_url", "persistence_database_url", "postgres_dsn"
+    ):
+        pytest.fail(
+            "postgres backend unexpectedly has a database URL when DATABASE_URL is absent"
+        )
 
     builder = _persistence_builder()
     if builder is None:
-        pytest.fail("postgres backend is configurable, but no persistence backend factory was found")
+        pytest.fail(
+            "postgres backend is configurable, but no persistence backend factory was found"
+        )
 
     with pytest.raises(Exception) as ctx:
         _call_with_settings_only(builder, settings)
@@ -345,7 +326,9 @@ def test_postgres_backend_requires_database_url_with_clear_error(monkeypatch: py
     )
 
 
-def test_postgres_backend_reports_missing_psycopg_from_dynamic_import(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_postgres_backend_reports_missing_psycopg_from_dynamic_import(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     builder = getattr(bootstrap, "build_persistence_adapters", None)
     if not callable(builder):
         pytest.skip("persistence backend factory is not present in this fork")
@@ -361,11 +344,17 @@ def test_postgres_backend_reports_missing_psycopg_from_dynamic_import(monkeypatc
 
     _assert_clear_error(
         ctx.value,
-        mentions=(("postgres",), ("psycopg",), ("install", "optional", "dependency", "extra", "pip")),
+        mentions=(
+            ("postgres",),
+            ("psycopg",),
+            ("install", "optional", "dependency", "extra", "pip"),
+        ),
     )
 
 
-def test_postgres_backend_reports_clear_error_when_psycopg_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_postgres_adapter_startup_does_not_require_psycopg(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     if importlib.util.find_spec(POSTGRES_MODULE) is None:
         pytest.skip("Postgres persistence adapter is not present in this fork")
 
@@ -375,24 +364,17 @@ def test_postgres_backend_reports_clear_error_when_psycopg_is_missing(monkeypatc
         module = importlib.import_module(POSTGRES_MODULE)
     except ModuleNotFoundError as exc:
         if exc.name == "psycopg":
-            pytest.fail("Postgres adapter imports psycopg at module import time instead of raising a clear setup error")
+            pytest.fail(
+                "Postgres adapter imports psycopg at module import time instead of raising a clear setup error"
+            )
         raise
 
-    settings = AppSettings()
-    constructor = _postgres_constructor(module)
-    builder = _persistence_builder()
-    callable_under_test = constructor or builder
-    if callable_under_test is None:
-        pytest.skip("Postgres adapter has no discoverable constructor or backend factory")
-
-    with pytest.raises(Exception) as ctx:
-        instance = _call_with_settings_or_url(callable_under_test, settings)
-        _force_initialization(instance)
-
-    _assert_clear_error(
-        ctx.value,
-        mentions=(("psycopg",), ("install", "optional", "dependency", "extra", "pip")),
+    persistence = module.build_postgres_persistence(
+        database_url=POSTGRES_DSN,
+        schema="assistant_test",
     )
+
+    assert persistence.event_store is not None
 
 
 def test_postgres_adapter_sql_is_parameterized_and_tenant_scoped() -> None:
@@ -404,14 +386,18 @@ def test_postgres_adapter_sql_is_parameterized_and_tenant_scoped() -> None:
     dml = [
         statement
         for statement in statements
-        if re.search(r"\b(insert|update|delete|select)\b", statement, flags=re.IGNORECASE)
+        if re.search(
+            r"\b(insert|update|delete|select)\b", statement, flags=re.IGNORECASE
+        )
     ]
     assert dml, "expected at least one DML statement in the Postgres adapter"
     assert all("tenant_id" in statement.lower() for statement in dml)
     assert any("idempotency_key" in statement.lower() for statement in dml)
 
     for statement in dml:
-        assert re.search(r"(%s|%\([^)]+\)s|\$[0-9]+|:[a-zA-Z_][a-zA-Z0-9_]*|\?)", statement), statement
+        assert re.search(
+            r"(%s|%\([^)]+\)s|\$[0-9]+|:[a-zA-Z_][a-zA-Z0-9_]*|\?)", statement
+        ), statement
         assert not re.search(r"\{[a-zA-Z_][a-zA-Z0-9_]*\}", statement), statement
 
 
@@ -447,17 +433,32 @@ def test_postgres_adapter_serializes_contract_dtos_without_pydantic_objects() ->
 
     serializers = (
         (
-            _first_callable(module, "_cloud_event_to_record", "cloud_event_to_record", "_serialize_cloud_event"),
+            _first_callable(
+                module,
+                "_cloud_event_to_record",
+                "cloud_event_to_record",
+                "_serialize_cloud_event",
+            ),
             event,
             ("data", "payload"),
         ),
         (
-            _first_callable(module, "_outbox_message_to_record", "outbox_message_to_record", "_serialize_outbox_message"),
+            _first_callable(
+                module,
+                "_outbox_message_to_record",
+                "outbox_message_to_record",
+                "_serialize_outbox_message",
+            ),
             outbox,
             ("event", "payload"),
         ),
         (
-            _first_callable(module, "_workflow_state_to_record", "workflow_state_to_record", "_serialize_workflow_state"),
+            _first_callable(
+                module,
+                "_workflow_state_to_record",
+                "workflow_state_to_record",
+                "_serialize_workflow_state",
+            ),
             state,
             ("data", "payload", "state"),
         ),

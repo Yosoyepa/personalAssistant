@@ -20,6 +20,7 @@ from personal_assistant.domain.reminders.idempotency import (
     ReminderIdempotencyIdentity,
     reminder_effect_ids,
 )
+from personal_assistant.infrastructure.migrations import apply_migrations
 
 
 MIGRATION_PATH = (
@@ -31,13 +32,21 @@ MIGRATION_PATH = (
     / "sql"
     / "0002_reminder_identity_constraints.sql"
 )
+TEST_POSTGRES_DSN_ENV = "TEST_POSTGRES_DSN"
+
+
+def _postgres_dsn() -> str:
+    dsn = os.environ.get(TEST_POSTGRES_DSN_ENV) or os.environ.get("DATABASE_URL")
+    if not dsn:
+        pytest.skip(
+            f"{TEST_POSTGRES_DSN_ENV} or DATABASE_URL is required for real PostgreSQL tests"
+        )
+    return dsn
 
 
 @pytest.fixture
 def postgres_schema() -> Iterator[tuple[Any, str]]:
-    dsn = os.environ.get("DATABASE_URL")
-    if not dsn:
-        pytest.skip("DATABASE_URL is required for the real PostgreSQL migration test")
+    dsn = _postgres_dsn()
     psycopg = pytest.importorskip("psycopg")
     sql = pytest.importorskip("psycopg.sql")
     schema = f"p3_a3_{secrets.token_hex(6)}"
@@ -208,9 +217,8 @@ def test_real_postgres_effect_writes_replay_once_under_concurrency(
     postgres_schema: tuple[Any, str],
 ) -> None:
     connection, schema = postgres_schema
-    dsn = os.environ["DATABASE_URL"]
-    postgres.ensure_schema(dsn=dsn, schema=schema)
-    _run_migration(connection)
+    dsn = _postgres_dsn()
+    apply_migrations(dsn=dsn, schema=schema)
 
     principal = Principal.for_test(
         principal_id="user-postgres",

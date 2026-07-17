@@ -11,7 +11,6 @@ from personal_assistant.adapters.persistence.postgres import (
     PostgresTraceRecorder,
     PostgresWorkflowStateStore,
     build_postgres_persistence,
-    ensure_schema,
 )
 
 __all__ = [
@@ -25,5 +24,4 @@ __all__ = [
     "PostgresTraceRecorder",
     "PostgresWorkflowStateStore",
     "build_postgres_persistence",
-    "ensure_schema",
 ]

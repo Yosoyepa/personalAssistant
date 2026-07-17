@@ -14,14 +14,15 @@ Current branch behavior:
 - `PERSISTENCE_BACKEND=memory` returns in-memory approval, event-store, outbox,
   workflow-state, memory, calendar, scheduler, and trace adapters.
 - `PERSISTENCE_BACKEND=postgres` requires `DATABASE_URL`, imports
-  `personal_assistant.adapters.persistence.postgres`, and initializes an
-  idempotent SQL schema.
+  `personal_assistant.adapters.persistence.postgres`, and builds adapters
+  without connecting to PostgreSQL or executing DDL.
 - `AppSettings.from_env()` loads `.env` through `APP_ENV_FILE` and the
   persistence-phase settings surface includes `PERSISTENCE_BACKEND` and
-  `DATABASE_URL`.
+  `DATABASE_URL` plus the optional `DATABASE_SCHEMA`.
 - Postgres support is optional. Memory mode never imports `psycopg`.
-- There is no migration history yet; schema creation is code-owned through
-  `ensure_schema()`.
+- Versioned SQL lives in
+  `src/personal_assistant/infrastructure/migrations/sql/`; the runtime never
+  applies it implicitly.
 
 Persistence-phase contract:
 
@@ -30,9 +31,11 @@ Persistence-phase contract:
   events, outbox, workflow state, memory, local calendar, scheduled reminders,
   and traces.
 - `DATABASE_URL` is required only for the Postgres backend.
+- `DATABASE_SCHEMA` defaults to `public` and must be a valid PostgreSQL
+  identifier.
 - If a runtime receives `PERSISTENCE_BACKEND=postgres` without `DATABASE_URL`,
-  `psycopg`, or a reachable database, it fails startup instead of silently
-  falling back to memory.
+  it fails startup instead of silently falling back to memory. An unreachable
+  or unmigrated database keeps `/readyz` at HTTP 503; liveness never applies DDL.
 
 ## Configuration
 
@@ -41,6 +44,7 @@ Persistence-phase contract:
 | `PERSISTENCE_BACKEND=memory` | Local tests, demos, disposable runtime | No | Use process-local stores. Data is lost when the process exits. |
 | `PERSISTENCE_BACKEND=postgres` | Durable local or deployed runtime | No | Select Postgres stores through `personal_assistant.adapters.persistence.postgres`. |
 | `DATABASE_URL` | `PERSISTENCE_BACKEND=postgres` | Yes | Postgres connection URL. Keep it in `.env` or the deployment secret store, never in committed docs. |
+| `DATABASE_SCHEMA` | Optional for Postgres | No | Isolated target schema; defaults to `public`. Only strict PostgreSQL identifiers are accepted. |
 | `APP_ENV_FILE=.env` | Local runtime startup | No | Optional env file read by `AppSettings.from_env()`. Use `APP_ENV_FILE=disabled` for hermetic tests. |
 
 Example local Postgres URL:
@@ -96,8 +100,27 @@ Prerequisites:
 - The database and role exist.
 - The runtime dependencies include `psycopg`, normally through
   `personal-assistant[postgres]`.
-- The runtime user can create tables in the configured schema, or the schema has
-  already been created with `ensure_schema()`.
+- The migration role can create the configured schema and its tables.
+
+Configure and inspect the target before starting the runtime:
+
+```bash
+export APP_ENV_FILE=.env
+export PERSISTENCE_BACKEND=postgres
+export DATABASE_URL="postgresql://personal_assistant:personal_assistant@127.0.0.1:5432/personal_assistant"
+export DATABASE_SCHEMA="public"
+
+uv run python -m personal_assistant.infrastructure.migrations status
+uv run python -m personal_assistant.infrastructure.migrations apply
+uv run python -m personal_assistant.infrastructure.migrations status
+```
+
+`status` is read-only. Before the first apply it reports `0001_initial` and
+`0002_reminder_identity_constraints` as pending without creating the schema.
+`apply` holds a schema-scoped advisory lock, runs each file and its history
+insert in one transaction, and records the raw file's SHA-256 in
+`assistant_schema_migrations`. Repeating `apply` records nothing. A changed
+checksum or a gap/unknown version is a hard error.
 
 Configure the runtime:
 
@@ -105,6 +128,7 @@ Configure the runtime:
 export APP_ENV_FILE=.env
 export PERSISTENCE_BACKEND=postgres
 export DATABASE_URL="postgresql://personal_assistant:personal_assistant@127.0.0.1:5432/personal_assistant"
+export DATABASE_SCHEMA="public"
 PYTHONPATH=src python3 -m uvicorn personal_assistant.infrastructure.http:app \
   --host 127.0.0.1 \
   --port 8000
@@ -113,8 +137,10 @@ PYTHONPATH=src python3 -m uvicorn personal_assistant.infrastructure.http:app \
 Postgres startup criteria:
 
 - The runtime refuses to start when `DATABASE_URL` is missing.
-- Missing `psycopg` raises a clear optional-dependency error.
-- Unreachable Postgres fails during schema initialization.
+- Adapter construction performs no connection and no DDL.
+- Missing `psycopg`, unreachable PostgreSQL, pending migrations, or invalid
+  history make `/readyz` return HTTP 503 with `checks.migrations` set to
+  `pending` or `error`.
 - The container wires Postgres implementations for the same persistence ports
   used by the memory backend, including scheduler, local calendar, and traces.
 - Replaying a previously accepted webhook after process restart reuses existing
@@ -128,6 +154,7 @@ worker lease fields are typed columns.
 
 | Table | Purpose | Required Uniqueness / Indexes |
 |---|---|---|
+| `assistant_schema_migrations` | Auditable migration history for the selected schema. | Primary `version`; immutable SHA-256 checksum per applied SQL file. |
 | `assistant_workflow_states` | Durable-lite state for reminder and command workflows; `payload_fingerprint` is stored separately from the replay key. | Primary `(tenant_id, idempotency_key)`; unique `(tenant_id, workflow_id)`; index `(tenant_id, status, updated_at)`. |
 | `assistant_events` | CloudEvents-style append store for tenant-scoped domain/application events. | Primary `(tenant_id, event_id)`; index `(tenant_id, occurred_at)`. |
 | `assistant_outbox` | Transactional outbox records awaiting dispatch. | Primary `(tenant_id, idempotency_key)`; unique `(tenant_id, message_id)`; index `(tenant_id, dispatch_status, claimed_until, next_attempt_at, created_at)`. |
@@ -241,7 +268,14 @@ Postgres backend gate:
 export APP_ENV_FILE=.env
 export PERSISTENCE_BACKEND=postgres
 export DATABASE_URL="postgresql://personal_assistant:personal_assistant@127.0.0.1:5432/personal_assistant"
-.venv/bin/python -m pytest tests/test_persistence_config.py tests/test_postgres_persistence.py -q
+export DATABASE_SCHEMA="assistant_test"
+uv run python -m personal_assistant.infrastructure.migrations status
+uv run python -m personal_assistant.infrastructure.migrations apply
+uv run python -m personal_assistant.infrastructure.migrations status
+TEST_POSTGRES_DSN="$DATABASE_URL" uv run pytest -q \
+  tests/test_migrations.py \
+  tests/test_persistence_config.py \
+  tests/test_postgres_persistence.py
 ```
 
 Manual replay checks:
@@ -255,7 +289,10 @@ Manual replay checks:
 
 ## Limitations
 
-- There is no committed migration history in this branch.
+- Migration `0001_initial` supports adoption of the known alpha schema created
+  by the former `ensure_schema()` path with idempotent/additive SQL and without
+  deleting data. Manually edited schema drift is unsupported: audit and repair
+  it before `apply`; this migration is not a general-purpose drift verifier.
 - Notification delivery records are still adapter-local; they are not persisted
   in Postgres yet.
 - There is no data migration path from existing in-memory sessions to Postgres;

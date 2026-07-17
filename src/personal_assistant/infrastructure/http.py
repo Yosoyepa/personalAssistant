@@ -74,6 +74,12 @@ from personal_assistant.infrastructure.bootstrap import (
     build_tts_provider,
 )
 from personal_assistant.infrastructure.config import AppSettings
+from personal_assistant.infrastructure.migrations import (
+    MigrationChecksumError,
+    MigrationError,
+    MigrationHistoryError,
+    migration_status,
+)
 from personal_assistant.infrastructure.prompts import build_prompt_catalog
 
 
@@ -98,8 +104,10 @@ class HealthResponse(BaseModel):
 class ReadinessResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: Literal["ready"]
-    checks: dict[str, Literal["ok"]]
+    status: Literal["ready", "not_ready"]
+    checks: dict[str, Literal["ok", "pending", "error"]]
+    pending_migrations: list[str] = Field(default_factory=list)
+    detail: str | None = None
 
 
 class ReminderCommandRequest(BaseModel):
@@ -809,16 +817,50 @@ def create_app(
         return HealthResponse(status="ok", service="personal_assistant")
 
     @app.get("/readyz", response_model=ReadinessResponse, tags=["runtime"])
-    def readyz() -> ReadinessResponse:
+    def readyz(response: Response) -> ReadinessResponse:
+        checks: dict[str, Literal["ok", "pending", "error"]] = {
+            "container": "ok",
+            "calendar": "ok",
+            "scheduler": "ok",
+            "state_store": "ok",
+            "trace_recorder": "ok",
+        }
+        pending_migrations: list[str] = []
+        detail: str | None = None
+        if runtime_settings.persistence_backend == "postgres":
+            try:
+                status = migration_status(
+                    dsn=runtime_settings.database_url,
+                    schema=runtime_settings.database_schema,
+                )
+            except MigrationChecksumError:
+                checks["migrations"] = "error"
+                detail = "applied migration checksum mismatch"
+            except MigrationHistoryError:
+                checks["migrations"] = "error"
+                detail = "migration history is incompatible with this release"
+            except MigrationError:
+                checks["migrations"] = "error"
+                detail = "migration status could not be read"
+            except Exception:
+                checks["migrations"] = "error"
+                detail = "database unavailable or migration status could not be read"
+            else:
+                pending_migrations = [migration.label for migration in status.pending]
+                checks["migrations"] = "pending" if pending_migrations else "ok"
+                if pending_migrations:
+                    detail = "database migrations are pending"
+        if any(check != "ok" for check in checks.values()):
+            response.status_code = 503
+            return ReadinessResponse(
+                status="not_ready",
+                checks=checks,
+                pending_migrations=pending_migrations,
+                detail=detail,
+            )
         return ReadinessResponse(
             status="ready",
-            checks={
-                "container": "ok",
-                "calendar": "ok",
-                "scheduler": "ok",
-                "state_store": "ok",
-                "trace_recorder": "ok",
-            },
+            checks=checks,
         )
 
     @app.post(

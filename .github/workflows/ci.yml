@@ -141,6 +141,8 @@ jobs:
     env:
       PERSISTENCE_BACKEND: postgres
       DATABASE_URL: postgresql://assistant_ci:test_postgres@127.0.0.1:5432/assistant_ci
+      DATABASE_SCHEMA: assistant_ci
+      TEST_POSTGRES_DSN: postgresql://assistant_ci:test_postgres@127.0.0.1:5432/assistant_ci
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -158,30 +160,17 @@ jobs:
       - name: Install locked dependencies
         run: uv sync --frozen --all-extras --group dev --python 3.12
 
-      - name: Exercise PostgreSQL schema creation
-        shell: bash
+      - name: Exercise explicit PostgreSQL migrations
         run: |
-          uv run python - <<'PY'
-          import os
-
-          import psycopg
-
-          from personal_assistant.adapters.persistence.postgres import ensure_schema
-
-          connection = psycopg.connect(os.environ["DATABASE_URL"])
-          try:
-              ensure_schema(connection=connection, schema="assistant_ci")
-              row = connection.execute(
-                  "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s",
-                  ("assistant_ci",),
-              ).fetchone()
-              assert row is not None and row[0] > 0
-          finally:
-              connection.close()
-          PY
+          uv run python -m personal_assistant.infrastructure.migrations status
+          uv run python -m personal_assistant.infrastructure.migrations apply
+          uv run python -m personal_assistant.infrastructure.migrations apply
+          uv run python -m personal_assistant.infrastructure.migrations status
 
       - name: Run PostgreSQL adapter and configuration tests
         run: >-
           uv run pytest -q
+          tests/test_migrations.py
           tests/test_postgres_persistence.py
           tests/test_persistence_config.py
+          tests/test_reminder_identity_constraints_postgres.py
