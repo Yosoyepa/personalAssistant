@@ -4,12 +4,12 @@
 
 | Field | Value |
 |---|---|
-| Status | `READY_FOR_PR` |
+| Status | `PR_OPEN` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
 | Phase branch | `codex/phase-0-governance` |
 | Base commit | `865dd63` |
-| Local acceptance commit | pending (this document) |
-| Pull request | pending GitHub device authentication |
+| Local acceptance commit | `3af4425` |
+| Pull request | [#1](https://github.com/Yosoyepa/personalAssistant/pull/1) |
 | Date | `2026-07-17` |
 
 ## Objective and acceptance
@@ -30,7 +30,7 @@ owning phases remove their markers.
 | P0-A2 | Branch, review, commit and rollback governance | `794790b` | accepted after one rework |
 | P0-A3 | Strict characterization of critical defects | `18afd2c` | accepted |
 | P0-A4 | Remove 26 Mypy diagnostics without behavior change | `585d2be` | accepted |
-| P0-A5 | CI, CODEOWNERS, Dependabot and branch protection plan | `6a38aeb` | accepted after one rework |
+| P0-A5 | CI, CODEOWNERS, Dependabot and branch protection plan | `6a38aeb`, `32f9242` | accepted after two reworks and remote verification |
 
 All five goals were marked complete only after review of their unstaged diffs,
 targeted validation, explicit staging, and Conventional Commit creation.
@@ -53,6 +53,8 @@ Executed from the integrated phase branch with `APP_ENV_FILE=disabled`:
 | `uv run pip-audit` | no known dependency vulnerabilities |
 | `uv run pre-commit run --all-files` | all hooks passed |
 | `git diff --check origin/main...HEAD` | pass |
+| governance PowerShell regression | pass without remote calls |
+| governance `Verify` against GitHub | pass with exact desired state |
 
 The PostgreSQL 16 service check is defined in CI. Docker Desktop was installed
 but not running during local acceptance, so the remote `postgres-integration`
@@ -74,8 +76,8 @@ check remains mandatory before merge.
 
 The phase must not be marked `MERGED` until all of the following are recorded:
 
-- [ ] phase branch pushed;
-- [ ] phase pull request created;
+- [x] phase branch pushed;
+- [x] phase pull request created;
 - [ ] `quality`, `tests (3.11)`, `tests (3.12)`, `security`, and
       `postgres-integration` green;
 - [ ] desired GitHub governance applied and verified;
@@ -87,6 +89,9 @@ The phase must not be marked `MERGED` until all of the following are recorded:
   blocks the suite until the owning phase converts the case into a normal test.
 - Coverage uses the standard line-coverage display precision; changed-line
   coverage is independently gated at 90%.
+- The first remote `Apply` exposed an empty-collection binding defect and an
+  invalid `allow_fork_syncing=true` expectation for an unlocked branch. Both
+  are covered by a network-free PowerShell regression in CI.
 - GitHub branch protection may require repository-owner permissions. Failure to
   apply it blocks remote completion but does not invalidate the local commits.
 
