@@ -327,17 +327,141 @@ class AdminDashboardTests(unittest.TestCase):
         self.assertEqual(snapshot["states"]["counts"]["failed"], 1)
         self.assertEqual(snapshot["traces"]["counts"]["agent.failed"], 1)
         self.assertEqual(
-            snapshot["traces"]["items"][0]["error"]["message"], "telegram unavailable"
+            snapshot["traces"]["items"][0]["error"]["message"], "[REDACTED]"
         )
         self.assertEqual(snapshot["errors"]["total"], 3)
         self.assertEqual(
             snapshot["errors"]["counts"], {"trace": 1, "workflow": 1, "outbox": 1}
         )
         self.assertEqual(snapshot["errors"]["event_type_counts"]["agent.failed"], 1)
-        self.assertIn(
-            "telegram unavailable",
+        self.assertEqual(
             {item["message"] for item in snapshot["errors"]["items"]},
+            {"[REDACTED]"},
         )
+
+    def test_snapshot_and_html_redact_workflow_and_outbox_error_payloads(
+        self,
+    ) -> None:
+        now = datetime(2026, 6, 23, 16, 31, tzinfo=UTC)
+        workflow_payload = {
+            "ErRoR": (
+                "message=workflow-test-placeholder-message "
+                "https://workflow-user:workflow-pass@workflow.invalid/fail"
+                "?token=workflow-test-placeholder-token"
+            ),
+            "SeCrEt": "workflow-test-placeholder-secret",
+            "UrL": (
+                "https://workflow-user:workflow-pass@workflow.invalid/private"
+                "?token=workflow-test-placeholder-token"
+            ),
+            "TrAnScRiPt": "workflow-test-placeholder-transcript",
+            "MeSsAgE": "workflow-test-placeholder-message",
+            "AuDiO": b"workflow-test-placeholder-audio",
+            "details": {"TeXt": "workflow-test-placeholder-nested-text"},
+        }
+        outbox_payload = {
+            "ERROR": (
+                "message=outbox-test-placeholder-message "
+                "https://outbox-user:outbox-pass@outbox.invalid/fail"
+                "?token=outbox-test-placeholder-token"
+            ),
+            "secret": "outbox-test-placeholder-secret",
+            "url": (
+                "https://outbox-user:outbox-pass@outbox.invalid/private"
+                "?token=outbox-test-placeholder-token"
+            ),
+            "transcript": "outbox-test-placeholder-transcript",
+            "message": "outbox-test-placeholder-message",
+            "audio": b"outbox-test-placeholder-audio",
+            "details": {"text": "outbox-test-placeholder-nested-text"},
+        }
+        failed_state = WorkflowState(
+            workflow_id="wf-private-error",
+            tenant_id="tenant-a",
+            workflow_type="reminder.dispatch",
+            status=WorkflowStatus.failed,
+            step="send_notification",
+            idempotency_key="wf-private-error",
+            data=workflow_payload,
+            created_at=now,
+            updated_at=now,
+        )
+        failed_event = CloudEvent(
+            id="evt-private-error",
+            type="reminder.dispatch_failed",
+            source="test",
+            subject="rem-private-error",
+            tenant_id="tenant-a",
+            data=outbox_payload,
+            time=now,
+        )
+        failed_message = OutboxMessage(
+            id="outbox-private-error",
+            tenant_id="tenant-a",
+            event=failed_event,
+            idempotency_key="outbox-private-error",
+            dispatch_status=OutboxStatus.failed,
+            attempts=3,
+            created_at=now,
+        )
+        dashboard = AdminDashboard(
+            SimpleNamespace(
+                traces=PublicOnlyTenantListAdapter([]),
+                outbox=PublicOnlyTenantListAdapter([failed_message]),
+                scheduler=PublicOnlyTenantListAdapter([]),
+                calendar=PublicOnlyCalendarAdapter([]),
+                event_store=PublicOnlyTenantListAdapter([failed_event]),
+                states=PublicOnlyTenantListAdapter([failed_state]),
+                memory=PublicOnlyTenantListAdapter([]),
+            )
+        )
+
+        snapshot = dashboard.snapshot(self.principal, now=now)
+        payload = json.dumps(snapshot, sort_keys=True)
+        html = dashboard.render_html(self.principal, now=now)
+
+        self.assertEqual(snapshot["errors"]["total"], 2)
+        self.assertEqual(
+            {item["message"] for item in snapshot["errors"]["items"]},
+            {"[REDACTED]"},
+        )
+        workflow_details = next(
+            item["details"]["data"]
+            for item in snapshot["errors"]["items"]
+            if item["source"] == "workflow"
+        )
+        outbox_details = next(
+            item["details"]["event_data"]
+            for item in snapshot["errors"]["items"]
+            if item["source"] == "outbox"
+        )
+        self.assertEqual(workflow_details["MeSsAgE"], "[REDACTED]")
+        self.assertEqual(outbox_details["message"], "[REDACTED]")
+        self.assertEqual(workflow_details["AuDiO"]["kind"], "binary")
+        self.assertEqual(outbox_details["audio"]["kind"], "binary")
+        self.assertIn("error_sha256", workflow_details)
+        self.assertIn("error_sha256", outbox_details)
+        private_markers = {
+            "workflow-test-placeholder-message",
+            "workflow-test-placeholder-token",
+            "workflow-test-placeholder-secret",
+            "workflow-test-placeholder-transcript",
+            "workflow-test-placeholder-audio",
+            "workflow-test-placeholder-nested-text",
+            "workflow-user",
+            "workflow-pass",
+            "outbox-test-placeholder-message",
+            "outbox-test-placeholder-token",
+            "outbox-test-placeholder-secret",
+            "outbox-test-placeholder-transcript",
+            "outbox-test-placeholder-audio",
+            "outbox-test-placeholder-nested-text",
+            "outbox-user",
+            "outbox-pass",
+        }
+        for marker in private_markers:
+            self.assertNotIn(marker, payload)
+            self.assertNotIn(marker, html)
 
     def test_trace_errors_are_categorized_filterable_and_grouped_by_run(self) -> None:
         events = [
@@ -424,7 +548,8 @@ class AdminDashboardTests(unittest.TestCase):
         self.assertIn('data-error-filter="category"', html)
         self.assertIn('data-error-filter="run_id"', html)
         self.assertIn('data-category="audio"', html)
-        self.assertIn("unsupported audio format", html)
+        self.assertNotIn("unsupported audio format", html)
+        self.assertIn("[REDACTED]", html)
 
     def test_snapshot_is_tenant_and_actor_scoped(self) -> None:
         tenant_b = Principal.for_test(

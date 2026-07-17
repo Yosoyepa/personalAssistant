@@ -145,6 +145,26 @@ their timezone and any available identity metadata from the request payload
 stored beside the result. New writes must include the strict fields and never
 use these fallbacks.
 
+### Trace privacy and legacy rows
+
+Both trace backends enforce the same privacy boundary. Trace construction and
+serialization sanitize recursively, the in-memory recorder stores and returns
+safe copies, and the Postgres recorder computes its fingerprint and JSONB value
+only from the sanitized copy. Postgres reads also sanitize legacy payloads
+before returning them to runtime or admin surfaces.
+
+The boundary retains only allowlisted identifiers, hashes, sizes/counts,
+categories, and operational metadata. It redacts messages, transcripts,
+prompts, credentials, URL credentials/query/fragment data, and binary/audio
+content. Adding a new trace field therefore requires classifying it in the
+central privacy policy; an unknown field is omitted by default.
+
+This read boundary does not rewrite historical JSONB in place. Before deploying
+over a database that may contain traces written by an older version, the
+operator must apply the organization's retention policy to purge or separately
+rewrite those rows. Until that cleanup completes, old raw values may remain at
+rest even though current APIs no longer return them.
+
 ## Idempotency Rules
 
 Every durable write must be tenant-scoped. A key from one tenant must never

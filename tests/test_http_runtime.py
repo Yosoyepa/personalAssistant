@@ -741,7 +741,9 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(trace.tool_call["name"], "audio.synthesize")
         self.assertEqual(trace.input_summary["stage"], "synthesize")
         self.assertEqual(trace.error["category"], "audio")
-        self.assertIn("tts unavailable", trace.error["message"])
+        self.assertEqual(trace.error["message"], "[REDACTED]")
+        self.assertEqual(trace.error["message_length"], len("tts unavailable"))
+        self.assertEqual(len(trace.error["message_sha256"]), 64)
         errors = AdminDashboard(container).errors(principal, category="audio")
         self.assertEqual(errors["total"], 1)
 
@@ -771,7 +773,11 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(trace.tool_call["name"], "notification.send")
         self.assertEqual(trace.input_summary["stage"], "send")
         self.assertEqual(trace.error["category"], "audio")
-        self.assertIn("provider rejected notification", trace.error["message"])
+        self.assertEqual(trace.error["message"], "[REDACTED]")
+        self.assertEqual(
+            trace.error["message_length"], len("provider rejected notification")
+        )
+        self.assertEqual(len(trace.error["message_sha256"]), 64)
         errors = AdminDashboard(container).errors(principal, category="audio")
         self.assertEqual(errors["total"], 1)
 
@@ -885,12 +891,10 @@ class HttpRuntimeTests(unittest.TestCase):
         trace = container.traces.list_for_tenant("tenant-a")[0]
         self.assertEqual(trace.event_type, TraceEventType.tool_called)
         self.assertEqual(trace.tool_call["name"], "audio.transcribe")
-        self.assertEqual(
-            trace.output_summary["transcript"], "recuérdame pagar arriendo en 2 minutos"
-        )
-        self.assertEqual(
-            trace.input_summary["transcription_filename"], "telegram-45.ogg"
-        )
+        self.assertEqual(trace.output_summary["transcript"], "[REDACTED]")
+        self.assertEqual(trace.output_summary["text_length"], len(transcribed.text))
+        self.assertEqual(len(trace.output_summary["transcript_sha256"]), 64)
+        self.assertEqual(trace.input_summary["transcription_filename"], "[REDACTED]")
 
     def test_telegram_webhook_rejects_invalid_secret_and_user(self) -> None:
         settings = AppSettings(

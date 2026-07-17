@@ -386,4 +386,17 @@ Required event types:
 - `outbox.appended` when side-effect intents are created;
 - `agent.completed`, `agent.declined`, `agent.escalated`, or `agent.failed`.
 
-Logs must not include raw OAuth tokens, secrets, full document bodies, or raw Telegram transcript dumps. Sensitive fields are redacted before trace write.
+Trace and structured-error privacy is enforced at the shared DTO/store boundary,
+not by individual callers. The in-memory and Postgres trace recorders must
+materialize the same sanitized representation before persistence, and trace
+serialization must reapply the policy after any mutable-field change.
+
+Persisted trace metadata is fail-closed: only explicitly classified safe
+identifiers, hashes, sizes/counts, categories, and bounded operational metadata
+are retained. Unknown fields are omitted. Message text, transcripts, prompts,
+document/body/content fields, credentials/tokens/secrets, and sensitive URLs are
+redacted to a marker plus length/hash metadata. Binary and audio content is
+reduced to media kind, byte size, and SHA-256; no bytes are retained. Structured
+errors expose only an explicit public-message allowlist keyed by `ErrorCode`,
+with a generic per-code fallback; a rejected diagnostic message is reduced to
+length and SHA-256.
