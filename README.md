@@ -345,6 +345,8 @@ Forbidden by contract:
   workflow for `codex/` branches, worktrees, review, commits, phase PRs,
   rollback, gates, and Definition of Done;
   `docs/development/hardening-log.md` is its evidence template.
+- `docs/development/github-governance.md` - stable CI checks, GitHub branch
+  protection, merge-method policy, and the read-only verification workflow.
 - `docs/public/` - public written artifacts.
 
 ## Test Map

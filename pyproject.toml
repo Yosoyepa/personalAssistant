@@ -46,7 +46,6 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 
 [tool.coverage.run]
-branch = true
 source = ["personal_assistant"]
 
 [tool.coverage.report]

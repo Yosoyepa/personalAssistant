@@ -1,0 +1,6 @@
+# The maintainer is requested on every repository change.
+* @Yosoyepa
+
+# Keep repository governance changes explicitly visible to the maintainer.
+/.github/ @Yosoyepa
+/scripts/configure-github-governance.ps1 @Yosoyepa
