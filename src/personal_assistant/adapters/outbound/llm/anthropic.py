@@ -127,7 +127,8 @@ class AnthropicCompatibleLLMProvider:
 
         text = _extract_text(decoded)
         data = _parse_json_object(text)
-        usage = decoded.get("usage") if isinstance(decoded.get("usage"), Mapping) else {}
+        raw_usage = decoded.get("usage")
+        usage = raw_usage if isinstance(raw_usage, Mapping) else {}
         return LLMResult(
             provider=self.provider,
             model=str(decoded.get("model") or self._model),

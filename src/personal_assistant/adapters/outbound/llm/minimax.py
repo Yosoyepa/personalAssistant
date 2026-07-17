@@ -21,14 +21,22 @@ class MiniMaxLLMProvider(AnthropicCompatibleLLMProvider):
         timeout_seconds: float = 30.0,
         urlopen: UrlOpen | None = None,
     ) -> None:
-        kwargs = {
-            "api_key": api_key,
-            "base_url": base_url,
-            "model": model,
-            "prompt_catalog": prompt_catalog,
-            "auth_header": "authorization",
-            "timeout_seconds": timeout_seconds,
-        }
-        if urlopen is not None:
-            kwargs["urlopen"] = urlopen
-        super().__init__(**kwargs)
+        if urlopen is None:
+            super().__init__(
+                api_key=api_key,
+                base_url=base_url,
+                model=model,
+                prompt_catalog=prompt_catalog,
+                auth_header="authorization",
+                timeout_seconds=timeout_seconds,
+            )
+        else:
+            super().__init__(
+                api_key=api_key,
+                base_url=base_url,
+                model=model,
+                prompt_catalog=prompt_catalog,
+                auth_header="authorization",
+                timeout_seconds=timeout_seconds,
+                urlopen=urlopen,
+            )

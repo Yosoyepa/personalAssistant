@@ -1,0 +1,187 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_ENV_FILE: disabled
+  LLM_PROVIDER: disabled
+  TRANSCRIPTION_PROVIDER: disabled
+  TTS_PROVIDER: disabled
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Verify lock file
+        run: uv lock --check
+
+      - name: Install locked dependencies
+        run: uv sync --frozen --all-extras --group dev --python 3.12
+
+      - name: Validate repository configuration
+        run: |
+          uv run pre-commit validate-config
+          uv run python -m json.tool eval/cases.json > /dev/null
+
+      - name: Test GitHub governance script without remote calls
+        shell: pwsh
+        run: ./tests/powershell/configure-github-governance.tests.ps1
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Type-check
+        run: uv run mypy src
+
+      - name: Compile Python sources
+        run: uv run python -m compileall -q src tests
+
+      - name: Build distributions
+        run: uv build
+
+  tests:
+    name: tests (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install locked dependencies
+        run: uv sync --frozen --all-extras --group dev --python ${{ matrix.python-version }}
+
+      - name: Confirm matrix interpreter
+        run: uv run python --version
+
+      - name: Run tests with line coverage
+        run: uv run coverage run -m pytest -q
+
+      - name: Create coverage report
+        run: uv run coverage xml
+
+      - name: Enforce total coverage
+        run: uv run coverage report --fail-under=85
+
+      - name: Enforce changed-line coverage
+        if: github.event_name == 'pull_request' && matrix.python-version == '3.12'
+        run: uv run diff-cover coverage.xml --compare-branch "origin/${{ github.base_ref }}" --fail-under=90
+
+      - name: Upload coverage report
+        if: always() && matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-python-${{ matrix.python-version }}
+          path: coverage.xml
+          if-no-files-found: error
+          retention-days: 14
+
+  postgres-integration:
+    name: postgres-integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: assistant_ci
+          POSTGRES_USER: assistant_ci
+          POSTGRES_PASSWORD: test_postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U assistant_ci -d assistant_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PERSISTENCE_BACKEND: postgres
+      DATABASE_URL: postgresql://assistant_ci:test_postgres@127.0.0.1:5432/assistant_ci
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install locked dependencies
+        run: uv sync --frozen --all-extras --group dev --python 3.12
+
+      - name: Exercise PostgreSQL schema creation
+        shell: bash
+        run: |
+          uv run python - <<'PY'
+          import os
+
+          import psycopg
+
+          from personal_assistant.adapters.persistence.postgres import ensure_schema
+
+          connection = psycopg.connect(os.environ["DATABASE_URL"])
+          try:
+              ensure_schema(connection=connection, schema="assistant_ci")
+              row = connection.execute(
+                  "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = %s",
+                  ("assistant_ci",),
+              ).fetchone()
+              assert row is not None and row[0] > 0
+          finally:
+              connection.close()
+          PY
+
+      - name: Run PostgreSQL adapter and configuration tests
+        run: >-
+          uv run pytest -q
+          tests/test_postgres_persistence.py
+          tests/test_persistence_config.py

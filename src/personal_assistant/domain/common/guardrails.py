@@ -48,7 +48,7 @@ class GuardrailResult(BaseModel):
 
     findings: tuple[GuardrailFinding, ...] = Field(default_factory=tuple)
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def blocked(self) -> bool:
         return any(finding.severity == GuardrailSeverity.HIGH for finding in self.findings)
