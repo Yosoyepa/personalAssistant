@@ -88,6 +88,24 @@ class AssistantReplies:
     def reminder_needs_datetime(self) -> str:
         return self._text("reminder_needs_datetime")
 
+    def reminder_ambiguous_hour(self) -> str:
+        return self._text("reminder_ambiguous_hour")
+
+    def reminder_missing_date(self) -> str:
+        return self._text("reminder_missing_date")
+
+    def reminder_nonexistent_local_time(self) -> str:
+        return self._text("reminder_nonexistent_local_time")
+
+    def reminder_ambiguous_local_time(self) -> str:
+        return self._text("reminder_ambiguous_local_time")
+
+    def reminder_invalid_timezone(self) -> str:
+        return self._text("reminder_invalid_timezone")
+
+    def reminder_replay_conflict(self) -> str:
+        return self._text("reminder_replay_conflict")
+
     def reminder_needs_approval(self, title: str) -> str:
         return self._format("reminder_needs_approval", title=title)
 
