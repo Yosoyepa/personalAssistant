@@ -22,9 +22,34 @@ from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
 from personal_assistant.infrastructure.prompts import build_prompt_catalog
+from personal_assistant.infrastructure.replies import build_reply_catalog
 
 
 NOW = datetime(2026, 6, 20, 12, tzinfo=UTC)
+
+TEMPORAL_REPLY_COPY = {
+    "reminder_ambiguous_hour": (
+        "¿A qué hora exacta? Indica a. m. o p. m.; por ejemplo, 5 p. m. o 17:00."
+    ),
+    "reminder_missing_date": (
+        "¿Para qué fecha? Indica un día concreto; por ejemplo, mañana o 20 de julio."
+    ),
+    "reminder_nonexistent_local_time": (
+        "Esa hora local no existe por el cambio de horario. Elige otra hora para ese día."
+    ),
+    "reminder_ambiguous_local_time": (
+        "Esa hora local ocurre dos veces por el cambio de horario. "
+        "Indica si te refieres a la primera o a la segunda."
+    ),
+    "reminder_invalid_timezone": (
+        "No reconozco la zona horaria configurada. Usa un identificador IANA válido; "
+        "por ejemplo, America/Bogota."
+    ),
+    "reminder_replay_conflict": (
+        "Ese mensaje ya fue procesado con otro contenido. "
+        "Envíalo como un mensaje nuevo para crear el recordatorio."
+    ),
+}
 
 
 def _principal() -> Principal:
@@ -200,6 +225,57 @@ def test_repository_reply_catalog_loads_user_facing_copy_from_locale_file() -> N
     ].format(title="clase")
     assert replies.approval_failed() == raw_catalog["approval_failed"]
     assert replies.approval_cancel_failed() == raw_catalog["approval_cancel_failed"]
+
+
+def test_temporal_replies_have_stable_v1_ids_and_match_runtime_catalog() -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    registry = json.loads((repository_root / "replies" / "registry.json").read_text(encoding="utf-8"))
+    locale = json.loads((repository_root / "locales" / "es.json").read_text(encoding="utf-8"))
+    versioned = build_reply_catalog(repository_root / "replies")
+    replies = AssistantReplies()
+
+    assert set(registry["replies"]) == set(TEMPORAL_REPLY_COPY)
+    assert versioned == TEMPORAL_REPLY_COPY
+    internal_terms = {"tenant", "payload", "idempotency", "hash", "traceback", "workflow", "outbox"}
+    for reply_id, expected_copy in TEMPORAL_REPLY_COPY.items():
+        assert registry["replies"][reply_id] == {
+            "version": "v1",
+            "path": f"{reply_id}/v1.md",
+        }
+        assert locale[reply_id] == expected_copy
+        assert getattr(replies, reply_id)() == expected_copy
+        assert all(term not in expected_copy.casefold() for term in internal_terms)
+
+
+@pytest.mark.parametrize(
+    ("reply_id", "entry", "error"),
+    [
+        ("help", {"version": "one", "path": "help/one.md"}, "invalid version"),
+        ("help", {"version": "v0", "path": "help/v0.md"}, "invalid version"),
+        ("help", {"version": "v01", "path": "help/v01.md"}, "invalid version"),
+        ("help", {"version": "v1", "path": "../help/v1.md"}, "match its id and version"),
+        (
+            "../escape",
+            {"version": "v1", "path": "../escape/v1.md"},
+            "escapes its catalog root",
+        ),
+        ("help", {"version": "v1", "path": "other/v1.md"}, "match its id and version"),
+        ("help", {"version": "v1", "path": "help/v2.md"}, "match its id and version"),
+    ],
+)
+def test_filesystem_reply_catalog_rejects_unsafe_or_unversioned_paths(
+    tmp_path: Path,
+    reply_id: str,
+    entry: dict[str, str],
+    error: str,
+) -> None:
+    (tmp_path / "registry.json").write_text(
+        json.dumps({"replies": {reply_id: entry}}),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match=error):
+        build_reply_catalog(tmp_path)
 
 
 class CommandReplyDefaults(AssistantReplies):
@@ -413,8 +489,6 @@ def test_filesystem_reply_catalog_loads_versioned_reply_files(tmp_path: Path) ->
         ),
         encoding="utf-8",
     )
-
-    from personal_assistant.infrastructure.replies import build_reply_catalog
 
     replies = AssistantReplies.from_catalog(build_reply_catalog(tmp_path))  # type: ignore[attr-defined]
 
