@@ -27,9 +27,16 @@ class TelegramAdapter:
 
     channel = ChannelName.telegram
 
-    def normalize_webhook(self, payload: dict[str, Any], *, tenant_id: str) -> NormalizedMessage:
+    def normalize_webhook(
+        self, payload: dict[str, Any], *, tenant_id: str
+    ) -> NormalizedMessage:
         callback_query = payload.get("callback_query") or {}
-        message = payload.get("message") or payload.get("edited_message") or callback_query.get("message") or {}
+        message = (
+            payload.get("message")
+            or payload.get("edited_message")
+            or callback_query.get("message")
+            or {}
+        )
         chat = message.get("chat") or {}
         user = callback_query.get("from") or message.get("from") or {}
         voice = message.get("voice") or {}
@@ -39,18 +46,33 @@ class TelegramAdapter:
         media_file_id = str(media.get("file_id") or "") if media else None
         media_mime_type = str(media.get("mime_type") or "audio/ogg") if media else None
         media_file_size = media.get("file_size") if media else None
-        text = callback_query.get("data") or message.get("text") or message.get("caption") or ""
+        text = (
+            callback_query.get("data")
+            or message.get("text")
+            or message.get("caption")
+            or ""
+        )
         if not text and media_file_id:
             text = f"[{media_kind} message]"
-        message_id = str(callback_query.get("id") or message.get("message_id") or payload.get("update_id") or "")
+        callback_event_id = str(callback_query.get("id") or "")
+        message_id = str(
+            message.get("message_id")
+            or callback_event_id
+            or payload.get("update_id")
+            or ""
+        )
         conversation_id = str(chat.get("id") or "")
         actor_id = str(user.get("id") or conversation_id)
         update_id = payload.get("update_id")
-        idempotency_key = (
-            f"telegram:{update_id}"
+        # Telegram webhooks normally carry update_id. Callback ids are the
+        # stable provider-event fallback when a callback fixture/provider omits
+        # update_id; the referenced message id remains a separate dimension.
+        source_event_id = (
+            str(update_id)
             if update_id is not None
-            else f"telegram:{conversation_id}:{message_id}"
+            else callback_event_id or f"message:{conversation_id}:{message_id}"
         )
+        idempotency_key = f"telegram:{source_event_id}"
         command, command_args = _parse_command(str(text))
         if not tenant_id:
             raise ValueError("tenant_id is required from authenticated channel config")
@@ -59,6 +81,7 @@ class TelegramAdapter:
             actor_id=actor_id,
             conversation_id=conversation_id,
             message_id=message_id,
+            source_event_id=source_event_id,
             text=str(text),
             idempotency_key=idempotency_key,
             command=command,
@@ -66,5 +89,7 @@ class TelegramAdapter:
             media_kind=media_kind,
             media_file_id=media_file_id or None,
             media_mime_type=media_mime_type,
-            media_file_size=int(media_file_size) if media_file_size is not None else None,
+            media_file_size=int(media_file_size)
+            if media_file_size is not None
+            else None,
         )

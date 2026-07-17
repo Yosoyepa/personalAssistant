@@ -6,14 +6,26 @@ import hashlib
 import json
 from uuid import uuid4
 
-from personal_assistant.application.ports.calendar import CalendarEventRequest, CalendarEventResult
+from personal_assistant.application.ports.calendar import (
+    CalendarEventRequest,
+    CalendarEventResult,
+)
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier, require_approval
-from personal_assistant.domain.common.identity import Principal, require_trusted_principal
+from personal_assistant.domain.common.permissions import (
+    ApprovalGrant,
+    PermissionTier,
+    require_approval,
+)
+from personal_assistant.domain.common.identity import (
+    Principal,
+    require_trusted_principal,
+)
 
 
 def _fingerprint(request: CalendarEventRequest) -> str:
-    payload = json.dumps(request.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+    payload = json.dumps(
+        request.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -55,7 +67,10 @@ class LocalCalendarTool:
             event_id=f"cal_{uuid4().hex}",
             title=request.title,
             starts_at=request.starts_at,
+            timezone=request.timezone,
             idempotency_key=request.idempotency_key,
+            source_event_id=request.source_event_id,
+            payload_fingerprint=request.payload_fingerprint,
         )
         self._events_by_key[key] = result
         self._fingerprints[key] = request_fingerprint

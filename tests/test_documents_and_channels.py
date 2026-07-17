@@ -2,17 +2,26 @@ from __future__ import annotations
 
 import unittest
 
-from personal_assistant.adapters.inbound.api import normalize_telegram_webhook, normalize_whatsapp_webhook
+from personal_assistant.adapters.inbound.api import (
+    normalize_telegram_webhook,
+    normalize_whatsapp_webhook,
+)
 from personal_assistant.application.dto.documents import DocumentInput
 from personal_assistant.application.use_cases.documents import DocumentService
-from personal_assistant.adapters.outbound.notifications.local import LocalNotificationTool
+from personal_assistant.adapters.outbound.notifications.local import (
+    LocalNotificationTool,
+)
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.domain.common.identity import Principal
 
 
 class DocumentAndChannelTests(unittest.TestCase):
     def principal(self) -> Principal:
-        return Principal.for_test(principal_id="user-1", tenant_id="tenant-a", permission_tier=PermissionTier.P2)
+        return Principal.for_test(
+            principal_id="user-1",
+            tenant_id="tenant-a",
+            permission_tier=PermissionTier.P2,
+        )
 
     def test_document_prompt_injection_is_warned_not_executed(self) -> None:
         service = DocumentService()
@@ -52,7 +61,11 @@ class DocumentAndChannelTests(unittest.TestCase):
                 "message_id": 43,
                 "chat": {"id": 123},
                 "from": {"id": 456},
-                "voice": {"file_id": "voice-file-1", "mime_type": "audio/ogg", "file_size": 2048},
+                "voice": {
+                    "file_id": "voice-file-1",
+                    "mime_type": "audio/ogg",
+                    "file_size": 2048,
+                },
             },
         }
         normalized = normalize_telegram_webhook(payload, tenant_id="tenant-a")
@@ -63,6 +76,28 @@ class DocumentAndChannelTests(unittest.TestCase):
         self.assertEqual(normalized.media_mime_type, "audio/ogg")
         self.assertEqual(normalized.media_file_size, 2048)
 
+    def test_telegram_callback_keeps_message_reference_separate_from_event(
+        self,
+    ) -> None:
+        payload = {
+            "update_id": 12,
+            "callback_query": {
+                "id": "callback-12",
+                "from": {"id": 456},
+                "data": "/aprobar apr-1",
+                "message": {
+                    "message_id": 44,
+                    "chat": {"id": 123},
+                },
+            },
+        }
+
+        normalized = normalize_telegram_webhook(payload, tenant_id="tenant-a")
+
+        self.assertEqual(normalized.message_id, "44")
+        self.assertEqual(normalized.source_event_id, "12")
+        self.assertEqual(normalized.idempotency_key, "telegram:12")
+
     def test_whatsapp_normalizer_uses_authenticated_tenant(self) -> None:
         payload = {
             "entry": [
@@ -71,7 +106,13 @@ class DocumentAndChannelTests(unittest.TestCase):
                         {
                             "value": {
                                 "contacts": [{"wa_id": "555"}],
-                                "messages": [{"id": "wamid.1", "from": "555", "text": {"body": "hola"}}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.1",
+                                        "from": "555",
+                                        "text": {"body": "hola"},
+                                    }
+                                ],
                             }
                         }
                     ]
@@ -82,6 +123,8 @@ class DocumentAndChannelTests(unittest.TestCase):
 
         self.assertFalse(hasattr(normalized, "tenant_id"))
         self.assertEqual(normalized.actor_id, "555")
+        self.assertEqual(normalized.message_id, "wamid.1")
+        self.assertEqual(normalized.source_event_id, "wamid.1")
 
 
 if __name__ == "__main__":

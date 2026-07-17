@@ -14,7 +14,10 @@ from personal_assistant.application.dto.commands import (
     PendingApproval,
 )
 from personal_assistant.application.dto.context import TokenBudget
-from personal_assistant.application.dto.reminders import ReminderWorkflowInput
+from personal_assistant.application.dto.reminders import (
+    ReminderWorkflowInput,
+    ReminderWorkflowResult,
+)
 from personal_assistant.application.dto.runtime import AgentStatus, LLMRequest
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.application.ports.observability import TraceRecorderPort
@@ -141,7 +144,7 @@ class ConversationCommandService:
         if command == "pendientes" or lowered == "/pendientes":
             return self._pending(principal)
         if command == "aprobar" or lowered.startswith("/aprobar"):
-            return self._approve(principal, text, now=now, timezone=timezone)
+            return self._approve(principal, text)
         if command == "cancelar" or lowered.startswith("/cancelar"):
             return self._cancel(principal, text)
         if command == "recordar":
@@ -245,12 +248,13 @@ class ConversationCommandService:
             channel=message.channel.value,
             principal_id=principal.principal_id,
             conversation_id=message.conversation_id,
-            source_event_id=message.message_id,
+            source_event_id=message.source_event_id,
         )
         result = self.reminder_workflow.run(
             principal,
             ReminderWorkflowInput(
                 message_id=message.message_id,
+                source_event_id=message.source_event_id,
                 conversation_id=message.conversation_id,
                 text=text,
                 channel=message.channel.value,
@@ -277,13 +281,15 @@ class ConversationCommandService:
                     tier=PermissionTier.P3.value,
                     workflow_kind="reminder.create",
                     message_id=message.message_id,
+                    source_event_id=result.source_event_id,
                     conversation_id=message.conversation_id,
                     channel=message.channel.value,
                     recipient=message.conversation_id,
                     request_text=text,
                     request_now=now,
-                    timezone=timezone,
-                    idempotency_key=idempotency_key,
+                    timezone=result.timezone,
+                    idempotency_key=result.idempotency_key,
+                    payload_fingerprint=result.payload_fingerprint,
                 ),
             )
             return CommandResult(
@@ -291,15 +297,19 @@ class ConversationCommandService:
                 kind=CommandKind.reminder_create,
                 reply=f"{result.reply}\n{self.replies.approval_command_hint(approval.approval_id)}",
                 approval_id=approval.approval_id,
-                metadata={"approval_required": True},
+                metadata={
+                    **_reminder_result_metadata(result),
+                    "approval_required": True,
+                },
             )
         return CommandResult(
-            status=result.status, kind=CommandKind.reminder_create, reply=result.reply
+            status=result.status,
+            kind=CommandKind.reminder_create,
+            reply=result.reply,
+            metadata=_reminder_result_metadata(result),
         )
 
-    def _approve(
-        self, principal: Principal, text: str, *, now: datetime, timezone: str
-    ) -> CommandResult:
+    def _approve(self, principal: Principal, text: str) -> CommandResult:
         parts = text.split(maxsplit=1)
         if len(parts) != 2:
             return CommandResult(
@@ -332,18 +342,22 @@ class ConversationCommandService:
             principal,
             ReminderWorkflowInput(
                 message_id=approval.message_id,
+                source_event_id=approval.source_event_id,
                 conversation_id=approval.conversation_id,
                 text=approval.request_text,
                 channel=approval.channel,  # type: ignore[arg-type]
                 recipient=approval.recipient,
-                now=now,
-                timezone=timezone,
+                now=approval.request_now,
+                timezone=approval.timezone,
                 idempotency_key=approval.idempotency_key,
                 approval=grant,
             ),
         )
         return CommandResult(
-            status=result.status, kind=CommandKind.approve, reply=result.reply
+            status=result.status,
+            kind=CommandKind.approve,
+            reply=result.reply,
+            metadata=_reminder_result_metadata(result),
         )
 
     def _cancel(self, principal: Principal, text: str) -> CommandResult:
@@ -525,3 +539,21 @@ def _prompt_trace_summary(prompt: RenderedPrompt | None) -> dict[str, str]:
     if prompt is None:
         return {}
     return {"prompt_id": prompt.prompt_id, "prompt_version": prompt.version}
+
+
+def _reminder_result_metadata(
+    result: ReminderWorkflowResult,
+) -> dict[str, str | int | bool | None]:
+    return {
+        "idempotency_key": result.idempotency_key,
+        "source_event_id": result.source_event_id,
+        "payload_fingerprint": result.payload_fingerprint,
+        "timezone": result.timezone,
+        "clarification_reason": (
+            result.clarification_reason.value
+            if result.clarification_reason is not None
+            else None
+        ),
+        "clarification_reply_id": result.clarification_reply_id,
+        "clarification_reply_version": result.clarification_reply_version,
+    }

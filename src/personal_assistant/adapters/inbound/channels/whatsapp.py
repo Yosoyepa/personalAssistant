@@ -12,7 +12,9 @@ class WhatsAppAdapter:
 
     channel = ChannelName.whatsapp
 
-    def normalize_webhook(self, payload: dict[str, Any], *, tenant_id: str) -> NormalizedMessage:
+    def normalize_webhook(
+        self, payload: dict[str, Any], *, tenant_id: str
+    ) -> NormalizedMessage:
         if not tenant_id:
             raise ValueError("tenant_id is required from authenticated channel config")
 
@@ -29,5 +31,6 @@ class WhatsAppAdapter:
             actor_id=actor_id,
             conversation_id=actor_id,
             message_id=message_id,
+            source_event_id=message_id,
             text=text,
         )

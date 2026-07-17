@@ -26,7 +26,10 @@ from personal_assistant.domain.common.exceptions import AssistantError, ErrorCod
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
-from personal_assistant.domain.reminders.idempotency import ReminderIdempotencyConflict
+from personal_assistant.domain.reminders.idempotency import (
+    ReminderIdempotencyConflict,
+    ReminderPayload,
+)
 
 
 class RecordingConnection:
@@ -113,6 +116,7 @@ class PostgresPersistenceTests(unittest.TestCase):
             tier=PermissionTier.P3.value,
             workflow_kind="reminder.create",
             message_id="msg-1",
+            source_event_id="event-1",
             conversation_id="chat-1",
             channel="telegram",
             recipient="chat-1",
@@ -120,6 +124,7 @@ class PostgresPersistenceTests(unittest.TestCase):
             request_now=datetime(2026, 6, 28, 12, tzinfo=UTC),
             timezone="America/Bogota",
             idempotency_key="idem-1",
+            payload_fingerprint="a" * 64,
             created_at=datetime(2026, 6, 28, 12, tzinfo=UTC),
         )
 
@@ -226,6 +231,58 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertEqual([row.approval_id for row in rows], ["apr-1", "apr-2"])
         self.assertEqual(rows[1].status, PendingApprovalStatus.approved)
 
+    def test_approval_store_upgrades_legacy_identity_metadata_on_read(self) -> None:
+        principal = self.principal()
+        legacy = self.pending_approval(principal).model_dump(mode="json")
+        legacy.pop("source_event_id")
+        legacy.pop("payload_fingerprint")
+        connection = RecordingConnection(fetchone_results=[{"payload": legacy}])
+        store = postgres.PostgresApprovalStore(connection=connection)
+
+        restored = store.get(principal, "apr-1")
+
+        self.assertIsNotNone(restored)
+        assert restored is not None
+        self.assertEqual(restored.source_event_id, restored.message_id)
+        self.assertEqual(
+            restored.payload_fingerprint,
+            ReminderPayload(
+                text=restored.request_text,
+                recipient=restored.recipient,
+                timezone=restored.timezone,
+            ).fingerprint,
+        )
+
+    def test_approval_store_replays_equivalent_legacy_row_with_old_hash(self) -> None:
+        principal = self.principal()
+        approval = self.pending_approval(principal)
+        canonical_fingerprint = ReminderPayload(
+            text=approval.request_text,
+            recipient=approval.recipient,
+            timezone=approval.timezone,
+        ).fingerprint
+        approval = approval.model_copy(
+            update={
+                "source_event_id": approval.message_id,
+                "payload_fingerprint": canonical_fingerprint,
+            }
+        )
+        legacy = approval.model_dump(mode="json")
+        legacy.pop("source_event_id")
+        legacy.pop("payload_fingerprint")
+        connection = RecordingConnection(
+            fetchone_results=[
+                None,
+                {"payload": legacy, "fingerprint": "pre-p1-a4-hash"},
+            ]
+        )
+        store = postgres.PostgresApprovalStore(connection=connection)
+
+        restored = store.create(principal, approval)
+
+        self.assertEqual(restored.source_event_id, approval.message_id)
+        self.assertEqual(restored.payload_fingerprint, canonical_fingerprint)
+
     def test_outbox_claim_updates_payload_and_attempts(self) -> None:
         principal = self.principal()
         message = OutboxMessage(
@@ -269,12 +326,17 @@ class PostgresPersistenceTests(unittest.TestCase):
             starts_at=datetime(2026, 6, 28, 22, tzinfo=UTC),
             timezone="America/Bogota",
             idempotency_key="idem-calendar-1",
+            source_event_id="event-calendar-1",
+            payload_fingerprint="b" * 64,
         )
         result = CalendarEventResult(
             event_id="cal-1",
             title=request.title,
             starts_at=request.starts_at,
             idempotency_key=request.idempotency_key,
+            timezone=request.timezone,
+            source_event_id=request.source_event_id,
+            payload_fingerprint=request.payload_fingerprint,
         )
         approval = ApprovalGrant.issue(
             principal=principal,
@@ -301,6 +363,42 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertTrue(json.loads(insert_params[7])["event_id"].startswith("cal_"))
         self.assertEqual(saved.event_id, "cal-1")
 
+    def test_calendar_store_restores_legacy_result_timezone_from_request(self) -> None:
+        principal = self.principal()
+        request = CalendarEventRequest(
+            title="cita",
+            starts_at=datetime(2026, 10, 25, 9, tzinfo=UTC),
+            timezone="Europe/Madrid",
+            idempotency_key="calendar-legacy",
+            source_event_id="event-calendar-legacy",
+            payload_fingerprint="d" * 64,
+        )
+        result = CalendarEventResult(
+            event_id="cal-legacy",
+            title=request.title,
+            starts_at=request.starts_at,
+            timezone=request.timezone,
+            idempotency_key=request.idempotency_key,
+        ).model_dump(mode="json")
+        result.pop("timezone")
+        connection = RecordingConnection(
+            fetchall_results=[
+                [
+                    {
+                        "payload": result,
+                        "request_payload": request.model_dump(mode="json"),
+                    }
+                ]
+            ]
+        )
+        store = postgres.PostgresCalendarStore(connection=connection)
+
+        [restored] = store.list_events(principal)
+
+        self.assertEqual(restored.timezone, "Europe/Madrid")
+        self.assertEqual(restored.source_event_id, request.source_event_id)
+        self.assertEqual(restored.payload_fingerprint, request.payload_fingerprint)
+
     def test_scheduler_mark_sent_updates_payload(self) -> None:
         principal = self.principal()
         reminder = ScheduledReminder(
@@ -312,6 +410,9 @@ class PostgresPersistenceTests(unittest.TestCase):
             recipient="chat-1",
             body="Recordatorio: pagar arriendo",
             idempotency_key="idem-reminder-1",
+            timezone="America/Bogota",
+            source_event_id="event-reminder-1",
+            payload_fingerprint="c" * 64,
         )
         connection = RecordingConnection(
             fetchone_results=[("idem-reminder-1", reminder.model_dump(mode="json"))]
@@ -330,6 +431,36 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertTrue(payload["sent"])
         self.assertEqual(update_params[1:], (principal.tenant_id, "idem-reminder-1"))
         self.assertTrue(saved.sent)
+
+    def test_scheduler_store_upgrades_legacy_metadata_deterministically(self) -> None:
+        principal = self.principal()
+        legacy = ScheduledReminder(
+            reminder_id="rem-legacy",
+            tenant_id=principal.tenant_id,
+            calendar_event_id="cal-legacy",
+            notify_at=datetime(2026, 6, 28, 21, 58, tzinfo=UTC),
+            timezone="UTC",
+            source_event_id="placeholder",
+            payload_fingerprint="e" * 64,
+            channel="telegram",
+            recipient="chat-1",
+            body="Recordatorio legacy",
+            idempotency_key="idem-reminder-legacy",
+        ).model_dump(mode="json")
+        legacy.pop("timezone")
+        legacy.pop("source_event_id")
+        legacy.pop("payload_fingerprint")
+        connection = RecordingConnection(
+            fetchall_results=[[{"payload": legacy}, {"payload": dict(legacy)}]]
+        )
+        store = postgres.PostgresReminderScheduler(connection=connection)
+
+        first, second = store.list_for_tenant(principal)
+
+        self.assertEqual(first.timezone, "UTC")
+        self.assertEqual(first.source_event_id, "legacy:idem-reminder-legacy")
+        self.assertRegex(first.payload_fingerprint, r"^[0-9a-f]{64}$")
+        self.assertEqual(second.payload_fingerprint, first.payload_fingerprint)
 
     def test_memory_retrieve_scopes_by_tenant_user_kind_confirmed_and_query(
         self,

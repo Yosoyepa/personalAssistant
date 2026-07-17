@@ -8,6 +8,14 @@
       "version": "v1",
       "path": "reminder_missing_date/v1.md"
     },
+    "reminder_missing_time": {
+      "version": "v1",
+      "path": "reminder_missing_time/v1.md"
+    },
+    "reminder_missing_datetime": {
+      "version": "v1",
+      "path": "reminder_missing_datetime/v1.md"
+    },
     "reminder_nonexistent_local_time": {
       "version": "v1",
       "path": "reminder_nonexistent_local_time/v1.md"

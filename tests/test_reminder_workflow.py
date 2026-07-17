@@ -16,6 +16,7 @@ from personal_assistant.adapters.outbound.calendar.local import LocalCalendarToo
 from personal_assistant.domain.reminders.parser import extract_reminder
 from personal_assistant.domain.reminders.models import (
     ParsedReminder,
+    ReminderClarificationReason,
     ReminderUnsupportedReason,
     UnsupportedReminder,
 )
@@ -103,6 +104,7 @@ class ReminderWorkflowTests(unittest.TestCase):
             )
         return ReminderWorkflowInput(
             message_id="42",
+            source_event_id="42",
             conversation_id="chat-1",
             text=text,
             recipient="chat-1",
@@ -115,6 +117,7 @@ class ReminderWorkflowTests(unittest.TestCase):
         text = "recuérdame clase el martes a las 17"
         return ReminderWorkflowInput(
             message_id="42",
+            source_event_id="42",
             conversation_id="chat-1",
             text=text,
             recipient="chat-1",
@@ -210,11 +213,26 @@ class ReminderWorkflowTests(unittest.TestCase):
         result = self.workflow.run(self.principal, request)
 
         self.assertEqual(result.status, AgentStatus.completed)
+        self.assertEqual(result.source_event_id, request.source_event_id)
+        self.assertEqual(result.timezone, "America/Bogota")
+        self.assertRegex(result.payload_fingerprint, r"^[0-9a-f]{64}$")
         [calendar_event] = self.calendar.list_events(self.principal)
         self.assertEqual(
             calendar_event.starts_at, datetime(2026, 6, 23, 22, tzinfo=UTC)
         )
+        self.assertEqual(calendar_event.timezone, result.timezone)
+        self.assertEqual(calendar_event.source_event_id, result.source_event_id)
+        self.assertEqual(calendar_event.payload_fingerprint, result.payload_fingerprint)
+        [scheduled] = self.scheduler.list_for_tenant(self.principal)
+        self.assertEqual(scheduled.timezone, result.timezone)
+        self.assertEqual(scheduled.source_event_id, result.source_event_id)
+        self.assertEqual(scheduled.payload_fingerprint, result.payload_fingerprint)
+        self.assertEqual(scheduled.notify_at.tzinfo, UTC)
         [event] = self.event_store.list_for_tenant(self.principal)
+        self.assertEqual(event.source_event_id, result.source_event_id)
+        self.assertEqual(event.payload_fingerprint, result.payload_fingerprint)
+        self.assertEqual(event.timezone, result.timezone)
+        self.assertEqual(event.causation_id, result.source_event_id)
         self.assertEqual(event.data["starts_at"], "2026-06-23T22:00:00+00:00")
         self.assertEqual(event.data["timezone"], "America/Bogota")
         state = self.states.get_by_idempotency_key(
@@ -222,6 +240,8 @@ class ReminderWorkflowTests(unittest.TestCase):
         )
         self.assertIsNotNone(state)
         assert state is not None
+        self.assertEqual(state.payload_fingerprint, result.payload_fingerprint)
+        self.assertEqual(state.data["source_event_id"], result.source_event_id)
         self.assertEqual(state.data["timezone"], "America/Bogota")
 
     def test_reminder_draft_round_trip_canonicalizes_local_offset_to_utc(self) -> None:
@@ -238,6 +258,82 @@ class ReminderWorkflowTests(unittest.TestCase):
         self.assertEqual(restored.starts_at, datetime(2026, 6, 20, 22, tzinfo=UTC))
         self.assertEqual(restored.notify_at, datetime(2026, 6, 20, 21, 30, tzinfo=UTC))
         self.assertEqual(restored.timezone, "America/Bogota")
+
+    def test_workflow_input_canonicalizes_processing_clock_to_utc(self) -> None:
+        request = ReminderWorkflowInput(
+            message_id="clock-1",
+            source_event_id="event-clock-1",
+            conversation_id="chat-1",
+            text="recuérdame mañana a las 17",
+            recipient="chat-1",
+            now=datetime(2026, 6, 20, 7, tzinfo=ZoneInfo("America/Bogota")),
+            timezone="America/Bogota",
+        )
+
+        self.assertEqual(request.now, datetime(2026, 6, 20, 12, tzinfo=UTC))
+
+    def test_clarification_reply_identity_is_versioned_by_typed_reason(self) -> None:
+        key = self.key("clarification-1")
+        request = ReminderWorkflowInput(
+            message_id="message-clarification-1",
+            source_event_id="clarification-1",
+            conversation_id="chat-1",
+            text="recuérdame mañana",
+            recipient="chat-1",
+            now=self.now,
+            idempotency_key=key,
+            approval=None,
+        )
+
+        first = self.workflow.run(self.principal, request)
+        replay = self.workflow.run(self.principal, request)
+        state = self.states.get_by_idempotency_key(self.principal, key)
+
+        self.assertEqual(
+            first.clarification_reason, ReminderClarificationReason.missing_time
+        )
+        self.assertEqual(first.clarification_reply_id, "reminder_missing_time")
+        self.assertEqual(first.clarification_reply_version, "v1")
+        self.assertEqual(replay.clarification_reply_id, first.clarification_reply_id)
+        self.assertEqual(replay.clarification_reply_version, "v1")
+        self.assertTrue(replay.reused)
+        self.assertIsNotNone(state)
+        assert state is not None
+        self.assertEqual(state.data["clarification_reason"], "missing_time")
+        self.assertEqual(state.data["clarification_reply_id"], "reminder_missing_time")
+        self.assertEqual(state.data["clarification_reply_version"], "v1")
+
+    def test_invalid_requested_timezone_returns_versioned_clarification_without_effects(
+        self,
+    ) -> None:
+        key = self.key("invalid-timezone-1")
+        request = ReminderWorkflowInput(
+            message_id="message-invalid-timezone-1",
+            source_event_id="invalid-timezone-1",
+            conversation_id="chat-1",
+            text="recuérdame mañana a las 17",
+            recipient="chat-1",
+            now=self.now,
+            timezone="Mars/Olympus_Mons",
+            idempotency_key=key,
+            approval=None,
+        )
+
+        result = self.workflow.run(self.principal, request)
+
+        self.assertEqual(result.status, AgentStatus.needs_clarification)
+        self.assertEqual(
+            result.clarification_reason,
+            ReminderClarificationReason.invalid_timezone,
+        )
+        self.assertEqual(result.clarification_reply_id, "reminder_invalid_timezone")
+        self.assertEqual(result.clarification_reply_version, "v1")
+        self.assertEqual(result.timezone, "Mars/Olympus_Mons")
+        self.assertFalse(result.approval_required)
+        self.assertEqual(self.calendar.list_events(self.principal), [])
+        self.assertEqual(self.scheduler.list_for_tenant(self.principal), [])
+        self.assertEqual(self.event_store.list_for_tenant(self.principal), [])
+        self.assertEqual(self.outbox.list_for_tenant(self.principal), [])
 
     def test_reminder_draft_rejects_non_iana_timezone(self) -> None:
         with self.assertRaisesRegex(ValueError, "valid IANA timezone"):
@@ -302,6 +398,7 @@ class ReminderWorkflowTests(unittest.TestCase):
             self.principal,
             ReminderWorkflowInput(
                 message_id="relative-1",
+                source_event_id="relative-1",
                 conversation_id="chat-1",
                 text=text,
                 recipient="chat-1",
@@ -504,6 +601,7 @@ class ReminderWorkflowTests(unittest.TestCase):
             self.principal,
             ReminderWorkflowInput(
                 message_id="llm-1",
+                source_event_id="llm-1",
                 conversation_id="chat-1",
                 text=text,
                 recipient="chat-1",
@@ -532,6 +630,7 @@ class ReminderWorkflowTests(unittest.TestCase):
         )
         request = ReminderWorkflowInput(
             message_id="42",
+            source_event_id="42",
             conversation_id="chat-1",
             text=text,
             recipient="chat-1",

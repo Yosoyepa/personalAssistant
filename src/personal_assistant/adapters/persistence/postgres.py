@@ -52,7 +52,10 @@ from personal_assistant.domain.common.permissions import (
     require_permission,
 )
 from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
-from personal_assistant.domain.reminders.idempotency import ReminderIdempotencyConflict
+from personal_assistant.domain.reminders.idempotency import (
+    ReminderIdempotencyConflict,
+    ReminderPayload,
+)
 
 
 ConnectionFactory = Callable[[], Any]
@@ -91,10 +94,13 @@ def _approval_hash(approval: PendingApproval) -> str:
             "workflow_kind": approval.workflow_kind,
             "idempotency_key": approval.idempotency_key,
             "message_id": approval.message_id,
+            "source_event_id": approval.source_event_id,
             "conversation_id": approval.conversation_id,
             "channel": approval.channel,
             "recipient": approval.recipient,
             "request_text": approval.request_text,
+            "timezone": approval.timezone,
+            "payload_fingerprint": approval.payload_fingerprint,
         }
     )
 
@@ -116,6 +122,64 @@ def _payload_from_row(row: Any, key: str = "payload", index: int = 0) -> dict[st
     if isinstance(payload, str):
         return json.loads(payload)
     return dict(payload)
+
+
+def _upgrade_legacy_pending_approval(payload: dict[str, Any]) -> dict[str, Any]:
+    """Upgrade persisted pre-P1-A4 approvals without relaxing new writes."""
+
+    upgraded = dict(payload)
+    if not upgraded.get("source_event_id"):
+        upgraded["source_event_id"] = upgraded.get("message_id")
+    if not upgraded.get("payload_fingerprint"):
+        upgraded["payload_fingerprint"] = ReminderPayload(
+            text=str(upgraded["request_text"]),
+            recipient=str(upgraded["recipient"]),
+            timezone=str(upgraded.get("timezone") or "America/Bogota"),
+        ).fingerprint
+    return upgraded
+
+
+def _upgrade_legacy_scheduled_reminder(payload: dict[str, Any]) -> dict[str, Any]:
+    """Read legacy jobs with deterministic, explicit compatibility metadata."""
+
+    upgraded = dict(payload)
+    key = str(upgraded["idempotency_key"])
+    if not upgraded.get("source_event_id"):
+        upgraded["source_event_id"] = f"legacy:{key}"
+    # Pre-P1-A4 jobs persisted only an aware instant, not the user's IANA zone.
+    # UTC is the sole honest fallback; all new writes persist the original zone.
+    if not upgraded.get("timezone"):
+        upgraded["timezone"] = "UTC"
+    if not upgraded.get("payload_fingerprint"):
+        upgraded["payload_fingerprint"] = _fingerprint(
+            {
+                "schema": "personal-assistant.legacy-scheduled-reminder",
+                "calendar_event_id": upgraded.get("calendar_event_id"),
+                "notify_at": upgraded.get("notify_at"),
+                "channel": upgraded.get("channel"),
+                "recipient": upgraded.get("recipient"),
+                "body": upgraded.get("body"),
+                "timezone": upgraded["timezone"],
+            }
+        )
+    return upgraded
+
+
+def _upgrade_legacy_calendar_result(
+    payload: dict[str, Any], request_payload: dict[str, Any]
+) -> dict[str, Any]:
+    """Restore result metadata from the request persisted beside legacy rows."""
+
+    upgraded = dict(payload)
+    if not upgraded.get("timezone"):
+        timezone = request_payload.get("timezone")
+        if not timezone:
+            raise ValueError("persisted calendar request is missing timezone")
+        upgraded["timezone"] = timezone
+    for field in ("source_event_id", "payload_fingerprint"):
+        if not upgraded.get(field) and request_payload.get(field):
+            upgraded[field] = request_payload[field]
+    return upgraded
 
 
 def _require_aware(value: datetime, field: str) -> None:
@@ -914,7 +978,7 @@ class PostgresApprovalStore(_PostgresStore):
             row = cursor.fetchone()
             if row is not None:
                 return PendingApproval.model_validate(
-                    _payload_from_row(row)
+                    _upgrade_legacy_pending_approval(_payload_from_row(row))
                 ).model_copy(deep=True)
 
             cursor.execute(
@@ -940,15 +1004,19 @@ class PostgresApprovalStore(_PostgresStore):
                     "approval insert failed",
                     tenant_id=principal.tenant_id,
                 )
-            if _row_value(existing, "fingerprint", 1) != approval_fingerprint:
+            existing_approval = PendingApproval.model_validate(
+                _upgrade_legacy_pending_approval(_payload_from_row(existing))
+            )
+            if (
+                _row_value(existing, "fingerprint", 1) != approval_fingerprint
+                and _approval_hash(existing_approval) != approval_fingerprint
+            ):
                 raise AssistantError(
                     ErrorCode.CONFLICT,
                     "approval request idempotency conflict",
                     tenant_id=principal.tenant_id,
                 )
-            return PendingApproval.model_validate(
-                _payload_from_row(existing)
-            ).model_copy(deep=True)
+            return existing_approval.model_copy(deep=True)
 
     def get(self, principal: Principal, approval_id: str) -> PendingApproval | None:
         require_trusted_principal(principal)
@@ -964,9 +1032,9 @@ class PostgresApprovalStore(_PostgresStore):
             row = cursor.fetchone()
             if row is None:
                 return None
-            return PendingApproval.model_validate(_payload_from_row(row)).model_copy(
-                deep=True
-            )
+            return PendingApproval.model_validate(
+                _upgrade_legacy_pending_approval(_payload_from_row(row))
+            ).model_copy(deep=True)
 
     def list_pending(self, principal: Principal) -> list[PendingApproval]:
         require_trusted_principal(principal)
@@ -985,9 +1053,9 @@ class PostgresApprovalStore(_PostgresStore):
                 ),
             )
             return [
-                PendingApproval.model_validate(_payload_from_row(row)).model_copy(
-                    deep=True
-                )
+                PendingApproval.model_validate(
+                    _upgrade_legacy_pending_approval(_payload_from_row(row))
+                ).model_copy(deep=True)
                 for row in cursor.fetchall()
             ]
 
@@ -1004,9 +1072,9 @@ class PostgresApprovalStore(_PostgresStore):
                 (principal.tenant_id, principal.principal_id),
             )
             return [
-                PendingApproval.model_validate(_payload_from_row(row)).model_copy(
-                    deep=True
-                )
+                PendingApproval.model_validate(
+                    _upgrade_legacy_pending_approval(_payload_from_row(row))
+                ).model_copy(deep=True)
                 for row in cursor.fetchall()
             ]
 
@@ -1130,7 +1198,10 @@ class PostgresCalendarStore(_PostgresStore):
             event_id=f"cal_{uuid4().hex}",
             title=request.title,
             starts_at=request.starts_at,
+            timezone=request.timezone,
             idempotency_key=request.idempotency_key,
+            source_event_id=request.source_event_id,
+            payload_fingerprint=request.payload_fingerprint,
         )
         result_payload = result.model_dump(mode="json")
         with self._db.cursor() as cursor:
@@ -1162,7 +1233,7 @@ class PostgresCalendarStore(_PostgresStore):
 
             cursor.execute(
                 f"""
-                SELECT payload, request_fingerprint
+                SELECT payload, request_fingerprint, request_payload
                 FROM {self._table("calendar_events")}
                 WHERE tenant_id = %s AND idempotency_key = %s
                 """,
@@ -1182,7 +1253,10 @@ class PostgresCalendarStore(_PostgresStore):
                     tenant_id=principal.tenant_id,
                 )
             return CalendarEventResult.model_validate(
-                _payload_from_row(existing)
+                _upgrade_legacy_calendar_result(
+                    _payload_from_row(existing),
+                    _payload_from_row(existing, key="request_payload", index=2),
+                )
             ).model_copy(update={"reused": True})
 
     def list_events(self, principal: Principal) -> list[CalendarEventResult]:
@@ -1190,7 +1264,7 @@ class PostgresCalendarStore(_PostgresStore):
         with self._db.cursor() as cursor:
             cursor.execute(
                 f"""
-                SELECT payload
+                SELECT payload, request_payload
                 FROM {self._table("calendar_events")}
                 WHERE tenant_id = %s
                 ORDER BY starts_at, event_id
@@ -1198,7 +1272,12 @@ class PostgresCalendarStore(_PostgresStore):
                 (principal.tenant_id,),
             )
             return [
-                CalendarEventResult.model_validate(_payload_from_row(row))
+                CalendarEventResult.model_validate(
+                    _upgrade_legacy_calendar_result(
+                        _payload_from_row(row),
+                        _payload_from_row(row, key="request_payload", index=1),
+                    )
+                )
                 for row in cursor.fetchall()
             ]
 
@@ -1215,6 +1294,9 @@ class PostgresReminderScheduler(_PostgresStore):
         channel: str,
         recipient: str,
         body: str,
+        timezone: str,
+        source_event_id: str,
+        payload_fingerprint: str,
         minutes_before: int = 30,
         idempotency_key: str,
     ) -> ScheduledReminder:
@@ -1225,6 +1307,9 @@ class PostgresReminderScheduler(_PostgresStore):
             tenant_id=principal.tenant_id,
             calendar_event_id=calendar_event_id,
             notify_at=notify_at,
+            timezone=timezone,
+            source_event_id=source_event_id,
+            payload_fingerprint=payload_fingerprint,
             channel=channel,
             recipient=recipient,
             body=body,
@@ -1257,7 +1342,9 @@ class PostgresReminderScheduler(_PostgresStore):
             )
             row = cursor.fetchone()
             if row is not None:
-                return ScheduledReminder.model_validate(_payload_from_row(row))
+                return ScheduledReminder.model_validate(
+                    _upgrade_legacy_scheduled_reminder(_payload_from_row(row))
+                )
 
             cursor.execute(
                 f"""
@@ -1274,7 +1361,25 @@ class PostgresReminderScheduler(_PostgresStore):
                     "reminder schedule failed",
                     tenant_id=principal.tenant_id,
                 )
-            return ScheduledReminder.model_validate(_payload_from_row(existing))
+            stored = ScheduledReminder.model_validate(
+                _upgrade_legacy_scheduled_reminder(_payload_from_row(existing))
+            )
+            if (
+                stored.calendar_event_id != job.calendar_event_id
+                or stored.notify_at != job.notify_at
+                or stored.timezone != job.timezone
+                or stored.source_event_id != job.source_event_id
+                or stored.payload_fingerprint != job.payload_fingerprint
+                or stored.channel != job.channel
+                or stored.recipient != job.recipient
+                or stored.body != job.body
+            ):
+                raise AssistantError(
+                    ErrorCode.CONFLICT,
+                    "reminder scheduler idempotency conflict",
+                    tenant_id=principal.tenant_id,
+                )
+            return stored
 
     def due(self, principal: Principal, now: datetime) -> list[ScheduledReminder]:
         require_trusted_principal(principal)
@@ -1290,7 +1395,9 @@ class PostgresReminderScheduler(_PostgresStore):
                 (principal.tenant_id, now),
             )
             return [
-                ScheduledReminder.model_validate(_payload_from_row(row))
+                ScheduledReminder.model_validate(
+                    _upgrade_legacy_scheduled_reminder(_payload_from_row(row))
+                )
                 for row in cursor.fetchall()
             ]
 
@@ -1315,7 +1422,7 @@ class PostgresReminderScheduler(_PostgresStore):
                 )
             idempotency_key = _row_value(row, "idempotency_key", 0)
             job = ScheduledReminder.model_validate(
-                _payload_from_row(row, index=1)
+                _upgrade_legacy_scheduled_reminder(_payload_from_row(row, index=1))
             ).model_copy(update={"sent": True})
             cursor.execute(
                 f"""
@@ -1345,7 +1452,9 @@ class PostgresReminderScheduler(_PostgresStore):
                 (principal.tenant_id,),
             )
             return [
-                ScheduledReminder.model_validate(_payload_from_row(row))
+                ScheduledReminder.model_validate(
+                    _upgrade_legacy_scheduled_reminder(_payload_from_row(row))
+                )
                 for row in cursor.fetchall()
             ]
 

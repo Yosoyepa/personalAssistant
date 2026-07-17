@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from personal_assistant.domain.reminders.models import ReminderClarificationReason
+
 
 CatalogValue = str | list[str]
 
@@ -18,7 +20,12 @@ _CATALOG_CACHE: dict[str, dict[str, CatalogValue]] = {}
 class AssistantReplies:
     """Build user-facing copy without mixing it into business decisions."""
 
-    def __init__(self, locale: str = _DEFAULT_LOCALE, *, catalog: dict[str, CatalogValue] | None = None) -> None:
+    def __init__(
+        self,
+        locale: str = _DEFAULT_LOCALE,
+        *,
+        catalog: dict[str, CatalogValue] | None = None,
+    ) -> None:
         self._catalog = dict(catalog) if catalog is not None else _load_catalog(locale)
 
     @classmethod
@@ -34,7 +41,14 @@ class AssistantReplies:
     def unsupported(self) -> str:
         return self._text("unsupported")
 
-    def status(self, *, pending_count: int, state_count: int, event_count: int, outbox_count: int) -> str:
+    def status(
+        self,
+        *,
+        pending_count: int,
+        state_count: int,
+        event_count: int,
+        outbox_count: int,
+    ) -> str:
         return self._format(
             "status",
             pending_count=pending_count,
@@ -94,6 +108,12 @@ class AssistantReplies:
     def reminder_missing_date(self) -> str:
         return self._text("reminder_missing_date")
 
+    def reminder_missing_time(self) -> str:
+        return self._text("reminder_missing_time")
+
+    def reminder_missing_datetime(self) -> str:
+        return self._text("reminder_missing_datetime")
+
     def reminder_nonexistent_local_time(self) -> str:
         return self._text("reminder_nonexistent_local_time")
 
@@ -105,6 +125,15 @@ class AssistantReplies:
 
     def reminder_replay_conflict(self) -> str:
         return self._text("reminder_replay_conflict")
+
+    def reminder_clarification(
+        self, reason: ReminderClarificationReason
+    ) -> tuple[str, str, str]:
+        """Return stable reply identity, version, and copy for one typed reason."""
+
+        reply_id = f"reminder_{reason.value}"
+        renderer = getattr(self, reply_id)
+        return reply_id, "v1", renderer()
 
     def reminder_needs_approval(self, title: str) -> str:
         return self._format("reminder_needs_approval", title=title)
@@ -118,7 +147,9 @@ class AssistantReplies:
     def reminder_notification_body(self, title: str) -> str:
         return self._format("reminder_notification_body", title=title)
 
-    def reminder_created(self, *, title: str, minutes_before: int, direct_notice: bool = False) -> str:
+    def reminder_created(
+        self, *, title: str, minutes_before: int, direct_notice: bool = False
+    ) -> str:
         if direct_notice:
             return self._format("reminder_created_direct", title=title)
         return self._format(
@@ -184,7 +215,9 @@ class AssistantReplies:
         value = self._catalog[key]
         if isinstance(value, str):
             return [value]
-        if not isinstance(value, list) or not all(isinstance(line, str) for line in value):
+        if not isinstance(value, list) or not all(
+            isinstance(line, str) for line in value
+        ):
             raise TypeError(f"Reply copy key {key!r} must be a list of strings.")
         return value
 
@@ -198,7 +231,9 @@ def _load_catalog(locale: str) -> dict[str, CatalogValue]:
         raw_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
         if not isinstance(raw_catalog, dict):
             raise TypeError(f"Reply catalog {catalog_path} must contain a JSON object.")
-        _CATALOG_CACHE[locale] = {str(key): _catalog_value(value) for key, value in raw_catalog.items()}
+        _CATALOG_CACHE[locale] = {
+            str(key): _catalog_value(value) for key, value in raw_catalog.items()
+        }
     return _CATALOG_CACHE[locale]
 
 
