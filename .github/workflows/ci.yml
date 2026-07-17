@@ -174,3 +174,4 @@ jobs:
           tests/test_postgres_persistence.py
           tests/test_persistence_config.py
           tests/test_reminder_identity_constraints_postgres.py
+          tests/test_reminder_uow_fault_injection_postgres.py
