@@ -91,7 +91,9 @@ Configuration is loaded from the process environment and, by default, an
 optional local `.env` file. Use `.env.example` as the template. Set
 `APP_ENV_FILE=disabled` for hermetic tests. Keep Telegram tokens, webhook
 secrets, MiniMax keys, speech provider keys, `ADMIN_TOKEN`, `DATABASE_URL`, OAuth
-tokens, and every other credential out of git.
+tokens, and every other credential out of git. For the public webhook boundary,
+local secrets, and rotation procedure, follow
+`docs/runbook/hardened-local-deployment.md`.
 
 ## Verify Locally
 
@@ -142,40 +144,47 @@ curl -sS http://127.0.0.1:8000/healthz | python3 -m json.tool
 curl -sS http://127.0.0.1:8000/readyz | python3 -m json.tool
 ```
 
-Create a reminder through the trusted runtime API:
+Create a reminder through the loopback-only trusted runtime API. It requires the
+server's fixed authority and an admin bearer token; request identity headers do
+not provide authority:
 
-```bash
-curl -sS -X POST http://127.0.0.1:8000/v1/runtime/reminders \
-  -H "Content-Type: application/json" \
-  -H "X-Principal-Id: user-local" \
-  -H "X-Tenant-Id: tenant-local" \
-  -H "X-Permission-Tier: P5" \
-  -d '{
-    "message_id": "telegram-message-1",
-    "source_event_id": "api-request-1",
-    "conversation_id": "telegram-chat-1",
-    "text": "recuerdame clase el martes a las 5",
-    "channel": "telegram",
-    "recipient": "telegram-chat-1",
-    "now": "2026-06-20T12:00:00+00:00",
-    "timezone": "America/Bogota"
-  }' \
-  | python3 -m json.tool
+```powershell
+# Read from ignored .env into this PowerShell process; do not print the value.
+$adminLines = @(Get-Content .env | Where-Object {
+  $_ -match '^ADMIN_TOKEN="[^"]+"$'
+})
+if ($adminLines.Count -ne 1) { throw 'Expected exactly one non-empty ADMIN_TOKEN.' }
+$adminLine = $adminLines[0]
+$adminToken = ([regex]::Match($adminLine, '^ADMIN_TOKEN="(?<value>[^"]+)"$')).Groups['value'].Value
+$headers = @{ Authorization = "Bearer $adminToken" }
+$body = @{
+  message_id = 'telegram-message-1'
+  source_event_id = 'api-request-1'
+  conversation_id = 'telegram-chat-1'
+  text = 'recuerdame clase el martes a las 5'
+  channel = 'telegram'
+  recipient = 'telegram-chat-1'
+  now = '2026-06-20T12:00:00+00:00'
+  timezone = 'America/Bogota'
+} | ConvertTo-Json
+Invoke-RestMethod -Method Post `
+  -Uri 'http://127.0.0.1:8000/v1/runtime/reminders' `
+  -Headers $headers -ContentType 'application/json' -Body $body |
+  ConvertTo-Json -Depth 10
 ```
 
 The expected first response is an approval escalation. Approve it with:
 
-```bash
-APPROVAL_ID="<approval id>"
-
-curl -sS -X POST "http://127.0.0.1:8000/v1/runtime/approvals/${APPROVAL_ID}/approve" \
-  -H "Content-Type: application/json" \
-  -H "X-Principal-Id: user-local" \
-  -H "X-Tenant-Id: tenant-local" \
-  -H "X-Permission-Tier: P5" \
-  -d '{}' \
-  | python3 -m json.tool
+```powershell
+$approvalId = '<approval id>'
+Invoke-RestMethod -Method Post `
+  -Uri "http://127.0.0.1:8000/v1/runtime/approvals/$approvalId/approve" `
+  -Headers $headers -ContentType 'application/json' -Body '{}' |
+  ConvertTo-Json -Depth 10
 ```
+
+After the local check, run `Remove-Variable adminToken, headers` in that
+PowerShell session.
 
 ## Telegram
 
@@ -196,17 +205,14 @@ export ASSISTANT_TENANT_ID="personal"
 export ASSISTANT_TIMEZONE="America/Bogota"
 ```
 
-Run FastAPI on loopback and expose it through ngrok or another HTTPS tunnel.
-Then register the webhook:
-
-```bash
-export PUBLIC_BASE_URL="https://your-public-https-url.example"
-
-curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
-  -d "url=${PUBLIC_BASE_URL}/webhooks/telegram" \
-  -d "secret_token=${TELEGRAM_WEBHOOK_SECRET}" \
-  | python3 -m json.tool
-```
+Run FastAPI on loopback and configure an HTTPS proxy/tunnel that forwards only
+`POST /webhooks/telegram`; it must deny health, runtime, and admin routes. Use
+the in-memory PowerShell Telegram helper in `docs/runbook/telegram.md` to set,
+inspect, or remove the webhook. It avoids putting the bot token or webhook
+secret in command arguments, process listings, or terminal output. Telegram's
+Bot API requires the bot token in its request URL, but the helper constructs
+that URL only inside the HTTP process; it never appears in the public webhook
+URL.
 
 The webhook resolves tenant authority from runtime configuration and requires a
 constant-time match for the `X-Telegram-Bot-Api-Secret-Token` header. Telegram
@@ -252,21 +258,17 @@ text-only behavior. See `docs/runbook/minimax.md` for provider notes.
 ## Admin Dashboard
 
 The admin dashboard is a local read-only inspection surface, not a production
-ops console. It is loopback-only and tenant-scoped; when `ADMIN_TOKEN` is set,
-requests must include `Authorization: Bearer <token>` or `X-Admin-Token`.
+ops console. It is loopback-only and tenant-scoped; it always requires
+`Authorization: Bearer <ADMIN_TOKEN>`. Query parameters only filter the display
+where supported; they do not establish authority.
 
-```bash
-export ADMIN_TOKEN="$(python3 - <<'PY'
-import secrets
-print(secrets.token_urlsafe(32))
-PY
-)"
-```
+Generate and store `ADMIN_TOKEN` in ignored `.env` with the PowerShell procedure
+in `docs/runbook/hardened-local-deployment.md`; do not export or print it.
 
 Open:
 
 ```text
-http://127.0.0.1:8000/admin?tenant_id=tenant-local&principal_id=user-local
+http://127.0.0.1:8000/admin
 ```
 
 Useful JSON endpoints include `/admin/snapshot`, `/admin/health`,
@@ -336,6 +338,8 @@ Forbidden by contract:
 
 - `docs/runbook/telegram.md` - BotFather, ngrok, webhook, Telegram command,
   audio, and local runtime notes.
+- `docs/runbook/hardened-local-deployment.md` - HTTPS webhook-only boundary,
+  local secret handling, verification, rotation, and rollback.
 - `docs/runbook/admin-dashboard.md` - local admin dashboard and JSON endpoint
   guide.
 - `docs/runbook/persistence.md` - memory/Postgres persistence guide.
