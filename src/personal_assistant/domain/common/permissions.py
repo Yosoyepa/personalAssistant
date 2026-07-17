@@ -6,6 +6,7 @@ share it across API, worker, and policy boundaries.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -121,7 +122,7 @@ class ApprovalGrant(BaseModel):
     request_hash: str | None = None
     _trusted_source: str | None = PrivateAttr(default=None)
 
-    @computed_field
+    @computed_field  # type: ignore[prop-decorator]
     @property
     def is_trusted(self) -> bool:
         return self._trusted_source is not None
@@ -206,7 +207,7 @@ def evaluate_permission(principal: Any, request: PermissionRequest) -> Permissio
             reason="tier requirement satisfied",
         )
 
-    grants = getattr(principal, "permissions", frozenset())
+    grants: Iterable[object] = getattr(principal, "permissions", frozenset())
     matched_grant = next(
         (
             grant

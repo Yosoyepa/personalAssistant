@@ -109,6 +109,7 @@ class ReminderWorkflow:
         self.states.upsert(principal, state)
 
         llm_trace_id: str | None = None
+        extraction: ReminderExtraction | None
         if existing and existing.step == ReminderWorkflowStep.approval_required.value and request.approval is not None:
             extraction = ReminderDraft.from_mapping(existing.data).to_extraction()
         else:

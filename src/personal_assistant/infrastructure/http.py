@@ -7,7 +7,7 @@ import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
 
 from fastapi import Depends, FastAPI, Header, Query, Request, Response
 from fastapi.encoders import jsonable_encoder
@@ -244,7 +244,7 @@ def _workflow_input_from_pending(
         message_id=pending.message_id,
         conversation_id=pending.conversation_id,
         text=pending.request_text,
-        channel=pending.channel,
+        channel=cast(Literal["telegram", "whatsapp"], pending.channel),
         recipient=pending.recipient,
         now=pending.request_now,
         timezone=pending.timezone,
@@ -465,7 +465,7 @@ def _send_telegram_audio_reply(
             request=AudioSynthesisRequest(
                 text=text,
                 voice_id=settings.tts_voice_id,
-                audio_format=settings.tts_audio_format,
+                audio_format=cast(Literal["mp3", "wav", "flac"], settings.tts_audio_format),
                 language_boost=settings.tts_language_boost,
             ),
             budget=TokenBudget(limit=settings.tts_max_reply_characters),

@@ -98,11 +98,13 @@ class MiniMaxTTSProvider:
         decoded = json.loads(raw.decode("utf-8"))
         if not isinstance(decoded, Mapping):
             raise AssistantError(ErrorCode.INTERNAL_ERROR, "TTS provider returned invalid response")
-        base_resp = decoded.get("base_resp") if isinstance(decoded.get("base_resp"), Mapping) else {}
+        raw_base_resp = decoded.get("base_resp")
+        base_resp = raw_base_resp if isinstance(raw_base_resp, Mapping) else {}
         if int(base_resp.get("status_code") or 0) != 0:
             message = str(base_resp.get("status_msg") or "TTS provider failed")
             raise AssistantError(ErrorCode.INTERNAL_ERROR, message)
-        data = decoded.get("data") if isinstance(decoded.get("data"), Mapping) else {}
+        raw_data = decoded.get("data")
+        data = raw_data if isinstance(raw_data, Mapping) else {}
         audio_hex = data.get("audio")
         if not isinstance(audio_hex, str) or not audio_hex:
             raise AssistantError(ErrorCode.INTERNAL_ERROR, "TTS provider returned empty audio")
@@ -110,7 +112,8 @@ class MiniMaxTTSProvider:
             audio = bytes.fromhex(audio_hex)
         except ValueError as exc:
             raise AssistantError(ErrorCode.INTERNAL_ERROR, "TTS provider returned invalid audio") from exc
-        extra = decoded.get("extra_info") if isinstance(decoded.get("extra_info"), Mapping) else {}
+        raw_extra = decoded.get("extra_info")
+        extra = raw_extra if isinstance(raw_extra, Mapping) else {}
         result_format = str(extra.get("audio_format") or audio_format)
         return AudioSynthesisResult(
             provider=self.provider,

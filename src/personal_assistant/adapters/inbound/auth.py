@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from pydantic import Field, field_validator
 
@@ -59,7 +59,7 @@ class AuthClaims(ApplicationDTO):
             tenant_id=str(tenant_id or ""),
             issuer=claims.get("iss"),
             audience=claims.get("aud"),
-            scopes=scopes,
+            scopes=cast(frozenset[str], scopes),
             raw_claims=dict(claims),
         )
 
@@ -79,7 +79,7 @@ def principal_from_auth_claims(
         auth_subject=verified_claims.subject,
         auth_provider=auth_provider or verified_claims.issuer,
         permission_tier=permission_tier,
-        permissions=permissions or frozenset(),
+        permissions=cast(frozenset[PermissionGrant], permissions or frozenset()),
         scopes=verified_claims.scopes,
     )
     principal.mark_trusted("verified_auth")
