@@ -10,14 +10,17 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, cast
 
-from fastapi import Depends, FastAPI, Header, Query, Request, Response, Security
+from fastapi import Depends, FastAPI, Query, Request, Response, Security
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from personal_assistant.adapters.inbound.auth import principal_from_auth_claims
+from personal_assistant.adapters.inbound.auth import (
+    LocalPrincipalProvider,
+    principal_from_auth_claims,
+)
 from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
 from personal_assistant.adapters.inbound.channels.telegram import (
     TelegramActorNotVerifiableError,
@@ -61,7 +64,6 @@ from personal_assistant.domain.reminders.idempotency import ReminderIdempotencyC
 from personal_assistant.infrastructure.admin import (
     AdminDashboard,
     clamp_limit,
-    is_local_client,
     local_admin_principal,
 )
 from personal_assistant.infrastructure.bootstrap import (
@@ -405,35 +407,20 @@ def _run_reminder_worker_loop(
         stop_event.wait(settings.reminder_worker_interval_seconds)
 
 
-def current_principal(
-    x_principal_id: Annotated[str | None, Header(alias="X-Principal-Id")] = None,
-    x_tenant_id: Annotated[str | None, Header(alias="X-Tenant-Id")] = None,
-    x_permission_tier: Annotated[
-        str, Header(alias="X-Permission-Tier")
-    ] = PermissionTier.P0.value,
-    x_scopes: Annotated[str | None, Header(alias="X-Scopes")] = None,
-) -> Principal:
-    if not x_principal_id:
-        raise AssistantError(
-            ErrorCode.AUTHENTICATION_REQUIRED, "X-Principal-Id header is required"
-        )
-    if not x_tenant_id:
-        raise AssistantError(
-            ErrorCode.TENANT_REQUIRED, "X-Tenant-Id header is required"
-        )
-    try:
-        tier = PermissionTier(x_permission_tier)
-    except ValueError as exc:
-        raise AssistantError(
-            ErrorCode.VALIDATION_FAILED,
-            "X-Permission-Tier must be one of P0-P6",
-            field="X-Permission-Tier",
-        ) from exc
-    return principal_from_auth_claims(
-        {"sub": x_principal_id, "tenant_id": x_tenant_id, "scope": x_scopes or ""},
-        auth_provider="local-http",
-        permission_tier=tier,
+def current_principal(request: Request) -> Principal:
+    """Authenticate one server-owned principal for local HTTP surfaces."""
+
+    provider = cast(
+        LocalPrincipalProvider | None,
+        getattr(request.app.state, "local_principal_provider", None),
     )
+    if provider is None:
+        raise AssistantError(
+            ErrorCode.AUTHENTICATION_REQUIRED,
+            "valid local bearer credentials are required",
+        )
+    peer_host = request.client.host if request.client is not None else None
+    return provider.authenticate(peer_host=peer_host, headers=request.headers)
 
 
 def telegram_principal(settings: AppSettings, actor_id: str) -> Principal:
@@ -734,44 +721,17 @@ def _transcribe_telegram_media(
     )
 
 
-def _admin_principal(
-    settings: AppSettings, tenant_id: str | None, principal_id: str
-) -> Principal:
-    return local_admin_principal(
-        tenant_id=tenant_id or settings.tenant_id,
-        principal_id=principal_id,
-        permission_tier=PermissionTier.P0,
-    )
-
-
-def _require_local_admin(request: Request, settings: AppSettings) -> None:
-    client_host = request.client.host if request.client is not None else None
-    if not is_local_client(client_host):
-        raise AssistantError(ErrorCode.PERMISSION_DENIED, "admin API is local-only")
-    if settings.admin_token is None:
-        return
-    supplied_token = _admin_request_token(request)
-    if supplied_token != settings.admin_token:
-        raise AssistantError(ErrorCode.PERMISSION_DENIED, "admin token is required")
-
-
-def _admin_request_token(request: Request) -> str | None:
-    header_token = request.headers.get("x-admin-token")
-    if header_token:
-        return header_token.strip()
-    authorization = request.headers.get("authorization", "").strip()
-    scheme, _, value = authorization.partition(" ")
-    if scheme.lower() == "bearer" and value.strip():
-        return value.strip()
-    return None
-
-
 def create_app(
     container: AppContainer | None = None, settings: AppSettings | None = None
 ) -> FastAPI:
     runtime_settings = settings or AppSettings.from_env()
     runtime_container = container or build_runtime_container(runtime_settings)
     runtime_replies = runtime_container.commands.replies
+    local_principal_provider = (
+        LocalPrincipalProvider.from_settings(runtime_settings)
+        if runtime_settings.admin_token is not None
+        else None
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -803,6 +763,7 @@ def create_app(
     app.state.settings = runtime_settings
     app.state.reminder_worker_stop = threading.Event()
     app.state.reminder_worker_thread = None
+    app.state.local_principal_provider = local_principal_provider
     dashboard = AdminDashboard(runtime_container)
 
     @app.exception_handler(AssistantError)
@@ -966,116 +927,76 @@ def create_app(
 
     @app.get("/admin", response_class=HTMLResponse, tags=["admin"])
     def admin_page(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> HTMLResponse:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return HTMLResponse(dashboard.render_html(principal, limit=clamp_limit(limit)))
 
     @app.get("/admin/snapshot", tags=["admin"])
     def admin_snapshot(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.snapshot(principal, limit=clamp_limit(limit))
 
     @app.get("/admin/health", tags=["admin"])
     def admin_health(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.snapshot(principal, limit=clamp_limit(limit))["health"]
 
     @app.get("/admin/approvals", tags=["admin"])
     def admin_approvals(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.approvals(principal, limit=clamp_limit(limit))
 
     @app.get("/admin/traces", tags=["admin"])
     def admin_traces(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.traces(principal, limit=clamp_limit(limit))
 
     @app.get("/admin/outbox", tags=["admin"])
     def admin_outbox(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.outbox(principal, limit=clamp_limit(limit))
 
     @app.get("/admin/scheduler", tags=["admin"])
     def admin_scheduler(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.scheduler(principal, limit=clamp_limit(limit))
 
     @app.get("/admin/agenda", tags=["admin"])
     def admin_agenda(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.agenda(principal, limit=clamp_limit(limit))
 
     @app.get("/admin/reminders", tags=["admin"])
     def admin_reminders(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.reminders(principal, limit=clamp_limit(limit))
 
     @app.get("/admin/errors", tags=["admin"])
     def admin_errors(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
         category: Annotated[str | None, Query(min_length=1)] = None,
         run_id: Annotated[str | None, Query(min_length=1)] = None,
         event_type: Annotated[str | None, Query(min_length=1)] = None,
         source: Annotated[str | None, Query(min_length=1)] = None,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.errors(
             principal,
             category=category,
@@ -1087,35 +1008,23 @@ def create_app(
 
     @app.get("/admin/events", tags=["admin"])
     def admin_events(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.events(principal, limit=clamp_limit(limit))
 
     @app.get("/admin/states", tags=["admin"])
     def admin_states(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.states(principal, limit=clamp_limit(limit))
 
     @app.get("/admin/memory", tags=["admin"])
     def admin_memory(
-        request: Request,
-        tenant_id: Annotated[str | None, Query(min_length=1)] = None,
-        principal_id: Annotated[str, Query(min_length=1)] = "local-admin",
+        principal: Annotated[Principal, Depends(current_principal)],
         limit: Annotated[int, Query(ge=1, le=200)] = 50,
     ) -> dict[str, Any]:
-        _require_local_admin(request, runtime_settings)
-        principal = _admin_principal(runtime_settings, tenant_id, principal_id)
         return dashboard.memory(principal, limit=clamp_limit(limit))
 
     @app.post(

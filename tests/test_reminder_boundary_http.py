@@ -16,11 +16,8 @@ from personal_assistant.infrastructure.config import AppSettings
 from personal_assistant.infrastructure.http import create_app
 
 
-BASE_HEADERS = {
-    "X-Principal-Id": "user-1",
-    "X-Tenant-Id": "tenant-a",
-    "X-Permission-Tier": "P5",
-}
+ADMIN_TOKEN = "test_admin_token"
+BASE_HEADERS = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
 
 
 class _NoNetworkNotificationProvider:
@@ -37,15 +34,24 @@ def _container() -> AppContainer:
     )
 
 
-def _client(container: AppContainer, *, tenant_id: str = "tenant-a") -> TestClient:
+def _client(
+    container: AppContainer,
+    *,
+    tenant_id: str = "tenant-a",
+    principal_id: str = "user-1",
+) -> TestClient:
     return TestClient(
         create_app(
             container,
             settings=AppSettings(
                 tenant_id=tenant_id,
+                admin_token=ADMIN_TOKEN,
+                local_auth_principal_id=principal_id,
+                local_auth_permission_tier=PermissionTier.P5,
                 reminder_worker_enabled=False,
             ),
-        )
+        ),
+        client=("127.0.0.1", 50000),
     )
 
 
@@ -64,11 +70,12 @@ def _payload(**overrides: object) -> dict[str, object]:
     return payload
 
 
-def _principal(headers: dict[str, str] | None = None) -> Principal:
-    selected = headers or BASE_HEADERS
+def _principal(
+    *, tenant_id: str = "tenant-a", principal_id: str = "user-1"
+) -> Principal:
     return Principal.for_test(
-        principal_id=selected["X-Principal-Id"],
-        tenant_id=selected["X-Tenant-Id"],
+        principal_id=principal_id,
+        tenant_id=tenant_id,
         permission_tier=PermissionTier.P5,
     )
 
@@ -299,46 +306,44 @@ def test_http_changed_payload_is_a_conflict_without_new_effects(
 
 def test_http_identity_dimensions_do_not_collide() -> None:
     container = _container()
-    client = _client(container)
     variants = [
-        (BASE_HEADERS, {}),
-        (
-            {**BASE_HEADERS, "X-Tenant-Id": "tenant-b"},
-            {},
-        ),
-        (
-            {**BASE_HEADERS, "X-Principal-Id": "user-2"},
-            {},
-        ),
-        (BASE_HEADERS, {"conversation_id": "chat-2", "recipient": "chat-2"}),
-        (BASE_HEADERS, {"channel": "whatsapp"}),
-        (BASE_HEADERS, {"source_event_id": "http-event-901"}),
+        ("tenant-a", "user-1", {}),
+        ("tenant-b", "user-1", {}),
+        ("tenant-a", "user-2", {}),
+        ("tenant-a", "user-1", {"conversation_id": "chat-2", "recipient": "chat-2"}),
+        ("tenant-a", "user-1", {"channel": "whatsapp"}),
+        ("tenant-a", "user-1", {"source_event_id": "http-event-901"}),
     ]
     run_ids: set[str] = set()
 
-    for headers, overrides in variants:
+    for tenant_id, principal_id, overrides in variants:
+        client = _client(
+            container,
+            tenant_id=tenant_id,
+            principal_id=principal_id,
+        )
         response = client.post(
             "/v1/runtime/reminders",
             json=_payload(**overrides),
-            headers=headers,
+            headers=BASE_HEADERS,
         )
 
         assert response.status_code == 202, response.text
         run_ids.add(response.json()["run_id"])
-        assert _effect_counts(container, _principal(headers)) == (0, 0, 0, 0)
+        assert _effect_counts(
+            container,
+            _principal(tenant_id=tenant_id, principal_id=principal_id),
+        ) == (0, 0, 0, 0)
 
     assert len(run_ids) == len(variants)
 
 
-def test_http_requires_tenant_header_and_rejects_wrong_telegram_token() -> None:
+def test_http_requires_bearer_and_rejects_wrong_telegram_token() -> None:
     container = _container()
-    missing_tenant = _client(container).get(
-        "/v1/runtime/approvals",
-        headers={"X-Principal-Id": "user-1"},
-    )
+    missing_bearer = _client(container).get("/v1/runtime/approvals")
 
-    assert missing_tenant.status_code == 400
-    assert missing_tenant.json()["error"]["code"] == "tenant_required"
+    assert missing_bearer.status_code == 401
+    assert missing_bearer.json()["error"]["code"] == "authentication_required"
 
     telegram_client = TestClient(
         create_app(
