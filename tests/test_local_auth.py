@@ -181,7 +181,7 @@ def test_provider_rejects_missing_legacy_duplicate_or_malformed_credentials(
         _provider().authenticate(peer_host="127.0.0.1", headers=headers)
 
     assert captured.value.code is ErrorCode.AUTHENTICATION_REQUIRED
-    assert str(captured.value) == "valid local bearer credentials are required"
+    assert str(captured.value) == "authentication required"
     assert FAKE_TOKEN not in str(captured.value)
 
 

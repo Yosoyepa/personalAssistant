@@ -264,9 +264,7 @@ def test_secret_denial_precedes_update_normalization(
         )
 
     assert response.status_code == 403, response.text
-    assert response.json()["error"]["message"] == (
-        "telegram webhook authentication failed"
-    )
+    assert response.json()["error"]["message"] == "permission denied"
     assert WEBHOOK_SECRET not in response.text
 
 
