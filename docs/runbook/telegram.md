@@ -265,7 +265,7 @@ worker variables below.
 | `TELEGRAM_WEBHOOK_SECRET` | Setting and validating webhook | Yes | Expected `X-Telegram-Bot-Api-Secret-Token` value. |
 | `PUBLIC_BASE_URL` | Setting webhook | No | Public HTTPS ngrok/domain base URL. |
 | `TELEGRAM_WEBHOOK_URL` | Local shell convenience | No | Public HTTPS URL plus webhook path for `setWebhook`. |
-| `TELEGRAM_ALLOWED_USER_IDS` | Future Telegram auth mapping | No | Comma-separated Telegram user IDs allowed in local/dev. |
+| `TELEGRAM_ALLOWED_USER_IDS` | Accepting Telegram updates | No | Comma-separated Telegram user IDs allowed in local/dev. Empty means deny everyone. |
 | `NGROK_AUTHTOKEN` | Configuring ngrok agent | Yes | Used by `ngrok config add-authtoken`; do not commit. |
 | `ADMIN_TOKEN` | Local admin hardening | Yes | Optional. When configured, admin routes require a matching Bearer token or `X-Admin-Token` header in addition to loopback access. |
 | `REMINDER_WORKER_ENABLED=true` | Reminder notification dispatch | No | Starts the FastAPI background worker that sends due reminder notifications. |
@@ -384,16 +384,23 @@ runtime headers and a runtime request body, not raw Telegram Update JSON.
 The Bot API bridge route is:
 
 ```text
-POST /webhooks/telegram/{TELEGRAM_WEBHOOK_SECRET}
+POST /webhooks/telegram
 Header: X-Telegram-Bot-Api-Secret-Token: <TELEGRAM_WEBHOOK_SECRET>
 Body: Telegram Update JSON
 ```
 
 Wrapper responsibilities:
 
-- Validate the Telegram secret-token header before parsing the request.
-- Map Telegram user/chat to a known `Principal` and tenant from trusted config.
-- Reject unknown Telegram users before intent routing.
+- Require the Telegram secret-token header and validate it with
+  `secrets.compare_digest` before update normalization.
+- Derive the actor only from Telegram user `from.id` data. Never use `chat.id`
+  as an actor fallback.
+- Reject updates without a verifiable actor and reject actors absent from the
+  configured allowlist. An empty allowlist denies everyone.
+- Perform every denial before transcription, command routing, approvals,
+  workflow state, domain events, outbox writes, Telegram replies, or TTS.
+- Map the verified Telegram user to a known `Principal` and tenant from trusted
+  config.
 - Call `normalize_telegram_webhook(payload, tenant_id=trusted_tenant_id)`.
 - Route normalized commands through `container.commands.handle(...)` with a
   trusted clock and timezone.
@@ -423,7 +430,7 @@ import secrets
 print(secrets.token_urlsafe(32).replace("-", "_")[:64])
 PY
 )"
-export TELEGRAM_WEBHOOK_URL="https://your-ngrok-domain.example/webhooks/telegram/${TELEGRAM_WEBHOOK_SECRET}"
+export TELEGRAM_WEBHOOK_URL="https://your-ngrok-domain.example/webhooks/telegram"
 
 curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
   -H "Content-Type: application/json" \
@@ -482,6 +489,8 @@ curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhoo
 - The required local gate passes.
 - A Telegram update normalizes into `NormalizedMessage` without tenant authority.
 - Unknown Telegram users are rejected before workflow routing.
+- Missing or invalid secret headers, empty allowlists, and updates without a
+  Telegram `from.id` are rejected before any state or external work.
 - A reminder message without approval escalates and creates no side effect.
 - A reminder message with valid approval creates exactly one local calendar event,
   one scheduled reminder, one event-store event, and one outbox event.

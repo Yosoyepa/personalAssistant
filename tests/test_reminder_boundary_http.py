@@ -351,7 +351,7 @@ def test_http_requires_tenant_header_and_rejects_wrong_telegram_token() -> None:
         )
     )
     wrong_token = telegram_client.post(
-        "/webhooks/telegram/webhook-secret",
+        "/webhooks/telegram",
         json={},
         headers={"X-Telegram-Bot-Api-Secret-Token": "wrong-token"},
     )

@@ -3,20 +3,25 @@
 from __future__ import annotations
 
 import hashlib
+import secrets
 import threading
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, cast
 
-from fastapi import Depends, FastAPI, Header, Query, Request, Response
+from fastapi import Depends, FastAPI, Header, Query, Request, Response, Security
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from personal_assistant.adapters.inbound.auth import principal_from_auth_claims
 from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
+from personal_assistant.adapters.inbound.channels.telegram import (
+    TelegramActorNotVerifiableError,
+)
 from personal_assistant.adapters.outbound.notifications.telegram import (
     TelegramBotApiClient,
     TelegramNotificationTool,
@@ -71,6 +76,11 @@ from personal_assistant.infrastructure.prompts import build_prompt_catalog
 
 
 MAX_TELEGRAM_AUDIO_BYTES = 20 * 1024 * 1024
+TELEGRAM_WEBHOOK_SECRET_HEADER = APIKeyHeader(
+    name="X-Telegram-Bot-Api-Secret-Token",
+    scheme_name="TelegramWebhookSecret",
+    auto_error=False,
+)
 SUPPORTED_TRANSCRIPTION_EXTENSIONS = frozenset(
     {"flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "opus", "wav", "webm"}
 )
@@ -427,10 +437,7 @@ def current_principal(
 
 
 def telegram_principal(settings: AppSettings, actor_id: str) -> Principal:
-    if (
-        settings.telegram_allowed_user_ids
-        and actor_id not in settings.telegram_allowed_user_ids
-    ):
+    if not actor_id or actor_id not in settings.telegram_allowed_user_ids:
         raise AssistantError(
             ErrorCode.PERMISSION_DENIED,
             "telegram user is not allowed",
@@ -441,6 +448,22 @@ def telegram_principal(settings: AppSettings, actor_id: str) -> Principal:
         auth_provider="telegram",
         permission_tier=PermissionTier.P5,
     )
+
+
+def _require_telegram_webhook_secret(
+    settings: AppSettings, supplied_secret: str | None
+) -> None:
+    expected_secret = settings.telegram_webhook_secret
+    candidate_secret = supplied_secret or ""
+    matches = secrets.compare_digest(
+        candidate_secret.encode("utf-8"), expected_secret.encode("utf-8")
+    )
+    if not expected_secret or not supplied_secret or not matches:
+        raise AssistantError(
+            ErrorCode.PERMISSION_DENIED,
+            "telegram webhook authentication failed",
+            tenant_id=settings.tenant_id,
+        )
 
 
 def _send_telegram_reply(
@@ -838,33 +861,29 @@ def create_app(
         )
 
     @app.post(
-        "/webhooks/telegram/{secret}",
+        "/webhooks/telegram",
         response_model=TelegramWebhookResponse,
         tags=["telegram"],
     )
     def telegram_webhook(
-        secret: str,
         payload: dict[str, Any],
         x_telegram_secret: Annotated[
             str | None,
-            Header(alias="X-Telegram-Bot-Api-Secret-Token"),
-        ] = None,
+            Security(TELEGRAM_WEBHOOK_SECRET_HEADER),
+        ],
     ) -> TelegramWebhookResponse:
-        if secret != runtime_settings.telegram_webhook_secret:
-            raise AssistantError(
-                ErrorCode.PERMISSION_DENIED, "invalid telegram webhook secret"
-            )
-        if (
-            x_telegram_secret is not None
-            and x_telegram_secret != runtime_settings.telegram_webhook_secret
-        ):
-            raise AssistantError(
-                ErrorCode.PERMISSION_DENIED, "invalid telegram secret token"
-            )
+        _require_telegram_webhook_secret(runtime_settings, x_telegram_secret)
 
-        message = normalize_telegram_webhook(
-            payload, tenant_id=runtime_settings.tenant_id
-        )
+        try:
+            message = normalize_telegram_webhook(
+                payload, tenant_id=runtime_settings.tenant_id
+            )
+        except TelegramActorNotVerifiableError as exc:
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "telegram update has no verifiable actor",
+                tenant_id=runtime_settings.tenant_id,
+            ) from exc
         principal = telegram_principal(runtime_settings, message.actor_id)
         if message.media_kind in {"voice", "audio"}:
             transcribed, transcription_error = _transcribe_telegram_media(

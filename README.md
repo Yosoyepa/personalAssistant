@@ -183,7 +183,7 @@ The Telegram bridge is documented in `docs/runbook/telegram.md`. The active
 webhook path is:
 
 ```text
-POST /webhooks/telegram/{TELEGRAM_WEBHOOK_SECRET}
+POST /webhooks/telegram
 ```
 
 Minimum local environment:
@@ -203,15 +203,18 @@ Then register the webhook:
 export PUBLIC_BASE_URL="https://your-public-https-url.example"
 
 curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/setWebhook" \
-  -d "url=${PUBLIC_BASE_URL}/webhooks/telegram/${TELEGRAM_WEBHOOK_SECRET}" \
+  -d "url=${PUBLIC_BASE_URL}/webhooks/telegram" \
   -d "secret_token=${TELEGRAM_WEBHOOK_SECRET}" \
   | python3 -m json.tool
 ```
 
-The webhook resolves tenant authority from runtime configuration, rejects wrong
-path/header secrets, filters allowed Telegram user ids when configured, and
-does not let the assistant call Telegram directly. Telegram sends are owned by
-the notification adapter and remain P5/idempotent side effects.
+The webhook resolves tenant authority from runtime configuration and requires a
+constant-time match for the `X-Telegram-Bot-Api-Secret-Token` header. Telegram
+actors come only from Telegram user `from.id` data; `chat.id` is never an actor
+fallback. The user allowlist is default-deny, including when it is empty. All
+three checks run before command routing or any state, provider, or notification
+work. Telegram sends are owned by the notification adapter and remain
+P5/idempotent side effects.
 
 ## Audio And TTS
 

@@ -11,6 +11,10 @@ from personal_assistant.application.dto.channels import ChannelName, NormalizedM
 _COMMAND_RE = re.compile(r"^[A-Za-z0-9_]+$")
 
 
+class TelegramActorNotVerifiableError(ValueError):
+    """Raised when an update has no Telegram user identity."""
+
+
 def _parse_command(text: str) -> tuple[str | None, str]:
     stripped = text.strip()
     if not stripped.startswith("/"):
@@ -30,17 +34,21 @@ class TelegramAdapter:
     def normalize_webhook(
         self, payload: dict[str, Any], *, tenant_id: str
     ) -> NormalizedMessage:
-        callback_query = payload.get("callback_query") or {}
+        raw_callback_query = payload.get("callback_query")
+        callback_query = (
+            raw_callback_query if isinstance(raw_callback_query, dict) else {}
+        )
         message = (
-            payload.get("message")
-            or payload.get("edited_message")
-            or callback_query.get("message")
+            _mapping(payload.get("message"))
+            or _mapping(payload.get("edited_message"))
+            or _mapping(callback_query.get("message"))
             or {}
         )
-        chat = message.get("chat") or {}
-        user = callback_query.get("from") or message.get("from") or {}
-        voice = message.get("voice") or {}
-        audio = message.get("audio") or {}
+        chat = _mapping(message.get("chat"))
+        raw_user = callback_query.get("from") if callback_query else message.get("from")
+        user = _mapping(raw_user)
+        voice = _mapping(message.get("voice"))
+        audio = _mapping(message.get("audio"))
         media = voice or audio
         media_kind = "voice" if voice else "audio" if audio else None
         media_file_id = str(media.get("file_id") or "") if media else None
@@ -62,7 +70,11 @@ class TelegramAdapter:
             or ""
         )
         conversation_id = str(chat.get("id") or "")
-        actor_id = str(user.get("id") or conversation_id)
+        actor_id = str(user.get("id") or "").strip()
+        if not actor_id:
+            raise TelegramActorNotVerifiableError(
+                "telegram update has no verifiable actor"
+            )
         update_id = payload.get("update_id")
         # Telegram webhooks normally carry update_id. Callback ids are the
         # stable provider-event fallback when a callback fixture/provider omits
@@ -93,3 +105,7 @@ class TelegramAdapter:
             if media_file_size is not None
             else None,
         )
+
+
+def _mapping(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
