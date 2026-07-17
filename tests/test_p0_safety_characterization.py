@@ -142,6 +142,7 @@ def approved_request(
     )
     return ReminderWorkflowInput(
         message_id=message_id,
+        source_event_id=message_id,
         conversation_id="chat-1",
         text=text,
         recipient="chat-1",
@@ -181,6 +182,9 @@ def schedule_due(scheduler: ReminderScheduler, actor: Principal, *, key: str) ->
         body="Recordatorio hermetico",
         minutes_before=0,
         idempotency_key=key,
+        timezone="America/Bogota",
+        source_event_id=f"event-{key}",
+        payload_fingerprint="a" * 64,
     )
 
 

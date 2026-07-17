@@ -96,6 +96,7 @@ class AdminDashboardTests(unittest.TestCase):
             )
         return ReminderWorkflowInput(
             message_id=message_id,
+            source_event_id=message_id,
             conversation_id="chat-1",
             text=text,
             recipient="chat-1",
@@ -195,6 +196,9 @@ class AdminDashboardTests(unittest.TestCase):
             recipient="chat-1",
             body="due reminder",
             idempotency_key="due-reminder",
+            timezone="America/Bogota",
+            source_event_id="event-due",
+            payload_fingerprint="a" * 64,
         )
         pending_job = ScheduledReminder(
             reminder_id="rem-pending",
@@ -205,6 +209,9 @@ class AdminDashboardTests(unittest.TestCase):
             recipient="chat-1",
             body="pending reminder",
             idempotency_key="pending-reminder",
+            timezone="America/Bogota",
+            source_event_id="event-pending",
+            payload_fingerprint="b" * 64,
         )
         sent_job = ScheduledReminder(
             reminder_id="rem-sent",
@@ -215,6 +222,9 @@ class AdminDashboardTests(unittest.TestCase):
             recipient="chat-1",
             body="sent reminder",
             idempotency_key="sent-reminder",
+            timezone="America/Bogota",
+            source_event_id="event-sent",
+            payload_fingerprint="c" * 64,
             sent=True,
         )
         agenda_events = [
@@ -223,18 +233,27 @@ class AdminDashboardTests(unittest.TestCase):
                 title="Due reminder event",
                 starts_at=datetime(2026, 6, 23, 16, 35, tzinfo=UTC),
                 idempotency_key="cal-due",
+                timezone="America/Bogota",
+                source_event_id="event-due",
+                payload_fingerprint="a" * 64,
             ),
             CalendarEventResult(
                 event_id="cal-pending",
                 title="Pending reminder event",
                 starts_at=datetime(2026, 6, 23, 18, 0, tzinfo=UTC),
                 idempotency_key="cal-pending",
+                timezone="America/Bogota",
+                source_event_id="event-pending",
+                payload_fingerprint="b" * 64,
             ),
             CalendarEventResult(
                 event_id="cal-past",
                 title="Past agenda event",
                 starts_at=datetime(2026, 6, 23, 15, 0, tzinfo=UTC),
                 idempotency_key="cal-past",
+                timezone="America/Bogota",
+                source_event_id="event-past",
+                payload_fingerprint="d" * 64,
             ),
         ]
         failed_state = WorkflowState(
@@ -480,12 +499,18 @@ class AdminDashboardTests(unittest.TestCase):
             recipient="chat-1",
             body="recordatorio",
             idempotency_key="rem-public",
+            timezone="America/Bogota",
+            source_event_id="event-public",
+            payload_fingerprint="e" * 64,
         )
         calendar_event = CalendarEventResult(
             event_id="cal-public",
             title="Public calendar event",
             starts_at=now,
             idempotency_key="cal-public",
+            timezone="America/Bogota",
+            source_event_id="event-public",
+            payload_fingerprint="e" * 64,
         )
         memory = self.container.memory.add(
             self.principal,

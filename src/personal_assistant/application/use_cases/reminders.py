@@ -45,6 +45,7 @@ from personal_assistant.domain.common.identity import Principal
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.domain.reminders.models import (
     ParsedReminder,
+    ReminderClarificationReason,
     ReminderExtraction,
     ReminderIntent,
     ReminderNeedsClarification,
@@ -80,7 +81,7 @@ def reminder_idempotency(
             channel=request.channel,
             principal_id=principal.principal_id,
             conversation_id=request.conversation_id,
-            source_event_id=request.source_event_id or request.message_id,
+            source_event_id=request.source_event_id,
         ),
         payload=ReminderPayload(
             text=request.text,
@@ -113,6 +114,9 @@ class ReminderWorkflow:
         assert_prompt_safe(request.text)
         idempotency = reminder_idempotency(principal, request)
         effective_key = idempotency.key
+        source_event_id = idempotency.identity.source_event_id
+        payload_fingerprint = idempotency.payload_fingerprint
+        timezone = idempotency.payload.timezone
         if (
             request.idempotency_key is not None
             and request.idempotency_key != effective_key
@@ -139,6 +143,7 @@ class ReminderWorkflow:
             tenant_id=principal.tenant_id,
             input_summary={
                 "message_id": request.message_id,
+                "source_event_id": source_event_id,
                 "channel": request.channel,
             },
         )
@@ -170,7 +175,14 @@ class ReminderWorkflow:
                 status=WorkflowStatus.running,
                 step=ReminderWorkflowStep.classify.value,
                 idempotency_key=effective_key,
-                payload_fingerprint=idempotency.payload_fingerprint,
+                payload_fingerprint=payload_fingerprint,
+                data={
+                    "message_id": request.message_id,
+                    "source_event_id": source_event_id,
+                    "channel": request.channel,
+                    "conversation_id": request.conversation_id,
+                    "timezone": timezone,
+                },
             ),
             resume_from_step=resume_from_step,
         )
@@ -185,6 +197,9 @@ class ReminderWorkflow:
                 intent=ReminderIntent.create,
                 reply=self.replies.reminder_duplicate(),
                 idempotency_key=effective_key,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=timezone,
                 calendar_event_id=existing.data.get("calendar_event_id"),
                 reminder_id=existing.data.get("reminder_id"),
                 reused=True,
@@ -207,6 +222,9 @@ class ReminderWorkflow:
                 intent=ReminderIntent.create,
                 reply=self.replies.reminder_duplicate(),
                 idempotency_key=effective_key,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=timezone,
                 reused=True,
                 trace_ids=[
                     started.trace_id,
@@ -220,6 +238,9 @@ class ReminderWorkflow:
                 intent=ReminderIntent.create,
                 reply=self.replies.reminder_duplicate(),
                 idempotency_key=effective_key,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=timezone,
                 reused=True,
                 trace_ids=[
                     started.trace_id,
@@ -239,6 +260,9 @@ class ReminderWorkflow:
                     intent=ReminderIntent.create,
                     reply=self.replies.reminder_needs_approval(draft.title),
                     idempotency_key=effective_key,
+                    source_event_id=source_event_id,
+                    payload_fingerprint=payload_fingerprint,
+                    timezone=timezone,
                     approval_required=True,
                     reused=True,
                     trace_ids=[
@@ -247,11 +271,26 @@ class ReminderWorkflow:
                         context_trace.trace_id,
                     ],
                 )
+            try:
+                clarification_reason = ReminderClarificationReason(
+                    str(existing.data.get("clarification_reason"))
+                )
+            except ValueError:
+                clarification_reason = ReminderClarificationReason.missing_datetime
+            reply_id, reply_version, reply = self.replies.reminder_clarification(
+                clarification_reason
+            )
             return ReminderWorkflowResult(
                 status=AgentStatus.needs_clarification,
                 intent=ReminderIntent.unsupported,
-                reply=self.replies.reminder_needs_datetime(),
+                reply=reply,
                 idempotency_key=effective_key,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=timezone,
+                clarification_reason=clarification_reason,
+                clarification_reply_id=reply_id,
+                clarification_reply_version=reply_version,
                 reused=True,
                 trace_ids=[
                     started.trace_id,
@@ -298,21 +337,35 @@ class ReminderWorkflow:
                     parent_event_id=context_trace.trace_id,
                 )
         if extraction is None:
+            clarification_reason = (
+                clarification.reason
+                if clarification is not None
+                else ReminderClarificationReason.missing_datetime
+            )
+            reply_id, reply_version, reply = self.replies.reminder_clarification(
+                clarification_reason
+            )
             waiting = state.transition(
                 status=WorkflowStatus.waiting_approval,
                 step=ReminderWorkflowStep.needs_clarification.value,
-                data=(
-                    {"clarification_reason": clarification.reason.value}
-                    if clarification is not None
-                    else None
-                ),
+                data={
+                    "clarification_reason": clarification_reason.value,
+                    "clarification_reply_id": reply_id,
+                    "clarification_reply_version": reply_version,
+                },
             )
             self.states.upsert(principal, waiting)
             return ReminderWorkflowResult(
                 status=AgentStatus.needs_clarification,
                 intent=ReminderIntent.unsupported,
-                reply=self.replies.reminder_needs_datetime(),
+                reply=reply,
                 idempotency_key=effective_key,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=timezone,
+                clarification_reason=clarification_reason,
+                clarification_reply_id=reply_id,
+                clarification_reply_version=reply_version,
                 trace_ids=[
                     trace_id
                     for trace_id in [
@@ -349,6 +402,9 @@ class ReminderWorkflow:
                 intent=ReminderIntent.create,
                 reply=self.replies.reminder_needs_approval(extraction.title),
                 idempotency_key=effective_key,
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
+                timezone=timezone,
                 approval_required=True,
                 trace_ids=[
                     trace_id
@@ -370,6 +426,8 @@ class ReminderWorkflow:
                 starts_at=extraction.starts_at,
                 timezone=extraction.timezone,
                 idempotency_key=f"{effective_key}:calendar",
+                source_event_id=source_event_id,
+                payload_fingerprint=payload_fingerprint,
             ),
             approval=request.approval,
         )
@@ -383,6 +441,9 @@ class ReminderWorkflow:
             channel=request.channel,
             recipient=request.recipient,
             body=self.replies.reminder_notification_body(extraction.title),
+            timezone=extraction.timezone,
+            source_event_id=source_event_id,
+            payload_fingerprint=payload_fingerprint,
             minutes_before=notice_minutes_before,
             idempotency_key=f"{effective_key}:notify",
         )
@@ -391,12 +452,19 @@ class ReminderWorkflow:
             source="personal_assistant.application.reminders",
             subject=reminder.reminder_id,
             tenant_id=principal.tenant_id,
+            correlation_id=effective_key,
+            causation_id=source_event_id,
+            source_event_id=source_event_id,
+            payload_fingerprint=payload_fingerprint,
+            timezone=extraction.timezone,
             data={
                 "calendar_event_id": calendar_result.event_id,
                 "reminder_id": reminder.reminder_id,
                 "starts_at": extraction.starts_at.isoformat(),
                 "timezone": extraction.timezone,
                 "notify_at": reminder.notify_at.isoformat(),
+                "source_event_id": source_event_id,
+                "payload_fingerprint": payload_fingerprint,
             },
         )
         self.event_store.append(principal, event)
@@ -430,6 +498,7 @@ class ReminderWorkflow:
                 "reminder_id": reminder.reminder_id,
                 "notify_at": reminder.notify_at.isoformat(),
                 "timezone": extraction.timezone,
+                "source_event_id": source_event_id,
             },
         )
         self.states.upsert(principal, completed)
@@ -442,6 +511,9 @@ class ReminderWorkflow:
                 direct_notice=extraction.notify_at is not None,
             ),
             idempotency_key=effective_key,
+            source_event_id=source_event_id,
+            payload_fingerprint=payload_fingerprint,
+            timezone=timezone,
             calendar_event_id=calendar_result.event_id,
             reminder_id=reminder.reminder_id,
             reused=calendar_result.reused,

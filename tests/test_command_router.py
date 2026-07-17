@@ -75,12 +75,19 @@ class CommandRouterTests(unittest.TestCase):
         )
         self.now = datetime(2026, 6, 20, 12, tzinfo=UTC)
 
-    def message(self, text: str, message_id: str = "42") -> NormalizedMessage:
+    def message(
+        self,
+        text: str,
+        message_id: str = "42",
+        *,
+        source_event_id: str | None = None,
+    ) -> NormalizedMessage:
         return NormalizedMessage(
             channel=ChannelName.telegram,
             actor_id=self.principal.principal_id,
             conversation_id="chat-1",
             message_id=message_id,
+            source_event_id=source_event_id or message_id,
             text=text,
         )
 
@@ -120,8 +127,13 @@ class CommandRouterTests(unittest.TestCase):
 
         self.assertEqual(normalized.command, "recordar")
         self.assertEqual(normalized.command_args, "recuérdame clase el martes a las 17")
+        self.assertEqual(normalized.message_id, "42")
+        self.assertEqual(normalized.source_event_id, "101")
         self.assertEqual(normalized.idempotency_key, "telegram:101")
         self.assertEqual(result.status, AgentStatus.escalated)
+        self.assertEqual(result.metadata["source_event_id"], "101")
+        self.assertEqual(result.metadata["timezone"], "America/Bogota")
+        self.assertRegex(str(result.metadata["payload_fingerprint"]), r"^[0-9a-f]{64}$")
         self.assertEqual(len(self.container.approvals.list_pending(self.principal)), 1)
 
     def test_reminder_command_creates_pending_approval_without_side_effect(
@@ -214,6 +226,7 @@ class CommandRouterTests(unittest.TestCase):
                 actor_id=other.principal_id,
                 conversation_id="chat-2",
                 message_id="43",
+                source_event_id="update-43",
                 text=f"/aprobar {pending.approval_id}",
                 command="aprobar",
                 command_args=pending.approval_id,
@@ -236,6 +249,39 @@ class CommandRouterTests(unittest.TestCase):
         self.assertEqual(result.status, AgentStatus.completed)
         self.assertIn("Estado local: activo", result.reply)
         self.assertIn("Pendientes: 0", result.reply)
+
+    def test_approval_resume_preserves_provider_event_identity(self) -> None:
+        source_event_id = "telegram-update-100"
+        created = self.container.commands.handle(
+            self.principal,
+            self.message(
+                "recuérdame clase el martes a las 17",
+                message_id="42",
+                source_event_id=source_event_id,
+            ),
+            now=self.now,
+            timezone="America/Bogota",
+        )
+        assert created.approval_id is not None
+        [pending] = self.container.approvals.list_pending(self.principal)
+
+        approved = self.container.commands.handle(
+            self.principal,
+            self.message(
+                f"/aprobar {created.approval_id}",
+                message_id="43",
+                source_event_id="telegram-update-101",
+            ),
+            now=self.now,
+            timezone="America/Bogota",
+        )
+
+        self.assertEqual(pending.message_id, "42")
+        self.assertEqual(pending.source_event_id, source_event_id)
+        self.assertEqual(approved.status, AgentStatus.completed)
+        self.assertEqual(approved.metadata["idempotency_key"], pending.idempotency_key)
+        [calendar_event] = self.container.calendar.list_events(self.principal)
+        self.assertEqual(calendar_event.source_event_id, source_event_id)
 
     def test_llm_intent_routes_free_text_to_reminder(self) -> None:
         container = build_container(llm=FakeIntentLLMProvider())

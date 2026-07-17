@@ -135,6 +135,19 @@ class HttpRuntimeBoundaryTests(unittest.TestCase):
 
 
 class AppSettingsTests(unittest.TestCase):
+    def test_invalid_iana_timezone_blocks_settings_construction(self) -> None:
+        with self.assertRaisesRegex(ValueError, "valid IANA timezone"):
+            AppSettings(timezone="UTC-05:00")
+
+    def test_invalid_iana_timezone_from_environment_blocks_startup(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"APP_ENV_FILE": "", "ASSISTANT_TIMEZONE": "Bogota/local"},
+            clear=True,
+        ):
+            with self.assertRaisesRegex(ValueError, "ASSISTANT_TIMEZONE"):
+                AppSettings.from_env()
+
     def test_llm_settings_accept_anthropic_style_aliases(self) -> None:
         with patch.dict(
             os.environ,
@@ -302,6 +315,7 @@ class HttpRuntimeTests(unittest.TestCase):
     def payload(self, **overrides: object) -> dict[str, object]:
         data: dict[str, object] = {
             "message_id": "42",
+            "source_event_id": "api-request-42",
             "conversation_id": "chat-1",
             "text": "recuérdame clase el martes a las 17",
             "channel": "telegram",
@@ -318,6 +332,10 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 202, response.text)
         body = response.json()
         self.assertEqual(body["status"], "escalated")
+        self.assertTrue(body["run_id"].startswith("reminder:v2:"))
+        self.assertEqual(body["source_event_id"], "api-request-42")
+        self.assertEqual(body["timezone"], "America/Bogota")
+        self.assertRegex(body["payload_fingerprint"], r"^[0-9a-f]{64}$")
         self.assertTrue(body["approval_required"])
         approval = body["approval"]
         self.assertIsNotNone(approval)
@@ -388,6 +406,68 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(len(self.container.calendar.list_events(principal)), 1)
         self.assertEqual(len(self.container.event_store.list_for_tenant(principal)), 1)
 
+    def test_http_approval_preserves_temporal_and_source_context_end_to_end(
+        self,
+    ) -> None:
+        source_event_id = "api-provider-event-900"
+        created = self.client.post(
+            "/v1/runtime/reminders",
+            json=self.payload(
+                message_id="provider-message-42",
+                source_event_id=source_event_id,
+                timezone="America/New_York",
+            ),
+            headers=self.headers,
+        )
+        self.assertEqual(created.status_code, 202, created.text)
+        created_body = created.json()
+        approval_id = created_body["approval"]["approval_id"]
+        principal = Principal.for_test(
+            principal_id="user-1",
+            tenant_id="tenant-a",
+            permission_tier=PermissionTier.P5,
+        )
+        pending = self.container.approvals.get(principal, approval_id)
+        self.assertIsNotNone(pending)
+        assert pending is not None
+
+        approved = self.client.post(
+            f"/v1/runtime/approvals/{approval_id}/approve",
+            json={},
+            headers=self.headers,
+        )
+
+        self.assertEqual(approved.status_code, 200, approved.text)
+        result = approved.json()["result"]
+        for field in ("source_event_id", "payload_fingerprint", "timezone"):
+            self.assertEqual(result[field], created_body[field])
+        self.assertEqual(pending.message_id, "provider-message-42")
+        self.assertEqual(pending.source_event_id, source_event_id)
+        self.assertEqual(
+            pending.payload_fingerprint, created_body["payload_fingerprint"]
+        )
+        self.assertEqual(pending.timezone, "America/New_York")
+
+        [calendar_event] = self.container.calendar.list_events(principal)
+        [scheduled] = self.container.scheduler.list_for_tenant(principal)
+        [event] = self.container.event_store.list_for_tenant(principal)
+        state = self.container.states.get_by_idempotency_key(
+            principal, created_body["run_id"]
+        )
+        for record in (calendar_event, scheduled, event):
+            self.assertEqual(record.source_event_id, source_event_id)
+            self.assertEqual(
+                record.payload_fingerprint, created_body["payload_fingerprint"]
+            )
+            self.assertEqual(record.timezone, "America/New_York")
+        self.assertEqual(calendar_event.starts_at.utcoffset().total_seconds(), 0)
+        self.assertEqual(scheduled.notify_at.utcoffset().total_seconds(), 0)
+        self.assertIsNotNone(state)
+        assert state is not None
+        self.assertEqual(state.payload_fingerprint, created_body["payload_fingerprint"])
+        self.assertEqual(state.data["source_event_id"], source_event_id)
+        self.assertEqual(state.data["timezone"], "America/New_York")
+
     def test_http_approvals_survive_app_recreation_with_same_container(self) -> None:
         approval_id = self.request_pending_approval()
         recreated_client = TestClient(
@@ -450,6 +530,74 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
         self.assertEqual(response.json()["error"]["code"], "prompt_injection_detected")
 
+    def test_caller_idempotency_key_is_only_an_assertion(self) -> None:
+        response = self.client.post(
+            "/v1/runtime/reminders",
+            json=self.payload(idempotency_key="reminder:legacy-client-key"),
+            headers=self.headers,
+        )
+        principal = self.principal()
+
+        self.assertEqual(response.status_code, 409, response.text)
+        self.assertEqual(response.json()["error"]["code"], "conflict")
+        self.assertEqual(self.container.states.list_for_tenant(principal), [])
+        self.assertEqual(self.container.calendar.list_events(principal), [])
+
+    def test_api_changed_replay_returns_409_without_new_effects(self) -> None:
+        first = self.client.post(
+            "/v1/runtime/reminders", json=self.payload(), headers=self.headers
+        )
+        replay = self.client.post(
+            "/v1/runtime/reminders",
+            json=self.payload(text="recuérdame pagar arriendo mañana a las 17"),
+            headers=self.headers,
+        )
+        principal = Principal.for_test(
+            principal_id="user-1",
+            tenant_id="tenant-a",
+            permission_tier=PermissionTier.P5,
+        )
+
+        self.assertEqual(first.status_code, 202, first.text)
+        self.assertEqual(replay.status_code, 409, replay.text)
+        self.assertEqual(replay.json()["error"]["code"], "conflict")
+        self.assertNotIn("pagar arriendo", replay.text)
+        self.assertEqual(len(self.container.approvals.list_pending(principal)), 1)
+        self.assertEqual(len(self.container.states.list_for_tenant(principal)), 1)
+        self.assertEqual(self.container.calendar.list_events(principal), [])
+        self.assertEqual(self.container.scheduler.list_for_tenant(principal), [])
+        self.assertEqual(self.container.event_store.list_for_tenant(principal), [])
+        self.assertEqual(self.container.outbox.list_for_tenant(principal), [])
+
+    def test_invalid_requested_timezone_returns_typed_http_clarification(self) -> None:
+        response = self.client.post(
+            "/v1/runtime/reminders",
+            json=self.payload(
+                source_event_id="api-invalid-timezone-1",
+                timezone="Mars/Olympus_Mons",
+            ),
+            headers=self.headers,
+        )
+        principal = Principal.for_test(
+            principal_id="user-1",
+            tenant_id="tenant-a",
+            permission_tier=PermissionTier.P5,
+        )
+
+        self.assertEqual(response.status_code, 200, response.text)
+        body = response.json()
+        self.assertEqual(body["status"], "needs_clarification")
+        self.assertEqual(body["clarification_reason"], "invalid_timezone")
+        self.assertEqual(body["clarification_reply_id"], "reminder_invalid_timezone")
+        self.assertEqual(body["clarification_reply_version"], "v1")
+        self.assertEqual(body["timezone"], "Mars/Olympus_Mons")
+        self.assertFalse(body["approval_required"])
+        self.assertEqual(self.container.approvals.list_pending(principal), [])
+        self.assertEqual(self.container.calendar.list_events(principal), [])
+        self.assertEqual(self.container.scheduler.list_for_tenant(principal), [])
+        self.assertEqual(self.container.event_store.list_for_tenant(principal), [])
+        self.assertEqual(self.container.outbox.list_for_tenant(principal), [])
+
     def test_telegram_webhook_routes_command_without_token_send(self) -> None:
         settings = AppSettings(
             tenant_id="tenant-a",
@@ -486,6 +634,57 @@ class HttpRuntimeTests(unittest.TestCase):
         )
         self.assertEqual(len(self.container.approvals.list_pending(principal)), 1)
         self.assertEqual(self.container.calendar.list_events(principal), [])
+
+    def test_telegram_changed_replay_is_acknowledged_without_effects_or_metadata(
+        self,
+    ) -> None:
+        settings = AppSettings(
+            tenant_id="tenant-a",
+            timezone="America/Bogota",
+            telegram_webhook_secret="secret-1",
+            telegram_allowed_user_ids=frozenset({"456"}),
+        )
+        client = TestClient(create_app(self.container, settings=settings))
+        headers = {"X-Telegram-Bot-Api-Secret-Token": "secret-1"}
+        payload = {
+            "update_id": 10,
+            "message": {
+                "message_id": 42,
+                "chat": {"id": "chat-1"},
+                "from": {"id": "456"},
+                "text": "/recordar recuérdame clase el martes a las 17",
+            },
+        }
+
+        first = client.post(
+            "/webhooks/telegram/secret-1", headers=headers, json=payload
+        )
+        payload["message"]["text"] = "/recordar recuérdame pagar mañana a las 17"
+        replay = client.post(
+            "/webhooks/telegram/secret-1", headers=headers, json=payload
+        )
+        principal = Principal.for_test(
+            principal_id="456",
+            tenant_id="tenant-a",
+            permission_tier=PermissionTier.P5,
+        )
+
+        self.assertEqual(first.status_code, 200, first.text)
+        self.assertEqual(replay.status_code, 200, replay.text)
+        body = replay.json()
+        self.assertEqual(body["status"], "failed")
+        self.assertIn("mensaje nuevo", body["reply"])
+        self.assertFalse(body["sent"])
+        self.assertFalse(body["audio_sent"])
+        self.assertIsNone(body["approval_id"])
+        self.assertNotIn("idempotency", replay.text.casefold())
+        self.assertNotIn("fingerprint", replay.text.casefold())
+        self.assertEqual(len(self.container.approvals.list_pending(principal)), 1)
+        self.assertEqual(len(self.container.states.list_for_tenant(principal)), 1)
+        self.assertEqual(self.container.calendar.list_events(principal), [])
+        self.assertEqual(self.container.scheduler.list_for_tenant(principal), [])
+        self.assertEqual(self.container.event_store.list_for_tenant(principal), [])
+        self.assertEqual(self.container.outbox.list_for_tenant(principal), [])
 
     def test_telegram_webhook_does_not_retry_when_reply_send_fails(self) -> None:
         settings = AppSettings(
@@ -621,6 +820,7 @@ class HttpRuntimeTests(unittest.TestCase):
             actor_id="456",
             conversation_id="chat-1",
             message_id="44",
+            source_event_id="telegram-update-44",
             text="[voice]",
             media_kind="voice",
             media_file_id="voice-file-1",
@@ -662,6 +862,7 @@ class HttpRuntimeTests(unittest.TestCase):
             actor_id="456",
             conversation_id="chat-1",
             message_id="45",
+            source_event_id="telegram-update-45",
             text="[voice]",
             media_kind="voice",
             media_file_id="voice-file-1",

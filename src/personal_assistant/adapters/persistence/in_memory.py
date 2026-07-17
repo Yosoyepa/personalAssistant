@@ -53,10 +53,13 @@ def _approval_hash(approval: PendingApproval) -> str:
             "workflow_kind": approval.workflow_kind,
             "idempotency_key": approval.idempotency_key,
             "message_id": approval.message_id,
+            "source_event_id": approval.source_event_id,
             "conversation_id": approval.conversation_id,
             "channel": approval.channel,
             "recipient": approval.recipient,
             "request_text": approval.request_text,
+            "timezone": approval.timezone,
+            "payload_fingerprint": approval.payload_fingerprint,
         }
     )
 
