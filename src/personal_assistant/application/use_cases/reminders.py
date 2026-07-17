@@ -153,7 +153,7 @@ class ReminderWorkflow:
             agent_id="personal_assistant",
             event_type=TraceEventType.guardrail_checked,
             tenant_id=principal.tenant_id,
-            validation={"input": "passed"},
+            validation={"status": "passed"},
             parent_event_id=started.trace_id,
         )
         context_trace = TraceEvent(

@@ -551,6 +551,72 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertEqual(select_params, (principal.tenant_id, "run-1"))
         self.assertEqual(rows[0].trace_id, "trace-1")
 
+    def test_trace_recorder_redacts_mutated_payload_before_json_insert(self) -> None:
+        trace = TraceEvent(
+            trace_id="trace-private",
+            run_id="run-private",
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_failed,
+            tenant_id="tenant-a",
+        )
+        trace.input_summary["transcript"] = "test-only transcript fixture"
+        trace.output_summary["audio"] = b"test-only-audio-bytes"
+        trace.error["ApiToken"] = "test_placeholder_credential"
+        connection = RecordingConnection(fetchone_results=[{"payload": {}}])
+
+        postgres.PostgresTraceRecorder(connection=connection).write(trace)
+
+        _, insert_params = connection.statements[0]
+        assert insert_params is not None
+        serialized = str(insert_params[-1])
+        self.assertNotIn("test-only transcript fixture", serialized)
+        self.assertNotIn("test-only-audio-bytes", serialized)
+        self.assertNotIn("test_placeholder_credential", serialized)
+        payload = json.loads(serialized)
+        self.assertEqual(payload["input_summary"]["transcript"], "[REDACTED]")
+        self.assertEqual(payload["output_summary"]["audio"]["kind"], "binary")
+        self.assertEqual(payload["output_summary"]["audio"]["size_bytes"], 21)
+        self.assertEqual(payload["error"]["ApiToken"], "[REDACTED]")
+
+    def test_trace_recorder_redacts_legacy_postgres_payload_on_read(self) -> None:
+        principal = self.principal()
+        legacy_payload = TraceEvent(
+            trace_id="trace-legacy",
+            run_id="run-legacy",
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_failed,
+            tenant_id=principal.tenant_id,
+        ).model_dump(mode="json")
+        legacy_payload["input_summary"] = {
+            "input": "test-only private validation input",
+            "metadata": {
+                "items": [
+                    {"AccessToken": "test_placeholder_credential"},
+                ]
+            },
+        }
+        legacy_payload["output_summary"] = {"transcript": "test-only legacy transcript"}
+        legacy_payload["error"] = {
+            "type": "LegacyError",
+            "message": "test-only legacy error text",
+        }
+        connection = RecordingConnection(
+            fetchall_results=[[{"payload": legacy_payload}]]
+        )
+
+        [restored] = postgres.PostgresTraceRecorder(connection=connection).list_for_run(
+            principal, "run-legacy"
+        )
+
+        serialized = restored.model_dump_json()
+        self.assertNotIn("test-only private validation input", serialized)
+        self.assertNotIn("test_placeholder_credential", serialized)
+        self.assertNotIn("test-only legacy transcript", serialized)
+        self.assertNotIn("test-only legacy error text", serialized)
+        self.assertEqual(restored.input_summary["input"], "[REDACTED]")
+        self.assertEqual(restored.output_summary["transcript"], "[REDACTED]")
+        self.assertEqual(restored.error["message"], "[REDACTED]")
+
     def test_terminal_workflow_state_conflict_is_preserved(self) -> None:
         principal = self.principal()
         completed = WorkflowState(

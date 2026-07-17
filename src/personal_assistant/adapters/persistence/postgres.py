@@ -1612,7 +1612,8 @@ class PostgresMemoryStore(_PostgresStore):
 
 class PostgresTraceRecorder(_PostgresStore):
     def write(self, event: TraceEvent) -> None:
-        payload = event.model_dump(mode="json")
+        safe_event = event.for_persistence()
+        payload = safe_event.model_dump(mode="json")
         trace_fingerprint = _fingerprint(payload)
         with self._db.cursor() as cursor:
             cursor.execute(
@@ -1627,13 +1628,13 @@ class PostgresTraceRecorder(_PostgresStore):
                 RETURNING payload
                 """,
                 (
-                    event.tenant_id,
-                    event.trace_id,
-                    event.run_id,
-                    event.agent_id,
-                    event.event_type.value,
-                    event.timestamp,
-                    event.parent_event_id,
+                    safe_event.tenant_id,
+                    safe_event.trace_id,
+                    safe_event.run_id,
+                    safe_event.agent_id,
+                    safe_event.event_type.value,
+                    safe_event.timestamp,
+                    safe_event.parent_event_id,
                     trace_fingerprint,
                     _json(payload),
                 ),
@@ -1648,7 +1649,7 @@ class PostgresTraceRecorder(_PostgresStore):
                 FROM {self._table("trace_events")}
                 WHERE tenant_id = %s AND trace_id = %s
                 """,
-                (event.tenant_id, event.trace_id),
+                (safe_event.tenant_id, safe_event.trace_id),
             )
             existing = cursor.fetchone()
             if (
@@ -1658,7 +1659,7 @@ class PostgresTraceRecorder(_PostgresStore):
                 raise AssistantError(
                     ErrorCode.CONFLICT,
                     "trace idempotency conflict",
-                    tenant_id=event.tenant_id,
+                    tenant_id=safe_event.tenant_id,
                 )
 
     def list_for_tenant(self, principal: Principal | str) -> list[TraceEvent]:
