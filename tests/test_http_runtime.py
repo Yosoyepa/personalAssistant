@@ -963,21 +963,67 @@ class HttpRuntimeTests(unittest.TestCase):
             reminder_worker_enabled=True,
             reminder_worker_interval_seconds=1,
         )
-        stop_event = threading.Event()
-        thread = threading.Thread(
-            target=_run_reminder_worker_loop,
-            kwargs={
-                "container": build_container(),
-                "settings": settings,
-                "stop_event": stop_event,
-            },
-            daemon=True,
+        with self.assertRaisesRegex(RuntimeError, "requires PostgreSQL"):
+            _run_reminder_worker_loop(
+                container=build_container(),
+                settings=settings,
+                stop_event=threading.Event(),
+            )
+
+    def test_reminder_worker_survives_tick_and_trace_store_failures(self) -> None:
+        class FailingWorker:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def run_once(self, principal) -> None:
+                self.calls += 1
+                raise RuntimeError("private database diagnostics")
+
+        class FailingTraces:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def write(self, event) -> None:
+                self.calls += 1
+                raise RuntimeError("private trace database diagnostics")
+
+        class StopAfterTwoTicks:
+            def __init__(self) -> None:
+                self.waits = 0
+
+            def is_set(self) -> bool:
+                return self.waits >= 2
+
+            def wait(self, timeout: float) -> bool:
+                self.waits += 1
+                return self.is_set()
+
+        worker = FailingWorker()
+        traces = FailingTraces()
+        stop_event = StopAfterTwoTicks()
+        container = type(
+            "FailingWorkerContainer",
+            (),
+            {"reminder_worker": worker, "traces": traces},
+        )()
+        settings = AppSettings(
+            tenant_id="tenant-a",
+            persistence_backend="postgres",
+            database_url="postgresql://unused",
+            telegram_bot_token="configured",
+            reminder_worker_enabled=True,
+            reminder_worker_interval_seconds=1,
         )
-        thread.start()
-        self.assertTrue(thread.is_alive())
-        stop_event.set()
-        thread.join(timeout=5)
-        self.assertFalse(thread.is_alive())
+
+        _run_reminder_worker_loop(
+            container=container,
+            settings=settings,
+            stop_event=stop_event,
+        )
+
+        self.assertEqual(worker.calls, 2)
+        self.assertEqual(traces.calls, 2)
+        self.assertEqual(stop_event.waits, 2)
 
     def test_admin_endpoints_use_default_settings_tenant(self) -> None:
         settings = AppSettings(

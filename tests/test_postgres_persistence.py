@@ -419,9 +419,10 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertIn("FOR UPDATE", select_sql)
         self.assertEqual(select_params, (principal.tenant_id, "rem-1"))
         self.assertIn("SET sent = true", update_sql)
-        payload = json.loads(update_params[0])
+        self.assertIsInstance(update_params[0], datetime)
+        payload = json.loads(update_params[1])
         self.assertTrue(payload["sent"])
-        self.assertEqual(update_params[1:], (principal.tenant_id, "idem-reminder-1"))
+        self.assertEqual(update_params[2:], (principal.tenant_id, "idem-reminder-1"))
         self.assertTrue(saved.sent)
 
     def test_scheduler_store_upgrades_legacy_metadata_deterministically(self) -> None:

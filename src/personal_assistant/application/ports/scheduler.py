@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from personal_assistant.application.dto.delivery import DeliveryError, DeliveryStatus
+from personal_assistant.application.dto.events import OutboxMessage
 from personal_assistant.domain.common.identity import Principal
 
 
@@ -97,6 +98,14 @@ class ReminderSchedulerPort(Protocol):
         reminder_id: str | None = None,
     ) -> ScheduledReminder:
         """Schedule an idempotent reminder before a calendar event."""
+
+    def mirror_delivery(
+        self,
+        principal: Principal,
+        reminder_id: str,
+        message: OutboxMessage,
+    ) -> ScheduledReminder:
+        """Mirror canonical outbox delivery state for operational reads only."""
 
 
 class ReminderSchedulerWorkerPort(ReminderSchedulerPort, Protocol):

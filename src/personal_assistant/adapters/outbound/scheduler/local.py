@@ -11,6 +11,7 @@ from personal_assistant.adapters._in_memory_transaction import (
     new_reentrant_lock,
 )
 from personal_assistant.application.dto.delivery import DeliveryStatus
+from personal_assistant.application.dto.events import OutboxMessage
 from personal_assistant.application.ports.scheduler import ScheduledReminder
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import (
@@ -134,6 +135,47 @@ class ReminderScheduler:
                 and (job.next_attempt_at is None or job.next_attempt_at <= now)
             ]
             return sorted(due_jobs, key=lambda job: (job.notify_at, job.reminder_id))
+
+    def mirror_delivery(
+        self,
+        principal: Principal,
+        reminder_id: str,
+        message: OutboxMessage,
+    ) -> ScheduledReminder:
+        require_trusted_principal(principal)
+        if (
+            message.tenant_id != principal.tenant_id
+            or message.event.subject != reminder_id
+        ):
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "delivery mirror identity mismatch",
+                tenant_id=principal.tenant_id,
+            )
+        with self._lock:
+            for key, job in self._jobs_by_key.items():
+                if key[0] != principal.tenant_id or job.reminder_id != reminder_id:
+                    continue
+                updated = ScheduledReminder.model_validate(
+                    job.model_copy(
+                        update={
+                            "delivery_status": message.dispatch_status,
+                            "attempts": message.attempts,
+                            "next_attempt_at": message.next_attempt_at,
+                            "sending_at": message.sending_at,
+                            "published_at": message.published_at,
+                            "last_error": message.last_error,
+                            "sent": message.dispatch_status != DeliveryStatus.pending,
+                        }
+                    ).model_dump()
+                )
+                self._jobs_by_key[key] = updated
+                return updated.model_copy(deep=True)
+        raise AssistantError(
+            ErrorCode.NOT_FOUND,
+            "scheduled reminder not found",
+            tenant_id=principal.tenant_id,
+        )
 
     def mark_sent(self, principal: Principal, reminder_id: str) -> ScheduledReminder:
         require_trusted_principal(principal)

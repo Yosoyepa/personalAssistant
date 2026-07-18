@@ -302,6 +302,23 @@ local calendar, scheduled reminders, and traces. See
 `docs/runbook/persistence.md` for schema notes, idempotency rules, worker lease
 expectations, and limitations.
 
+Durable reminder delivery requires PostgreSQL and a configured Telegram bot;
+memory remains a disposable development/test backend. The outbox is canonical
+and the scheduler is only a mirrored operational view. Operator commands are:
+
+```bash
+uv run python -m personal_assistant.infrastructure.worker run-once
+uv run python -m personal_assistant.infrastructure.worker list-uncertain
+uv run python -m personal_assistant.infrastructure.worker resolve-uncertain \
+  --message-id <id> --resolution delivered --confirm <id>
+```
+
+`retry` is also available as a resolution. It returns the message to `pending`
+only after exact confirmation and a runtime-owned P5 approval, and is rejected
+once the message has reached four attempts. Automatic retries apply only to
+known outcomes; ambiguous outcomes stop at `uncertain` for manual reconciliation
+to bias the system against duplicate sends.
+
 ## Implementation Boundary
 
 Present:

@@ -248,7 +248,7 @@ def test_error_metadata_rejects_free_text_and_extra_sensitive_fields() -> None:
         )
 
 
-@pytest.mark.parametrize("status", [DeliveryStatus.failed, DeliveryStatus.uncertain])
+@pytest.mark.parametrize("status", [DeliveryStatus.uncertain])
 def test_terminal_error_states_require_attempt_and_delivery_evidence(
     status: DeliveryStatus,
 ) -> None:
@@ -264,6 +264,49 @@ def test_terminal_error_states_require_attempt_and_delivery_evidence(
             event=event,
             idempotency_key="invalid-terminal",
             dispatch_status=status,
+        )
+
+
+def test_pre_io_failed_state_requires_sanitized_error_without_attempt() -> None:
+    event = CloudEvent(
+        type="notification.requested",
+        source="test",
+        tenant_id="tenant-a",
+    )
+    failed = OutboxMessage(
+        tenant_id="tenant-a",
+        event=event,
+        idempotency_key="invalid-payload",
+        dispatch_status=DeliveryStatus.failed,
+        attempts=0,
+        sending_at=None,
+        last_error=sanitized_error(),
+    )
+    assert failed.attempts == 0
+    assert failed.sending_at is None
+
+
+@pytest.mark.parametrize(
+    ("attempts", "sending_at"),
+    [(0, NOW), (1, None)],
+)
+def test_failed_state_rejects_mismatched_io_evidence(
+    attempts: int, sending_at: datetime | None
+) -> None:
+    event = CloudEvent(
+        type="notification.requested",
+        source="test",
+        tenant_id="tenant-a",
+    )
+    with pytest.raises(ValidationError):
+        OutboxMessage(
+            tenant_id="tenant-a",
+            event=event,
+            idempotency_key="invalid-failed-evidence",
+            dispatch_status=DeliveryStatus.failed,
+            attempts=attempts,
+            sending_at=sending_at,
+            last_error=sanitized_error(),
         )
 
 

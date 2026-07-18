@@ -48,8 +48,9 @@ Communication.
 ## Postconditions
 
 - Notification is scoped to the principal tenant.
-- Duplicate idempotency key with the same payload returns a cached terminal
-  result; a different payload fails with a conflict.
+- The durable worker derives the request idempotency key from outbox message ID
+  plus persisted attempt number. The outbox, not adapter-local cache, is the
+  delivery authority across restarts.
 - `unknown-outcome` is not sent again implicitly because delivery may already
   have happened.
 - Tool call is traced and auditable.
@@ -66,5 +67,5 @@ Communication.
 
 ## Audit Requirements
 
-Record tenant, principal, recipient summary, idempotency key, approval status, and
-trace id. Never log secrets or opaque approval token values.
+Record tenant, principal, message/attempt idempotency key, approval status, and
+trace id. Never log recipient/body content, secrets, or opaque approval values.
