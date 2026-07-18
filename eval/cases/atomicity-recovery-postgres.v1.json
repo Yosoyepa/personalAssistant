@@ -1,0 +1,2107 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "atomic-write-before-register-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-register",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "register",
+        "triggerPhase": "before",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "register",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-before-calendar-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-calendar",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "calendar",
+        "triggerPhase": "before",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "calendar",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-before-scheduler-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-scheduler",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "scheduler",
+        "triggerPhase": "before",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "scheduler",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-before-event-store-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-event-store",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "event_store",
+        "triggerPhase": "before",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "event_store",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-before-outbox-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-outbox",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "outbox",
+        "triggerPhase": "before",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 5
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "outbox",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-before-completed-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-completed",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "completed",
+        "triggerPhase": "before",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 6
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "completed",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-before-register-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-register",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "register",
+        "triggerPhase": "before",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 7
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "register",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-before-calendar-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-calendar",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "calendar",
+        "triggerPhase": "before",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 8
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "calendar",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-before-scheduler-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-scheduler",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "scheduler",
+        "triggerPhase": "before",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 9
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "scheduler",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-before-event-store-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-event-store",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "event_store",
+        "triggerPhase": "before",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 10
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "event_store",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-before-outbox-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-outbox",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "outbox",
+        "triggerPhase": "before",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 11
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "outbox",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-before-completed-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-before-completed",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "completed",
+        "triggerPhase": "before",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 12
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "completed",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-register-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-register",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "register",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 13
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "register",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-calendar-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-calendar",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "calendar",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 14
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "calendar",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-scheduler-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-scheduler",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "scheduler",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 15
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "scheduler",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-event-store-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-event-store",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "event_store",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 16
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "event_store",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-outbox-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-outbox",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "outbox",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 17
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "outbox",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-completed-baseline-0",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-completed",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "completed",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 18
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "completed",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-register-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-register",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "register",
+        "triggerPhase": "after",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 19
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "register",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-calendar-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-calendar",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "calendar",
+        "triggerPhase": "after",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 20
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "calendar",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-scheduler-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-scheduler",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "scheduler",
+        "triggerPhase": "after",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 21
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "scheduler",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-event-store-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-event-store",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "event_store",
+        "triggerPhase": "after",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 22
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "event_store",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-outbox-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-outbox",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "outbox",
+        "triggerPhase": "after",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 23
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "outbox",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-write-after-completed-baseline-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "write-after-completed",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "write-fault",
+        "boundary": "completed",
+        "triggerPhase": "after",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 24
+      },
+      "expected": {
+        "scenario": "write-fault",
+        "boundary": "completed",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "exact-baseline-preserved",
+        "recoveryObservation": "fresh-commit-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-resume-after-resume",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "resume-resume",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "resume-fault",
+        "boundary": "resume",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 25
+      },
+      "expected": {
+        "scenario": "resume-fault",
+        "boundary": "resume",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "waiting-approval-preserved",
+        "recoveryObservation": "approved-resume-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-resume-after-calendar",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "resume-calendar",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "resume-fault",
+        "boundary": "calendar",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 26
+      },
+      "expected": {
+        "scenario": "resume-fault",
+        "boundary": "calendar",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "waiting-approval-preserved",
+        "recoveryObservation": "approved-resume-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-resume-after-scheduler",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "resume-scheduler",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "resume-fault",
+        "boundary": "scheduler",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 27
+      },
+      "expected": {
+        "scenario": "resume-fault",
+        "boundary": "scheduler",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "waiting-approval-preserved",
+        "recoveryObservation": "approved-resume-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-resume-after-event-store",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "resume-event-store",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "resume-fault",
+        "boundary": "event_store",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 28
+      },
+      "expected": {
+        "scenario": "resume-fault",
+        "boundary": "event_store",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "waiting-approval-preserved",
+        "recoveryObservation": "approved-resume-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-resume-after-outbox",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "resume-outbox",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "resume-fault",
+        "boundary": "outbox",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 29
+      },
+      "expected": {
+        "scenario": "resume-fault",
+        "boundary": "outbox",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "waiting-approval-preserved",
+        "recoveryObservation": "approved-resume-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-resume-after-completed",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "resume-completed",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "resume-fault",
+        "boundary": "completed",
+        "triggerPhase": "after",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 30
+      },
+      "expected": {
+        "scenario": "resume-fault",
+        "boundary": "completed",
+        "faultObservation": "database-write-rejected",
+        "stateAfterFault": "waiting-approval-preserved",
+        "recoveryObservation": "approved-resume-then-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-unknown-commit-replay-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "unknown-commit-recovery-1",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "unknown-commit",
+        "boundary": "commit",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "unknown-commit",
+        "boundary": "commit",
+        "faultObservation": "sanitized-commit-outcome-unknown",
+        "stateAfterFault": "commit-visible-on-unknown",
+        "recoveryObservation": "same-process-explicit-replay-observed-commit",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-unknown-commit-replay-2",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "unknown-commit-recovery-2",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "unknown-commit",
+        "boundary": "commit",
+        "triggerPhase": "none",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "unknown-commit",
+        "boundary": "commit",
+        "faultObservation": "sanitized-commit-outcome-unknown",
+        "stateAfterFault": "commit-visible-on-unknown",
+        "recoveryObservation": "same-process-explicit-replay-observed-commit",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-unknown-commit-replay-3",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "unknown-commit-recovery-3",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "unknown-commit",
+        "boundary": "commit",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 3,
+        "recoveryProcess": "restart"
+      },
+      "expected": {
+        "scenario": "unknown-commit",
+        "boundary": "commit",
+        "faultObservation": "sanitized-commit-outcome-unknown",
+        "stateAfterFault": "commit-visible-on-unknown",
+        "recoveryObservation": "restart-explicit-replay-observed-commit",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-unknown-commit-replay-4",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "unknown-commit-recovery-4",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "unknown-commit",
+        "boundary": "commit",
+        "triggerPhase": "none",
+        "baselineCount": 1,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 4,
+        "recoveryProcess": "restart"
+      },
+      "expected": {
+        "scenario": "unknown-commit",
+        "boundary": "commit",
+        "faultObservation": "sanitized-commit-outcome-unknown",
+        "stateAfterFault": "commit-visible-on-unknown",
+        "recoveryObservation": "restart-explicit-replay-observed-commit",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-contention-same-identity-2",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "same-identity-2-contenders",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "concurrent-same-identity",
+        "boundary": "contention",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 2,
+        "workers": 2,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "concurrent-same-identity",
+        "boundary": "contention",
+        "faultObservation": "serializable-contention-observed",
+        "stateAfterFault": "one-logical-effect",
+        "recoveryObservation": "conflicts-are-safe-to-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 2,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-contention-same-identity-3",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "same-identity-3-contenders",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "concurrent-same-identity",
+        "boundary": "contention",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 3,
+        "workers": 3,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "concurrent-same-identity",
+        "boundary": "contention",
+        "faultObservation": "serializable-contention-observed",
+        "stateAfterFault": "one-logical-effect",
+        "recoveryObservation": "conflicts-are-safe-to-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 3,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-contention-same-identity-4",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "same-identity-4-contenders",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "concurrent-same-identity",
+        "boundary": "contention",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 4,
+        "workers": 4,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "concurrent-same-identity",
+        "boundary": "contention",
+        "faultObservation": "serializable-contention-observed",
+        "stateAfterFault": "one-logical-effect",
+        "recoveryObservation": "conflicts-are-safe-to-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 4,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-contention-same-identity-6",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "same-identity-6-contenders",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "concurrent-same-identity",
+        "boundary": "contention",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 6,
+        "workers": 6,
+        "variant": 6
+      },
+      "expected": {
+        "scenario": "concurrent-same-identity",
+        "boundary": "contention",
+        "faultObservation": "serializable-contention-observed",
+        "stateAfterFault": "one-logical-effect",
+        "recoveryObservation": "conflicts-are-safe-to-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 6,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-contention-distinct-identities-2",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "distinct-identities-2-contenders",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "concurrent-distinct-identities",
+        "boundary": "contention",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 2,
+        "workers": 2,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "concurrent-distinct-identities",
+        "boundary": "contention",
+        "faultObservation": "serializable-contention-observed",
+        "stateAfterFault": "all-effects-isolated",
+        "recoveryObservation": "conflicts-are-safe-to-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 2,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-contention-distinct-identities-3",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "distinct-identities-3-contenders",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "concurrent-distinct-identities",
+        "boundary": "contention",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 3,
+        "workers": 3,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "concurrent-distinct-identities",
+        "boundary": "contention",
+        "faultObservation": "serializable-contention-observed",
+        "stateAfterFault": "all-effects-isolated",
+        "recoveryObservation": "conflicts-are-safe-to-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 3,
+          "calendar": 3,
+          "scheduler": 3,
+          "events": 3,
+          "outbox": 3
+        },
+        "contenders": 3,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-contention-distinct-identities-4",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "distinct-identities-4-contenders",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "concurrent-distinct-identities",
+        "boundary": "contention",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 4,
+        "workers": 4,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "concurrent-distinct-identities",
+        "boundary": "contention",
+        "faultObservation": "serializable-contention-observed",
+        "stateAfterFault": "all-effects-isolated",
+        "recoveryObservation": "conflicts-are-safe-to-replay",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 4,
+          "calendar": 4,
+          "scheduler": 4,
+          "events": 4,
+          "outbox": 4
+        },
+        "contenders": 4,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-cross-tenant-shared-source-2",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "tenant-isolation-2",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "cross-tenant-identity",
+        "boundary": "replay",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 2,
+        "workers": 1,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "cross-tenant-identity",
+        "boundary": "replay",
+        "faultObservation": "no-injected-fault",
+        "stateAfterFault": "tenant-isolated",
+        "recoveryObservation": "idempotent-replays-completed",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 2,
+          "calendar": 2,
+          "scheduler": 2,
+          "events": 2,
+          "outbox": 2
+        },
+        "contenders": 2,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-cross-tenant-shared-source-3",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "tenant-isolation-3",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "cross-tenant-identity",
+        "boundary": "replay",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 3,
+        "workers": 1,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "cross-tenant-identity",
+        "boundary": "replay",
+        "faultObservation": "no-injected-fault",
+        "stateAfterFault": "tenant-isolated",
+        "recoveryObservation": "idempotent-replays-completed",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 3,
+          "calendar": 3,
+          "scheduler": 3,
+          "events": 3,
+          "outbox": 3
+        },
+        "contenders": 3,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-cross-tenant-shared-source-4",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "tenant-isolation-4",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "cross-tenant-identity",
+        "boundary": "replay",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 4,
+        "workers": 1,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "cross-tenant-identity",
+        "boundary": "replay",
+        "faultObservation": "no-injected-fault",
+        "stateAfterFault": "tenant-isolated",
+        "recoveryObservation": "idempotent-replays-completed",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 4,
+          "calendar": 4,
+          "scheduler": 4,
+          "events": 4,
+          "outbox": 4
+        },
+        "contenders": 4,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-sequential-replay-1",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "deterministic-replay-1",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 1,
+        "workers": 1,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "faultObservation": "no-injected-fault",
+        "stateAfterFault": "single-committed-effect",
+        "recoveryObservation": "idempotent-replays-completed",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 1,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-sequential-replay-2",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "deterministic-replay-2",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 2,
+        "workers": 1,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "faultObservation": "no-injected-fault",
+        "stateAfterFault": "single-committed-effect",
+        "recoveryObservation": "idempotent-replays-completed",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 2,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-sequential-replay-3",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "deterministic-replay-3",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 3,
+        "workers": 1,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "faultObservation": "no-injected-fault",
+        "stateAfterFault": "single-committed-effect",
+        "recoveryObservation": "idempotent-replays-completed",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 3,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-sequential-replay-4",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "deterministic-replay-4",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 4,
+        "workers": 1,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "faultObservation": "no-injected-fault",
+        "stateAfterFault": "single-committed-effect",
+        "recoveryObservation": "idempotent-replays-completed",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 4,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-sequential-replay-5",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "deterministic-replay-5",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 5,
+        "workers": 1,
+        "variant": 5
+      },
+      "expected": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "faultObservation": "no-injected-fault",
+        "stateAfterFault": "single-committed-effect",
+        "recoveryObservation": "idempotent-replays-completed",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 5,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    },
+    {
+      "id": "atomic-sequential-replay-6",
+      "category": "atomicity-recovery",
+      "tier": "failure-mode",
+      "failureMode": "deterministic-replay-6",
+      "contractRefs": [
+        "UOW-ATOMICITY",
+        "PG16-REAL"
+      ],
+      "executor": "reminder.atomicity.postgres.v1",
+      "input": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "triggerPhase": "none",
+        "baselineCount": 0,
+        "attempts": 6,
+        "workers": 1,
+        "variant": 6
+      },
+      "expected": {
+        "scenario": "sequential-replay",
+        "boundary": "replay",
+        "faultObservation": "no-injected-fault",
+        "stateAfterFault": "single-committed-effect",
+        "recoveryObservation": "idempotent-replays-completed",
+        "identityObservation": "stable-replay-identities",
+        "finalCounts": {
+          "states": 1,
+          "calendar": 1,
+          "scheduler": 1,
+          "events": 1,
+          "outbox": 1
+        },
+        "contenders": 6,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "fault-injection",
+        "reliability"
+      ]
+    }
+  ]
+}
