@@ -343,8 +343,11 @@ def build_container(
     scheduler = persistence.scheduler
     states = persistence.states
     traces = persistence.traces
+    if persistence.reminder_uow is None:
+        raise RuntimeError("reminder persistence requires a unit of work")
     reminder_notifications = DispatchDueReminders(
-        scheduler=scheduler, notifications=notification_adapter
+        unit_of_work=persistence.reminder_uow,
+        notifications=notification_adapter,
     )
     reminder_workflow = ReminderWorkflow(
         calendar=calendar,

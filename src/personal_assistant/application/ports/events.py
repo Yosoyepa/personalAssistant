@@ -48,8 +48,20 @@ class OutboxPort(Protocol):
         limit: int = 10,
         owner: str = "local-worker",
         lease_seconds: int = 60,
+        event_type: str | None = None,
     ) -> list[OutboxMessage]:
         """Claim due work with bounded limit, owner length, and lease duration."""
+
+    def sweep_expired_sending(
+        self,
+        principal: Principal,
+        now: datetime,
+        *,
+        error: DeliveryError,
+        limit: int = 10,
+        event_type: str | None = None,
+    ) -> list[OutboxMessage]:
+        """Atomically fence expired sending rows into uncertain without resend."""
 
     def mark_sending(
         self,
@@ -60,6 +72,16 @@ class OutboxPort(Protocol):
         started_at: datetime,
     ) -> OutboxMessage:
         """Persist the external-I/O boundary for a currently claimed message."""
+
+    def mark_claim_failed(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        claim_token: str,
+        error: DeliveryError,
+    ) -> OutboxMessage:
+        """Fail invalid claimed work before I/O without incrementing attempts."""
 
     def mark_published(
         self,
@@ -111,6 +133,24 @@ class OutboxPort(Protocol):
         error: DeliveryError,
     ) -> OutboxMessage:
         """Move a known transient sending result back to pending."""
+
+    def resolve_uncertain_delivered(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        published_at: datetime,
+    ) -> OutboxMessage:
+        """Reconcile an uncertain message as delivered after operator confirmation."""
+
+    def resolve_uncertain_retry(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        next_attempt_at: datetime,
+    ) -> OutboxMessage:
+        """Reconcile an uncertain message back to pending after confirmation."""
 
     def list_for_tenant(self, principal: Principal) -> list[OutboxMessage]:
         """List outbox messages visible to the authenticated tenant."""

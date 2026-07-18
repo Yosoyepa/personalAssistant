@@ -154,10 +154,26 @@ class OutboxMessage(BaseModel):
                 for value in (self.claim_token, self.claim_owner, self.claimed_until)
             ):
                 raise ValueError("published outbox messages cannot retain a claim")
-        elif status in {OutboxStatus.failed, OutboxStatus.uncertain}:
+        elif status == OutboxStatus.failed:
+            has_pre_io_evidence = self.sending_at is None and self.attempts == 0
+            has_post_io_evidence = self.sending_at is not None and self.attempts >= 1
+            if self.last_error is None or not (
+                has_pre_io_evidence or has_post_io_evidence
+            ):
+                raise ValueError(
+                    "failed outbox messages require pre-I/O or sending evidence"
+                )
+            if self.published_at is not None:
+                raise ValueError("failed messages cannot have published_at")
+            if any(
+                value is not None
+                for value in (self.claim_token, self.claim_owner, self.claimed_until)
+            ):
+                raise ValueError("terminal outbox messages cannot retain a claim")
+        elif status == OutboxStatus.uncertain:
             if self.sending_at is None or self.last_error is None or self.attempts < 1:
                 raise ValueError(
-                    "failed or uncertain outbox messages require attempt, sending_at, and error"
+                    "uncertain outbox messages require attempt, sending_at, and error"
                 )
             if self.published_at is not None:
                 raise ValueError(

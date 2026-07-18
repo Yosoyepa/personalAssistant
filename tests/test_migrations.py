@@ -26,9 +26,12 @@ from personal_assistant.infrastructure.migrations import (
     migration_status,
 )
 from personal_assistant.infrastructure.migrations.__main__ import main as migration_main
+from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.permissions import PermissionTier
 
 
 TEST_POSTGRES_DSN_ENV = "TEST_POSTGRES_DSN"
+NOW = datetime(2026, 7, 17, 12, tzinfo=UTC)
 
 
 def _schema() -> str:
@@ -65,13 +68,170 @@ def test_discovers_versioned_migrations_with_sha256_checksums() -> None:
         "0001_initial",
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
+        "0004_scheduler_delivery_mirror",
     ]
     assert all(len(migration.checksum) == 64 for migration in migrations)
     assert [migration.filename for migration in migrations] == [
         "0001_initial.sql",
         "0002_reminder_identity_constraints.sql",
         "0003_durable_delivery_state.sql",
+        "0004_scheduler_delivery_mirror.sql",
     ]
+
+
+def test_scheduler_legacy_trigger_preserves_canonical_delivery_status(
+    postgres_dsn: str,
+    isolated_schema: str,
+) -> None:
+    psycopg = pytest.importorskip("psycopg")
+    apply_migrations(dsn=postgres_dsn, schema=isolated_schema)
+    table = psycopg.sql.SQL("{}.assistant_scheduled_reminders").format(
+        psycopg.sql.Identifier(isolated_schema)
+    )
+    with psycopg.connect(postgres_dsn, autocommit=True) as connection:
+        for key, status, sent, attempts, sending_at in (
+            ("typed-claimed", "claimed", False, 0, None),
+            ("typed-sending", "sending", False, 1, NOW),
+            ("canonical-update", "pending", False, 0, None),
+            ("legacy-update", "pending", False, 0, None),
+        ):
+            connection.execute(
+                psycopg.sql.SQL(
+                    """
+                    INSERT INTO {} (
+                        tenant_id, idempotency_key, reminder_id,
+                        calendar_event_id, notify_at, channel, recipient,
+                        sent, delivery_status, attempts, sending_at, payload
+                    ) VALUES (
+                        'tenant-a', %s, %s, 'cal-1', %s, 'telegram', 'chat-1',
+                        %s, %s, %s, %s, '{{}}'::jsonb
+                    )
+                    """
+                ).format(table),
+                (key, key, NOW, sent, status, attempts, sending_at),
+            )
+        connection.execute(
+            psycopg.sql.SQL(
+                """
+                INSERT INTO {} (
+                    tenant_id, idempotency_key, reminder_id,
+                    calendar_event_id, notify_at, channel, recipient, sent, payload
+                ) VALUES (
+                    'tenant-a', 'legacy-insert', 'legacy-insert', 'cal-1', %s,
+                    'telegram', 'chat-1', true, '{{}}'::jsonb
+                )
+                """
+            ).format(table),
+            (NOW,),
+        )
+        connection.execute(
+            psycopg.sql.SQL(
+                "UPDATE {} SET delivery_status = 'claimed' WHERE reminder_id = 'canonical-update'"
+            ).format(table)
+        )
+        connection.execute(
+            psycopg.sql.SQL(
+                "UPDATE {} SET sent = true WHERE reminder_id = 'legacy-update'"
+            ).format(table)
+        )
+        legacy_payload = {
+            "reminder_id": "legacy-adapter",
+            "tenant_id": "tenant-adapter",
+            "calendar_event_id": "cal-1",
+            "notify_at": NOW.isoformat(),
+            "timezone": "America/Bogota",
+            "source_event_id": "source-legacy",
+            "payload_fingerprint": "a" * 64,
+            "channel": "telegram",
+            "recipient": "chat-1",
+            "body": "body",
+            "idempotency_key": "legacy-adapter",
+            "delivery_status": "pending",
+            "attempts": 0,
+            "next_attempt_at": None,
+            "sending_at": None,
+            "published_at": None,
+            "last_error": None,
+            "sent": False,
+        }
+        connection.execute(
+            psycopg.sql.SQL(
+                """
+                INSERT INTO {} (
+                    tenant_id, idempotency_key, reminder_id,
+                    calendar_event_id, notify_at, channel, recipient, sent, payload
+                ) VALUES (
+                    'tenant-adapter', 'legacy-adapter', 'legacy-adapter',
+                    'cal-1', %s, 'telegram', 'chat-1', false, %s::jsonb
+                )
+                """
+            ).format(table),
+            (NOW, json.dumps(legacy_payload)),
+        )
+        connection.execute(
+            psycopg.sql.SQL(
+                "UPDATE {} SET sent = true WHERE reminder_id = 'legacy-adapter'"
+            ).format(table)
+        )
+        rows = connection.execute(
+            psycopg.sql.SQL(
+                """
+                SELECT reminder_id, delivery_status, sent
+                FROM {}
+                WHERE tenant_id = 'tenant-a'
+                ORDER BY reminder_id
+                """
+            ).format(table)
+        ).fetchall()
+        payload_rows = connection.execute(
+            psycopg.sql.SQL(
+                """
+                SELECT reminder_id, payload->>'delivery_status',
+                       (payload->>'sent')::boolean
+                FROM {}
+                WHERE tenant_id = 'tenant-a'
+                ORDER BY reminder_id
+                """
+            ).format(table)
+        ).fetchall()
+
+        invalid_sql = psycopg.sql.SQL(
+            """
+            INSERT INTO {} (
+                tenant_id, idempotency_key, reminder_id, calendar_event_id,
+                notify_at, channel, recipient, sent, delivery_status, attempts,
+                sending_at, last_error_category, last_error_code,
+                last_error_at, payload
+            ) VALUES (
+                'tenant-invalid', %s, %s, 'cal-1', %s, 'telegram', 'chat-1',
+                false, 'failed', %s, %s, 'internal', 'internal_error', %s,
+                '{{}}'::jsonb
+            )
+            """
+        ).format(table)
+        with pytest.raises(psycopg.errors.CheckViolation):
+            connection.execute(invalid_sql, ("bad-zero", "bad-zero", NOW, 0, NOW, NOW))
+        with pytest.raises(psycopg.errors.CheckViolation):
+            connection.execute(invalid_sql, ("bad-one", "bad-one", NOW, 1, None, NOW))
+
+    assert rows == [
+        ("canonical-update", "claimed", True),
+        ("legacy-insert", "published", True),
+        ("legacy-update", "published", True),
+        ("typed-claimed", "claimed", True),
+        ("typed-sending", "sending", True),
+    ]
+    assert payload_rows == rows
+    persistence = postgres.PostgresPersistence(dsn=postgres_dsn, schema=isolated_schema)
+    actor = Principal.for_test(
+        principal_id="worker",
+        tenant_id="tenant-adapter",
+        permission_tier=PermissionTier.P5,
+    )
+    [legacy_job] = persistence.scheduler.list_for_tenant(actor)
+    assert legacy_job.delivery_status.value == "published"
+    assert legacy_job.sent is True
+    assert persistence.scheduler.due(actor, NOW) == []
 
 
 def test_discovery_rejects_gaps_and_embedded_transactions(tmp_path: Path) -> None:
@@ -208,7 +368,7 @@ def test_migration_cli_status_apply_and_safe_failures(
     before = json.loads(capsys.readouterr().out)
     assert before["schema"] == isolated_schema
     assert not before["ready"]
-    assert [migration["version"] for migration in before["pending"]] == [1, 2, 3]
+    assert [migration["version"] for migration in before["pending"]] == [1, 2, 3, 4]
 
     assert migration_main(["apply", "--schema", isolated_schema]) == 0
     applied = json.loads(capsys.readouterr().out)
@@ -217,8 +377,9 @@ def test_migration_cli_status_apply_and_safe_failures(
         "0001_initial",
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
+        "0004_scheduler_delivery_mirror",
     ]
-    assert [record["version"] for record in applied["applied"]] == [1, 2, 3]
+    assert [record["version"] for record in applied["applied"]] == [1, 2, 3, 4]
     assert all(record["applied_at"] for record in applied["applied"])
 
     assert migration_main(["status"]) == 0
@@ -260,6 +421,7 @@ def test_status_apply_and_repeated_apply_are_auditable_no_op(
         "0001_initial",
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
+        "0004_scheduler_delivery_mirror",
     ]
     with psycopg.connect(postgres_dsn, autocommit=True) as connection:
         schema_exists = connection.execute(
@@ -275,6 +437,7 @@ def test_status_apply_and_repeated_apply_are_auditable_no_op(
         "0001_initial",
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
+        "0004_scheduler_delivery_mirror",
     ]
     assert second.applied == ()
     assert second.status.ready
@@ -341,7 +504,7 @@ def test_real_history_corruption_is_rejected(
             )
         elif corruption == "unknown_version":
             connection.execute(
-                psycopg.sql.SQL("UPDATE {} SET version = 4 WHERE version = 2").format(
+                psycopg.sql.SQL("UPDATE {} SET version = 5 WHERE version = 2").format(
                     history
                 )
             )
@@ -388,6 +551,7 @@ def test_advisory_lock_serializes_apply(
         "0001_initial",
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
+        "0004_scheduler_delivery_mirror",
     ]
 
 
@@ -482,6 +646,7 @@ def test_existing_alpha_rows_are_adopted_without_data_loss(
         "0001_initial",
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
+        "0004_scheduler_delivery_mirror",
     ]
     with psycopg.connect(postgres_dsn, autocommit=True) as connection:
         row = connection.execute(
@@ -811,6 +976,7 @@ def test_postgres_startup_has_no_ddl_and_readiness_reports_pending(
         "0001_initial",
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
+        "0004_scheduler_delivery_mirror",
     ]
 
     apply_migrations(dsn=postgres_dsn, schema=isolated_schema)

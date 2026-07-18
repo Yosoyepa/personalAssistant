@@ -684,6 +684,7 @@ class PostgresOutbox(_PostgresStore):
         limit: int = 10,
         owner: str = "local-worker",
         lease_seconds: int = 60,
+        event_type: str | None = None,
     ) -> list[OutboxMessage]:
         """Atomically lease due messages while skipping rows claimed by peers."""
 
@@ -693,6 +694,19 @@ class PostgresOutbox(_PostgresStore):
             limit=limit, owner=owner, lease_seconds=lease_seconds
         )
         claimed_until = now + timedelta(seconds=lease_seconds)
+        event_filter_sql = (
+            "" if event_type is None else "AND event_payload ->> 'type' = %s"
+        )
+        due_parameters: list[object] = [
+            principal.tenant_id,
+            OutboxStatus.pending.value,
+            now,
+            OutboxStatus.claimed.value,
+            now,
+        ]
+        if event_type is not None:
+            due_parameters.append(event_type)
+        due_parameters.append(limit)
         with self._db.cursor() as cursor:
             cursor.execute(
                 f"""
@@ -713,6 +727,7 @@ class PostgresOutbox(_PostgresStore):
                               AND claimed_until <= %s
                           )
                       )
+                      {event_filter_sql}
                     ORDER BY created_at, message_id
                     LIMIT %s
                     FOR UPDATE SKIP LOCKED
@@ -734,12 +749,7 @@ class PostgresOutbox(_PostgresStore):
                 RETURNING target.payload
                 """,
                 (
-                    principal.tenant_id,
-                    OutboxStatus.pending.value,
-                    now,
-                    OutboxStatus.claimed.value,
-                    now,
-                    limit,
+                    *due_parameters,
                     OutboxStatus.claimed.value,
                     owner,
                     claimed_until,
@@ -771,6 +781,79 @@ class PostgresOutbox(_PostgresStore):
             lease_seconds=lease_seconds,
         )
 
+    def sweep_expired_sending(
+        self,
+        principal: Principal,
+        now: datetime,
+        *,
+        error: DeliveryError,
+        limit: int = 10,
+        event_type: str | None = None,
+    ) -> list[OutboxMessage]:
+        """Fence expired in-flight work with row locks; never make it claimable."""
+
+        require_trusted_principal(principal)
+        now = canonical_utc(now, field="now")
+        if isinstance(limit, bool) or not isinstance(limit, int):
+            raise ValueError(f"limit must be between 1 and {MAX_CLAIM_LIMIT}")
+        if not 1 <= limit <= MAX_CLAIM_LIMIT:
+            raise ValueError(f"limit must be between 1 and {MAX_CLAIM_LIMIT}")
+        error_data = error.model_dump(mode="json")
+        with self._db.cursor() as cursor:
+            cursor.execute(
+                f"""
+                WITH expired AS MATERIALIZED (
+                    SELECT tenant_id, idempotency_key
+                    FROM {self._table("outbox")}
+                    WHERE tenant_id = %s
+                      AND (%s::text IS NULL OR event_payload ->> 'type' = %s::text)
+                      AND dispatch_status = 'sending'
+                      AND claimed_until <= %s
+                    ORDER BY created_at, message_id
+                    LIMIT %s
+                    FOR UPDATE SKIP LOCKED
+                )
+                UPDATE {self._table("outbox")} AS target
+                SET dispatch_status = 'uncertain',
+                    claim_token = NULL,
+                    claim_owner = NULL,
+                    claimed_until = NULL,
+                    last_error_category = %s,
+                    last_error_code = %s,
+                    last_error_provider_code = %s,
+                    last_error_at = %s,
+                    payload = target.payload || %s::jsonb
+                FROM expired
+                WHERE target.tenant_id = expired.tenant_id
+                  AND target.idempotency_key = expired.idempotency_key
+                RETURNING target.payload
+                """,
+                (
+                    principal.tenant_id,
+                    event_type,
+                    event_type,
+                    now,
+                    limit,
+                    error_data["category"],
+                    error_data["code"],
+                    error_data["provider_code"],
+                    error.occurred_at,
+                    _json(
+                        {
+                            "dispatch_status": "uncertain",
+                            "claim_token": None,
+                            "claim_owner": None,
+                            "claimed_until": None,
+                            "last_error": error_data,
+                        }
+                    ),
+                ),
+            )
+            return [
+                OutboxMessage.model_validate(_payload_from_row(row))
+                for row in cursor.fetchall()
+            ]
+
     def mark_sending(
         self,
         principal: Principal,
@@ -798,6 +881,48 @@ class PostgresOutbox(_PostgresStore):
                 column_updates=(("sending_at", started_at),),
                 payload_updates={"sending_at": started_at},
                 increment_attempts=True,
+            )
+            return OutboxMessage.model_validate(payload)
+
+    def mark_claim_failed(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        claim_token: str,
+        error: DeliveryError,
+    ) -> OutboxMessage:
+        require_trusted_principal(principal)
+        claim_token = _require_claim_token(claim_token)
+        error_data = error.model_dump(mode="json")
+        with self._db.cursor() as cursor:
+            payload = _transition_delivery_row(
+                cursor,
+                table=self._table("outbox"),
+                tenant_id=principal.tenant_id,
+                id_column="message_id",
+                item_id=message_id,
+                item_name="outbox message",
+                status_column="dispatch_status",
+                status_payload_field="dispatch_status",
+                expected_status="claimed",
+                target_status="failed",
+                claim_token=claim_token,
+                column_updates=(
+                    ("claim_token", None),
+                    ("claim_owner", None),
+                    ("claimed_until", None),
+                    ("last_error_category", error_data["category"]),
+                    ("last_error_code", error_data["code"]),
+                    ("last_error_provider_code", error_data["provider_code"]),
+                    ("last_error_at", error.occurred_at),
+                ),
+                payload_updates={
+                    "claim_token": None,
+                    "claim_owner": None,
+                    "claimed_until": None,
+                    "last_error": error_data,
+                },
             )
             return OutboxMessage.model_validate(payload)
 
@@ -955,6 +1080,108 @@ class PostgresOutbox(_PostgresStore):
             error=error,
             target_status="failed",
         )
+
+    def resolve_uncertain_delivered(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        published_at: datetime,
+    ) -> OutboxMessage:
+        published_at = canonical_utc(published_at, field="published_at")
+        return self._resolve_uncertain(
+            principal,
+            message_id,
+            target_status="published",
+            column_updates=(
+                ("published_at", published_at),
+                ("last_error_category", None),
+                ("last_error_code", None),
+                ("last_error_provider_code", None),
+                ("last_error_at", None),
+            ),
+            payload_updates={"published_at": published_at, "last_error": None},
+        )
+
+    def resolve_uncertain_retry(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        next_attempt_at: datetime,
+    ) -> OutboxMessage:
+        next_attempt_at = canonical_utc(next_attempt_at, field="next_attempt_at")
+        return self._resolve_uncertain(
+            principal,
+            message_id,
+            target_status="pending",
+            column_updates=(
+                ("next_attempt_at", next_attempt_at),
+                ("sending_at", None),
+                ("published_at", None),
+            ),
+            payload_updates={
+                "next_attempt_at": next_attempt_at,
+                "sending_at": None,
+                "published_at": None,
+            },
+        )
+
+    def _resolve_uncertain(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        target_status: Literal["pending", "published"],
+        column_updates: tuple[tuple[str, object], ...],
+        payload_updates: Mapping[str, object],
+    ) -> OutboxMessage:
+        require_trusted_principal(principal)
+        assignments = ["dispatch_status = %s"]
+        parameters: list[object] = [target_status]
+        for column, value in column_updates:
+            assignments.append(f"{column} = %s")
+            parameters.append(value)
+        assignments.append("payload = payload || %s::jsonb")
+        parameters.append(
+            _json({"dispatch_status": target_status, **dict(payload_updates)})
+        )
+        parameters.extend((principal.tenant_id, message_id))
+        with self._db.cursor() as cursor:
+            cursor.execute(
+                f"""
+                UPDATE {self._table("outbox")}
+                SET {", ".join(assignments)}
+                WHERE tenant_id = %s
+                  AND message_id = %s
+                  AND dispatch_status = 'uncertain'
+                RETURNING payload
+                """,
+                tuple(parameters),
+            )
+            row = cursor.fetchone()
+            if row is not None:
+                return OutboxMessage.model_validate(_payload_from_row(row))
+            cursor.execute(
+                f"""
+                SELECT dispatch_status
+                FROM {self._table("outbox")}
+                WHERE tenant_id = %s AND message_id = %s
+                """,
+                (principal.tenant_id, message_id),
+            )
+            existing = cursor.fetchone()
+            if existing is None:
+                raise AssistantError(
+                    ErrorCode.NOT_FOUND,
+                    "outbox message not found",
+                    tenant_id=principal.tenant_id,
+                )
+            raise AssistantError(
+                ErrorCode.CONFLICT,
+                "outbox message is not uncertain",
+                tenant_id=principal.tenant_id,
+            )
 
     def mark_uncertain(
         self,
@@ -1806,10 +2033,13 @@ class PostgresReminderScheduler(_PostgresStore):
                 f"""
                 SELECT payload
                 FROM {self._table("scheduled_reminders")}
-                WHERE tenant_id = %s AND sent = false AND notify_at <= %s
+                WHERE tenant_id = %s
+                  AND delivery_status = 'pending'
+                  AND notify_at <= %s
+                  AND (next_attempt_at IS NULL OR next_attempt_at <= %s)
                 ORDER BY notify_at, reminder_id
                 """,
-                (principal.tenant_id, now),
+                (principal.tenant_id, now, now),
             )
             return [
                 ScheduledReminder.model_validate(
@@ -1818,7 +2048,94 @@ class PostgresReminderScheduler(_PostgresStore):
                 for row in cursor.fetchall()
             ]
 
+    def mirror_delivery(
+        self,
+        principal: Principal,
+        reminder_id: str,
+        message: OutboxMessage,
+    ) -> ScheduledReminder:
+        require_trusted_principal(principal)
+        if (
+            message.tenant_id != principal.tenant_id
+            or message.event.subject != reminder_id
+        ):
+            raise AssistantError(
+                ErrorCode.PERMISSION_DENIED,
+                "delivery mirror identity mismatch",
+                tenant_id=principal.tenant_id,
+            )
+        error = message.last_error
+        error_data = error.model_dump(mode="json") if error is not None else None
+        with self._db.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT payload
+                FROM {self._table("scheduled_reminders")}
+                WHERE tenant_id = %s AND reminder_id = %s
+                FOR UPDATE
+                """,
+                (principal.tenant_id, reminder_id),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                raise AssistantError(
+                    ErrorCode.NOT_FOUND,
+                    "scheduled reminder not found",
+                    tenant_id=principal.tenant_id,
+                )
+            job = ScheduledReminder.model_validate(
+                _upgrade_legacy_scheduled_reminder(_payload_from_row(row))
+            )
+            updated = ScheduledReminder.model_validate(
+                job.model_copy(
+                    update={
+                        "delivery_status": message.dispatch_status,
+                        "attempts": message.attempts,
+                        "next_attempt_at": message.next_attempt_at,
+                        "sending_at": message.sending_at,
+                        "published_at": message.published_at,
+                        "last_error": error,
+                        "sent": message.dispatch_status != OutboxStatus.pending,
+                    }
+                ).model_dump()
+            )
+            cursor.execute(
+                f"""
+                UPDATE {self._table("scheduled_reminders")}
+                SET delivery_status = %s,
+                    attempts = %s,
+                    next_attempt_at = %s,
+                    sending_at = %s,
+                    published_at = %s,
+                    last_error_category = %s,
+                    last_error_code = %s,
+                    last_error_provider_code = %s,
+                    last_error_at = %s,
+                    sent = %s,
+                    payload = %s::jsonb
+                WHERE tenant_id = %s AND reminder_id = %s
+                """,
+                (
+                    message.dispatch_status.value,
+                    message.attempts,
+                    message.next_attempt_at,
+                    message.sending_at,
+                    message.published_at,
+                    error_data["category"] if error_data else None,
+                    error_data["code"] if error_data else None,
+                    error_data["provider_code"] if error_data else None,
+                    error.occurred_at if error is not None else None,
+                    updated.sent,
+                    _json(updated.model_dump(mode="json")),
+                    principal.tenant_id,
+                    reminder_id,
+                ),
+            )
+            return updated
+
     def mark_sent(self, principal: Principal, reminder_id: str) -> ScheduledReminder:
+        """Legacy compatibility write; the durable worker does not call this."""
+
         require_trusted_principal(principal)
         with self._db.cursor() as cursor:
             cursor.execute(
@@ -1838,17 +2155,35 @@ class PostgresReminderScheduler(_PostgresStore):
                     tenant_id=principal.tenant_id,
                 )
             idempotency_key = _row_value(row, "idempotency_key", 0)
-            job = ScheduledReminder.model_validate(
+            stored = ScheduledReminder.model_validate(
                 _upgrade_legacy_scheduled_reminder(_payload_from_row(row, index=1))
-            ).model_copy(update={"sent": True})
+            )
+            published_at = datetime.now(UTC)
+            job = ScheduledReminder.model_validate(
+                stored.model_copy(
+                    update={
+                        "delivery_status": OutboxStatus.published,
+                        "published_at": published_at,
+                        "last_error": None,
+                        "sent": True,
+                    }
+                ).model_dump()
+            )
             cursor.execute(
                 f"""
                 UPDATE {self._table("scheduled_reminders")}
                 SET sent = true,
+                    delivery_status = 'published',
+                    published_at = %s,
+                    last_error_category = NULL,
+                    last_error_code = NULL,
+                    last_error_provider_code = NULL,
+                    last_error_at = NULL,
                     payload = %s::jsonb
                 WHERE tenant_id = %s AND idempotency_key = %s
                 """,
                 (
+                    published_at,
                     _json(job.model_dump(mode="json")),
                     principal.tenant_id,
                     idempotency_key,

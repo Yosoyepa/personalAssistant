@@ -7,7 +7,7 @@ real failure instead of being hidden by the known-gap marker.
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from threading import Barrier, Lock
 
 import pytest
@@ -27,6 +27,7 @@ from personal_assistant.adapters.persistence.in_memory import (
 from personal_assistant.adapters.persistence.in_memory_uow import (
     InMemoryReminderUnitOfWork,
 )
+from personal_assistant.application.dto.events import CloudEvent
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
 from personal_assistant.application.dto.runtime import AgentStatus
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
@@ -160,11 +161,13 @@ def worker(
     scheduler: ReminderScheduler,
     client: RecordingTelegramClient,
 ) -> ReminderWorker:
+    unit_of_work = scheduler._test_worker_uow
     return ReminderWorker(
         dispatcher=DispatchDueReminders(
-            scheduler=scheduler,
+            unit_of_work=unit_of_work,
             # A fresh adapter models another process or a restarted process.
             notifications=TelegramNotificationTool(client),
+            clock=lambda: NOW,
         ),
         approval_policy=RuntimeNotificationApprovalPolicy(
             approve_notifications=True,
@@ -176,7 +179,7 @@ def worker(
 
 
 def schedule_due(scheduler: ReminderScheduler, actor: Principal, *, key: str) -> None:
-    scheduler.schedule_before_event(
+    job = scheduler.schedule_before_event(
         actor,
         calendar_event_id=f"calendar-{key}",
         starts_at=NOW,
@@ -188,6 +191,31 @@ def schedule_due(scheduler: ReminderScheduler, actor: Principal, *, key: str) ->
         timezone="America/Bogota",
         source_event_id=f"event-{key}",
         payload_fingerprint="a" * 64,
+    )
+    outbox = InMemoryOutbox()
+    scheduler._test_worker_outbox = outbox
+    scheduler._test_worker_uow = InMemoryReminderUnitOfWork(
+        calendar=LocalCalendarTool(),
+        scheduler=scheduler,
+        event_store=InMemoryEventStore(),
+        outbox=outbox,
+        states=InMemoryWorkflowStateStore(),
+    )
+    outbox.add(
+        actor,
+        CloudEvent(
+            type="notification.requested",
+            source="test",
+            subject=job.reminder_id,
+            tenant_id=actor.tenant_id,
+            data={
+                "channel": "telegram",
+                "recipient": job.recipient,
+                "body": job.body,
+            },
+        ),
+        idempotency_key=f"{key}:outbox",
+        next_attempt_at=job.notify_at,
     )
 
 
@@ -302,11 +330,6 @@ def test_http_runtime_rejects_forged_principal_headers() -> None:
     assert response.json()["error"]["code"] == "authentication_required"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason="P0 worker gap: due reminders have no atomic claim, so two workers can deliver the same notification",
-)
 def test_two_workers_cannot_deliver_the_same_due_reminder() -> None:
     actor = principal()
     scheduler = RacingReminderScheduler()
@@ -326,24 +349,27 @@ def test_two_workers_cannot_deliver_the_same_due_reminder() -> None:
     assert len(client.messages) == 1, "the provider must observe exactly one delivery"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=(
-        "P0 worker durability gap: adapter idempotency is process-local, so restart after provider send "
-        "but before mark_sent redelivers"
-    ),
-)
 def test_worker_restart_after_provider_send_does_not_redeliver() -> None:
     actor = principal()
     scheduler = CrashOnceBeforeMarkSentScheduler()
     client = RecordingTelegramClient()
     schedule_due(scheduler, actor, key="restart-1")
 
-    with pytest.raises(SimulatedProcessCrash, match="after provider delivery"):
-        worker(scheduler, client).run_once(actor, now=NOW)
+    outbox = scheduler._test_worker_outbox
+    [claimed] = outbox.claim_due(actor, NOW, lease_seconds=10)
+    scheduler.mirror_delivery(actor, claimed.event.subject or "", claimed)
+    sending = outbox.mark_sending(
+        actor,
+        claimed.id,
+        claim_token=claimed.claim_token or "",
+        started_at=NOW,
+    )
+    scheduler.mirror_delivery(actor, sending.event.subject or "", sending)
+    client.messages.append(("chat-1", "provider accepted before crash"))
 
-    restarted_tick = worker(scheduler, client).run_once(actor, now=NOW)
+    restarted_tick = worker(scheduler, client).run_once(
+        actor, now=NOW + timedelta(seconds=10)
+    )
 
     if restarted_tick.sent_count > 1:
         raise RuntimeError(

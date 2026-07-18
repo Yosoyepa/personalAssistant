@@ -275,6 +275,7 @@ class InMemoryOutbox:
         limit: int = 10,
         owner: str = "local-worker",
         lease_seconds: int = 60,
+        event_type: str | None = None,
     ) -> list[OutboxMessage]:
         require_trusted_principal(principal)
         now = canonical_utc(now, field="now")
@@ -307,6 +308,8 @@ class InMemoryOutbox:
             )
             for key, message in candidates:
                 if key[0] != principal.tenant_id:
+                    continue
+                if event_type is not None and message.event.type != event_type:
                     continue
                 is_pending = message.dispatch_status == OutboxStatus.pending
                 is_expired_claim = (
@@ -354,6 +357,75 @@ class InMemoryOutbox:
             },
             increment_attempts=True,
         )
+
+    def mark_claim_failed(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        claim_token: str,
+        error: DeliveryError,
+    ) -> OutboxMessage:
+        return self._transition(
+            principal,
+            message_id,
+            claim_token=claim_token,
+            expected=OutboxStatus.claimed,
+            target=OutboxStatus.failed,
+            updates={
+                "claim_token": None,
+                "claim_owner": None,
+                "claimed_until": None,
+                "last_error": error,
+            },
+        )
+
+    def sweep_expired_sending(
+        self,
+        principal: Principal,
+        now: datetime,
+        *,
+        error: DeliveryError,
+        limit: int = 10,
+        event_type: str | None = None,
+    ) -> list[OutboxMessage]:
+        require_trusted_principal(principal)
+        now = canonical_utc(now, field="now")
+        if isinstance(limit, bool) or not isinstance(limit, int):
+            raise TypeError("limit must be an integer")
+        if not 1 <= limit <= MAX_CLAIM_LIMIT:
+            raise ValueError(f"limit must be between 1 and {MAX_CLAIM_LIMIT}")
+        swept: list[OutboxMessage] = []
+        with self._lock:
+            candidates = sorted(
+                self._messages_by_key.items(),
+                key=lambda item: (item[1].created_at, item[1].id),
+            )
+            for key, message in candidates:
+                if (
+                    key[0] != principal.tenant_id
+                    or (event_type is not None and message.event.type != event_type)
+                    or message.dispatch_status != OutboxStatus.sending
+                    or message.claimed_until is None
+                    or message.claimed_until > now
+                ):
+                    continue
+                updated = OutboxMessage.model_validate(
+                    message.model_copy(
+                        update={
+                            "dispatch_status": OutboxStatus.uncertain,
+                            "claim_token": None,
+                            "claim_owner": None,
+                            "claimed_until": None,
+                            "last_error": error,
+                        }
+                    ).model_dump()
+                )
+                self._messages_by_key[key] = updated
+                swept.append(updated.model_copy(deep=True))
+                if len(swept) >= limit:
+                    break
+        return swept
 
     def mark_published(
         self,
@@ -463,6 +535,75 @@ class InMemoryOutbox:
                 "sending_at": None,
                 "last_error": error,
             },
+        )
+
+    def resolve_uncertain_delivered(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        published_at: datetime,
+    ) -> OutboxMessage:
+        return self._operator_transition(
+            principal,
+            message_id,
+            target=OutboxStatus.published,
+            updates={
+                "published_at": canonical_utc(published_at, field="published_at"),
+                "last_error": None,
+            },
+        )
+
+    def resolve_uncertain_retry(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        next_attempt_at: datetime,
+    ) -> OutboxMessage:
+        return self._operator_transition(
+            principal,
+            message_id,
+            target=OutboxStatus.pending,
+            updates={
+                "next_attempt_at": canonical_utc(
+                    next_attempt_at, field="next_attempt_at"
+                ),
+                "sending_at": None,
+                "published_at": None,
+            },
+        )
+
+    def _operator_transition(
+        self,
+        principal: Principal,
+        message_id: str,
+        *,
+        target: OutboxStatus,
+        updates: dict[str, object],
+    ) -> OutboxMessage:
+        require_trusted_principal(principal)
+        with self._lock:
+            for key, message in self._messages_by_key.items():
+                if key[0] != principal.tenant_id or message.id != message_id:
+                    continue
+                if message.dispatch_status != OutboxStatus.uncertain:
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "outbox message is not uncertain",
+                        tenant_id=principal.tenant_id,
+                    )
+                updated = OutboxMessage.model_validate(
+                    message.model_copy(
+                        update={"dispatch_status": target, **updates}
+                    ).model_dump()
+                )
+                self._messages_by_key[key] = updated
+                return updated.model_copy(deep=True)
+        raise AssistantError(
+            ErrorCode.NOT_FOUND,
+            "outbox message not found",
+            tenant_id=principal.tenant_id,
         )
 
     def _terminal_error(
