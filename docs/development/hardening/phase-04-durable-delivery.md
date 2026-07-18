@@ -4,14 +4,14 @@
 
 | Field | Value |
 |---|---|
-| Status | `LOCAL_ACCEPTED` |
+| Status | `MERGED` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
 | Phase branch | `codex/phase-4-durable-delivery` |
 | Base commit | `a0117ec` |
 | Accepted implementation head | `442e3df` |
 | Local acceptance commit | `4ae3001` |
-| Pull request | pending |
-| Merge commit | pending |
+| Pull request | [#11](https://github.com/Yosoyepa/personalAssistant/pull/11) |
+| Merge commit | `23fc2b4` |
 | Date | `2026-07-17` |
 
 ## Objective and acceptance
@@ -152,6 +152,21 @@ does not expose module-level SQL constants or record-serializer helpers, and an
 import-order isolation probe skips once psycopg has already been loaded by the
 real PostgreSQL corpus. There are no expected failures in the delivery or
 atomicity invariants.
+
+## Remote evidence
+
+GitHub accepted phase head `21f4286` after all protected checks completed:
+
+- `quality`: pass;
+- `tests (3.11)`: pass with PostgreSQL 16;
+- `tests (3.12)`: pass with PostgreSQL 16 and the 90% changed-line gate;
+- `security`: pass;
+- `postgres-integration`: pass.
+
+PR #11 was mergeable and clean under branch protection. GitHub created merge
+commit `23fc2b4` with parents `a0117ec` and `21f4286`, then deleted the remote
+phase branch. The repository retained merge commits while squash, rebase,
+force-push, and deletion of `main` remained disabled.
 
 ## Adversarial and recovery evidence
 
