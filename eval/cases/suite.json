@@ -3,7 +3,8 @@
   "suiteId": "personal-assistant-release-gate",
   "caseFiles": [
     "legacy-contracts.v1.json",
-    "temporal.v1.json"
+    "temporal.v1.json",
+    "idempotency.v2.json"
   ],
   "legacySource": {
     "path": "../cases.json",
