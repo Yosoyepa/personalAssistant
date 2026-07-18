@@ -8,6 +8,7 @@ from pathlib import Path
 from personal_assistant.evals.executors.security_boundary_v1 import (
     ExpectedModel,
     InputModel,
+    _response_safety,
     execute,
 )
 from personal_assistant.evals.schema import CaseFile
@@ -110,7 +111,7 @@ def test_security_privacy_authority_and_preapproval_effect_invariants() -> None:
     }
     assert reminder["authority"] == {
         "tenant": "fixture-tenant",
-        "principal": "456",
+        "principal": "947362819",
         "tier": "P5",
         "provider": "telegram",
     }
@@ -122,3 +123,14 @@ def test_security_privacy_authority_and_preapproval_effect_invariants() -> None:
     for case in _cases():
         if case["input"]["scenario"] == "trace-redaction":
             assert case["expected"]["authority"] is None
+
+
+def test_numeric_actor_sentinel_does_not_match_trace_id_fragment() -> None:
+    class Response:
+        def __init__(self, text: str) -> None:
+            self.text = text
+
+    trace_fragment = _response_safety(Response('{"trace_id":"abc456def"}'), pii_sentinels=("456",))
+    echoed_actor = _response_safety(Response('{"message":"actor 456 denied"}'), pii_sentinels=("456",))
+    assert trace_fragment.pii_leaked is False
+    assert echoed_actor.pii_leaked is True
