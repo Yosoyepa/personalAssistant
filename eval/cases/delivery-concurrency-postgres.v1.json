@@ -1,0 +1,2107 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "delivery-skip-locked-2x1-2",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "skip-locked-2-workers-1-limit",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "messageCount": 2,
+        "workers": 2,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "observation": "skip-locked-disjoint",
+        "finalStatus": "claimed",
+        "claimedCount": 2,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "multiworker-disjoint-claims",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-skip-locked-2x2-4",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "skip-locked-2-workers-2-limit",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "messageCount": 4,
+        "workers": 2,
+        "claimLimit": 2,
+        "leaseSeconds": 10,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "observation": "skip-locked-disjoint",
+        "finalStatus": "claimed",
+        "claimedCount": 4,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "multiworker-disjoint-claims",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-skip-locked-3x2-6",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "skip-locked-3-workers-2-limit",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "messageCount": 6,
+        "workers": 3,
+        "claimLimit": 2,
+        "leaseSeconds": 10,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "observation": "skip-locked-disjoint",
+        "finalStatus": "claimed",
+        "claimedCount": 6,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "multiworker-disjoint-claims",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-skip-locked-4x2-8",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "skip-locked-4-workers-2-limit",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "messageCount": 8,
+        "workers": 4,
+        "claimLimit": 2,
+        "leaseSeconds": 10,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "observation": "skip-locked-disjoint",
+        "finalStatus": "claimed",
+        "claimedCount": 8,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "multiworker-disjoint-claims",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-skip-locked-3x1-3",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "skip-locked-3-workers-1-limit",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "messageCount": 3,
+        "workers": 3,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 5
+      },
+      "expected": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "observation": "skip-locked-disjoint",
+        "finalStatus": "claimed",
+        "claimedCount": 3,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "multiworker-disjoint-claims",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-skip-locked-3x4-12",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "skip-locked-3-workers-4-limit",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "messageCount": 12,
+        "workers": 3,
+        "claimLimit": 4,
+        "leaseSeconds": 10,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 6
+      },
+      "expected": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "observation": "skip-locked-disjoint",
+        "finalStatus": "claimed",
+        "claimedCount": 12,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "multiworker-disjoint-claims",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-skip-locked-4x4-16",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "skip-locked-4-workers-4-limit",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "messageCount": 16,
+        "workers": 4,
+        "claimLimit": 4,
+        "leaseSeconds": 10,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 7
+      },
+      "expected": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "observation": "skip-locked-disjoint",
+        "finalStatus": "claimed",
+        "claimedCount": 16,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "multiworker-disjoint-claims",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-skip-locked-5x3-15",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "skip-locked-5-workers-3-limit",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "messageCount": 15,
+        "workers": 5,
+        "claimLimit": 3,
+        "leaseSeconds": 10,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 8
+      },
+      "expected": {
+        "scenario": "claim-partition",
+        "operation": "claim",
+        "observation": "skip-locked-disjoint",
+        "finalStatus": "claimed",
+        "claimedCount": 15,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "multiworker-disjoint-claims",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-lease-reclaim-offset-0",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "lease-boundary-0",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "observation": "live-lease-protected",
+        "finalStatus": "claimed",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "restart-reclaim",
+        "fencingObservation": "original-token-retained",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-lease-reclaim-offset-9",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "lease-boundary-9",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 9,
+        "retryAfter": null,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "observation": "live-lease-protected",
+        "finalStatus": "claimed",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "restart-reclaim",
+        "fencingObservation": "original-token-retained",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-lease-reclaim-offset-10",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "lease-boundary-10",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 10,
+        "retryAfter": null,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "observation": "expired-lease-reclaimed",
+        "finalStatus": "claimed",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "restart-reclaim",
+        "fencingObservation": "new-token-issued",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-lease-reclaim-offset-11",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "lease-boundary-11",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 11,
+        "retryAfter": null,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "observation": "expired-lease-reclaimed",
+        "finalStatus": "claimed",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "restart-reclaim",
+        "fencingObservation": "new-token-issued",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-lease-reclaim-offset-20",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "lease-boundary-20",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 20,
+        "retryAfter": null,
+        "variant": 5
+      },
+      "expected": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "observation": "expired-lease-reclaimed",
+        "finalStatus": "claimed",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "restart-reclaim",
+        "fencingObservation": "new-token-issued",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-lease-reclaim-offset-30",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "lease-boundary-30",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 30,
+        "retryAfter": null,
+        "variant": 6
+      },
+      "expected": {
+        "scenario": "lease-reclaim",
+        "operation": "claim",
+        "observation": "expired-lease-reclaimed",
+        "finalStatus": "claimed",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "restart-reclaim",
+        "fencingObservation": "new-token-issued",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-transition-publish",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "transition-publish",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "transition",
+        "operation": "publish",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "transition",
+        "operation": "publish",
+        "observation": "production-transition-committed",
+        "finalStatus": "published",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-transition-fail",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "transition-fail",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "transition",
+        "operation": "fail",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "transition",
+        "operation": "fail",
+        "observation": "production-transition-committed",
+        "finalStatus": "failed",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-transition-uncertain",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "transition-uncertain",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "transition",
+        "operation": "uncertain",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "transition",
+        "operation": "uncertain",
+        "observation": "production-transition-committed",
+        "finalStatus": "uncertain",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-transition-reschedule",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "transition-reschedule",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "transition",
+        "operation": "reschedule",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 45,
+        "retryAfter": null,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "transition",
+        "operation": "reschedule",
+        "observation": "production-transition-committed",
+        "finalStatus": "pending",
+        "claimedCount": 0,
+        "pendingCount": 1,
+        "attemptsTotal": 1,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 45,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-transition-release",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "transition-release",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "transition",
+        "operation": "release",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 5
+      },
+      "expected": {
+        "scenario": "transition",
+        "operation": "release",
+        "observation": "production-transition-committed",
+        "finalStatus": "pending",
+        "claimedCount": 0,
+        "pendingCount": 1,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-transition-claim-failed",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "transition-claim-failed",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "transition",
+        "operation": "claim-failed",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 6
+      },
+      "expected": {
+        "scenario": "transition",
+        "operation": "claim-failed",
+        "observation": "production-transition-committed",
+        "finalStatus": "failed",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-stale-token-publish",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "stale-token-publish",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "stale-token",
+        "operation": "publish",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "stale-token",
+        "operation": "publish",
+        "observation": "stale-token-rejected",
+        "finalStatus": "claimed",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "stale-token-fenced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-stale-token-fail",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "stale-token-fail",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "stale-token",
+        "operation": "fail",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "stale-token",
+        "operation": "fail",
+        "observation": "stale-token-rejected",
+        "finalStatus": "claimed",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "stale-token-fenced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-stale-token-uncertain",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "stale-token-uncertain",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "stale-token",
+        "operation": "uncertain",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "stale-token",
+        "operation": "uncertain",
+        "observation": "stale-token-rejected",
+        "finalStatus": "claimed",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "stale-token-fenced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-stale-token-reschedule",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "stale-token-reschedule",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "stale-token",
+        "operation": "reschedule",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "stale-token",
+        "operation": "reschedule",
+        "observation": "stale-token-rejected",
+        "finalStatus": "claimed",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "stale-token-fenced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-stale-token-release",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "stale-token-release",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "stale-token",
+        "operation": "release",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 5
+      },
+      "expected": {
+        "scenario": "stale-token",
+        "operation": "release",
+        "observation": "stale-token-rejected",
+        "finalStatus": "claimed",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "stale-token-fenced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-stale-token-claim-failed",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "stale-token-claim-failed",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "stale-token",
+        "operation": "claim-failed",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 6
+      },
+      "expected": {
+        "scenario": "stale-token",
+        "operation": "claim-failed",
+        "observation": "stale-token-rejected",
+        "finalStatus": "claimed",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "stale-token-fenced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-sweep-1-lease-10-offset-0",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "sending-sweep-10-0",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "observation": "sending-lease-protected",
+        "finalStatus": "sending",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 0,
+        "concurrencyObservation": "crash-recovery-sweep",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-sweep-1-lease-10-offset-9",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "sending-sweep-10-9",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 9,
+        "retryAfter": null,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "observation": "sending-lease-protected",
+        "finalStatus": "sending",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 0,
+        "concurrencyObservation": "crash-recovery-sweep",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-sweep-1-lease-10-offset-10",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "sending-sweep-10-10",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 10,
+        "retryAfter": null,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "observation": "sending-swept-uncertain",
+        "finalStatus": "uncertain",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 0,
+        "concurrencyObservation": "crash-recovery-sweep",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-sweep-2-lease-10-offset-11",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "sending-sweep-10-11",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "messageCount": 2,
+        "workers": 1,
+        "claimLimit": 2,
+        "leaseSeconds": 10,
+        "offsetSeconds": 11,
+        "retryAfter": null,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "observation": "sending-swept-uncertain",
+        "finalStatus": "uncertain",
+        "claimedCount": 2,
+        "pendingCount": 0,
+        "attemptsTotal": 2,
+        "providerCalls": 0,
+        "concurrencyObservation": "crash-recovery-sweep",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-sweep-2-lease-60-offset-59",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "sending-sweep-60-59",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "messageCount": 2,
+        "workers": 1,
+        "claimLimit": 2,
+        "leaseSeconds": 60,
+        "offsetSeconds": 59,
+        "retryAfter": null,
+        "variant": 5
+      },
+      "expected": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "observation": "sending-lease-protected",
+        "finalStatus": "sending",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 2,
+        "providerCalls": 0,
+        "concurrencyObservation": "crash-recovery-sweep",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-sweep-2-lease-60-offset-60",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "sending-sweep-60-60",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "messageCount": 2,
+        "workers": 1,
+        "claimLimit": 2,
+        "leaseSeconds": 60,
+        "offsetSeconds": 60,
+        "retryAfter": null,
+        "variant": 6
+      },
+      "expected": {
+        "scenario": "sweep-sending",
+        "operation": "uncertain",
+        "observation": "sending-swept-uncertain",
+        "finalStatus": "uncertain",
+        "claimedCount": 2,
+        "pendingCount": 0,
+        "attemptsTotal": 2,
+        "providerCalls": 0,
+        "concurrencyObservation": "crash-recovery-sweep",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-dispatch-success-1",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-success-1",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "dispatcher-outcome",
+        "operation": "success",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "dispatcher-outcome",
+        "operation": "success",
+        "observation": "invalid-success-metadata-recorded-uncertain",
+        "finalStatus": "uncertain",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 0,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-dispatch-success-2",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-success-2",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "dispatcher-outcome",
+        "operation": "success",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 2,
+        "providerCodeMode": "absent"
+      },
+      "expected": {
+        "scenario": "dispatcher-outcome",
+        "operation": "success",
+        "observation": "success-without-provider-code-durably-recorded",
+        "finalStatus": "published",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 0,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-dispatch-permanent-3",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-permanent-3",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "dispatcher-outcome",
+        "operation": "permanent",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "dispatcher-outcome",
+        "operation": "permanent",
+        "observation": "provider-result-durably-recorded",
+        "finalStatus": "failed",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 0,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-dispatch-unknown-4",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-unknown-4",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "dispatcher-outcome",
+        "operation": "unknown",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "dispatcher-outcome",
+        "operation": "unknown",
+        "observation": "provider-result-durably-recorded",
+        "finalStatus": "uncertain",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 0,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-dispatch-transient-5",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-transient-5",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "dispatcher-outcome",
+        "operation": "transient",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": 1,
+        "variant": 5
+      },
+      "expected": {
+        "scenario": "dispatcher-outcome",
+        "operation": "transient",
+        "observation": "provider-result-durably-recorded",
+        "finalStatus": "pending",
+        "claimedCount": 0,
+        "pendingCount": 1,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 30,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-dispatch-transient-6",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-transient-6",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "dispatcher-outcome",
+        "operation": "transient",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": 30,
+        "variant": 6
+      },
+      "expected": {
+        "scenario": "dispatcher-outcome",
+        "operation": "transient",
+        "observation": "provider-result-durably-recorded",
+        "finalStatus": "pending",
+        "claimedCount": 0,
+        "pendingCount": 1,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 30,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-dispatch-transient-7",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-transient-7",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "dispatcher-outcome",
+        "operation": "transient",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": 90,
+        "variant": 7
+      },
+      "expected": {
+        "scenario": "dispatcher-outcome",
+        "operation": "transient",
+        "observation": "provider-result-durably-recorded",
+        "finalStatus": "pending",
+        "claimedCount": 0,
+        "pendingCount": 1,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 90,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-dispatch-transient-8",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-transient-8",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "dispatcher-outcome",
+        "operation": "transient",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": 240,
+        "variant": 8
+      },
+      "expected": {
+        "scenario": "dispatcher-outcome",
+        "operation": "transient",
+        "observation": "provider-result-durably-recorded",
+        "finalStatus": "pending",
+        "claimedCount": 0,
+        "pendingCount": 1,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 240,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-provider-crash-lease-10",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-crash-10",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "provider-crash",
+        "operation": "crash-before-response",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 10,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "provider-crash",
+        "operation": "crash-before-response",
+        "observation": "crash-swept-without-resend",
+        "finalStatus": "uncertain",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 0,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-provider-crash-lease-30",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-crash-30",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "provider-crash",
+        "operation": "crash-before-response",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 30,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "provider-crash",
+        "operation": "crash-before-response",
+        "observation": "crash-swept-without-resend",
+        "finalStatus": "uncertain",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 0,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-provider-crash-lease-60",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-crash-60",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "provider-crash",
+        "operation": "crash-before-response",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 3
+      },
+      "expected": {
+        "scenario": "provider-crash",
+        "operation": "crash-before-response",
+        "observation": "crash-swept-without-resend",
+        "finalStatus": "uncertain",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 0,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-provider-crash-lease-120",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "provider-crash-120",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "provider-crash",
+        "operation": "crash-before-response",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 120,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 4
+      },
+      "expected": {
+        "scenario": "provider-crash",
+        "operation": "crash-before-response",
+        "observation": "crash-swept-without-resend",
+        "finalStatus": "uncertain",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 1,
+        "concurrencyObservation": "provider-io-after-sending-commit",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 0,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-resolution-delivered",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "uncertain-resolution-delivered",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "resolution",
+        "operation": "delivered",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 120,
+        "retryAfter": null,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "resolution",
+        "operation": "delivered",
+        "observation": "p5-resolution-committed",
+        "finalStatus": "published",
+        "claimedCount": 0,
+        "pendingCount": 0,
+        "attemptsTotal": 1,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-resolution-retry",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "uncertain-resolution-retry",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "resolution",
+        "operation": "retry",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 120,
+        "retryAfter": null,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "resolution",
+        "operation": "retry",
+        "observation": "p5-resolution-committed",
+        "finalStatus": "pending",
+        "claimedCount": 0,
+        "pendingCount": 1,
+        "attemptsTotal": 1,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "active-token-enforced",
+        "scheduleDeltaSeconds": 120,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-event-filter-1",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "event-type-filter-1",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "event-filter",
+        "operation": "filter",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "event-filter",
+        "operation": "filter",
+        "observation": "foreign-event-type-ignored",
+        "finalStatus": "pending",
+        "claimedCount": 0,
+        "pendingCount": 1,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "event-type-filter-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-event-filter-4",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "event-type-filter-4",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "event-filter",
+        "operation": "filter",
+        "messageCount": 4,
+        "workers": 1,
+        "claimLimit": 4,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 2
+      },
+      "expected": {
+        "scenario": "event-filter",
+        "operation": "filter",
+        "observation": "foreign-event-type-ignored",
+        "finalStatus": "pending",
+        "claimedCount": 0,
+        "pendingCount": 4,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "event-type-filter-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-tenant-fence-1",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "tenant-fence-1",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "tenant-fence",
+        "operation": "fence",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 1
+      },
+      "expected": {
+        "scenario": "tenant-fence",
+        "operation": "fence",
+        "observation": "cross-tenant-transition-rejected",
+        "finalStatus": "claimed",
+        "claimedCount": 1,
+        "pendingCount": 0,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "tenant-boundary-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    },
+    {
+      "id": "delivery-tenant-fence-2",
+      "category": "delivery-concurrency",
+      "tier": "failure-mode",
+      "failureMode": "tenant-fence-2",
+      "contractRefs": [
+        "OUTBOX-DELIVERY",
+        "PG16-REAL"
+      ],
+      "executor": "outbox.delivery.postgres.v1",
+      "input": {
+        "scenario": "tenant-fence",
+        "operation": "fence",
+        "messageCount": 1,
+        "workers": 1,
+        "claimLimit": 1,
+        "leaseSeconds": 60,
+        "offsetSeconds": 0,
+        "retryAfter": null,
+        "variant": 2,
+        "tenantProbe": "claim"
+      },
+      "expected": {
+        "scenario": "tenant-fence",
+        "operation": "fence",
+        "observation": "cross-tenant-claim-empty",
+        "finalStatus": "pending",
+        "claimedCount": 0,
+        "pendingCount": 1,
+        "attemptsTotal": 0,
+        "providerCalls": 0,
+        "concurrencyObservation": "single-worker",
+        "fencingObservation": "tenant-boundary-enforced",
+        "scheduleDeltaSeconds": null,
+        "schemaLifecycle": "created-migrated-dropped"
+      },
+      "tags": [
+        "postgres",
+        "outbox",
+        "concurrency",
+        "reliability"
+      ]
+    }
+  ]
+}

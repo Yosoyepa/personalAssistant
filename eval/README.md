@@ -55,3 +55,17 @@ must use a dedicated executor and must never extend this adapter.
 New production failures become permanent executable regression cases. Do not
 add placeholders, skips, generated expected values, or LLM judges for behavior
 that code can verify.
+
+## PostgreSQL reliability corpus
+
+The `atomicity-recovery` and `delivery-concurrency` categories are blocking
+integration gates. They require PostgreSQL 16 plus `psycopg`, and read only
+`TEST_POSTGRES_DSN`. The DSN may be passwordless while `PGPASSWORD` is supplied
+to the process environment. A missing DSN is an explicit sanitized failure,
+never a skip or an empty pass.
+
+Every case creates a cryptographically unique `eval_reliability_*` schema,
+runs the repository migrations against it, executes production UoW/outbox
+contracts, and drops only that validated schema. These cases never contact an
+LLM or Telegram; deterministic finite provider scripts stand in only for the
+external I/O boundary, while all critical persistence is real PostgreSQL.
