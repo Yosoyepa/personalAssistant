@@ -6,13 +6,21 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 
-from personal_assistant.application.ports.notifications import NotificationPort, NotificationRequest
-from personal_assistant.application.ports.scheduler import ReminderSchedulerWorkerPort, ScheduledReminder
+from personal_assistant.application.ports.notifications import (
+    NotificationPort,
+    NotificationRequest,
+)
+from personal_assistant.application.ports.scheduler import (
+    ReminderSchedulerWorkerPort,
+    ScheduledReminder,
+)
 from personal_assistant.domain.common.exceptions import AssistantError
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant
 
-ReminderNotificationApprovalProvider = Callable[[Principal, ScheduledReminder], ApprovalGrant | None]
+ReminderNotificationApprovalProvider = Callable[
+    [Principal, ScheduledReminder], ApprovalGrant | None
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,12 +60,18 @@ class DispatchDueReminders:
 
         due_jobs = self.scheduler.due(principal, now)
         if approval is not None and len(due_jobs) > 1:
-            raise ValueError("a single approval grant cannot dispatch multiple reminder notifications")
+            raise ValueError(
+                "a single approval grant cannot dispatch multiple reminder notifications"
+            )
 
         sent_ids: list[str] = []
         skipped_ids: list[str] = []
         for job in due_jobs:
-            job_approval = approval_provider(principal, job) if approval_provider is not None else approval
+            job_approval = (
+                approval_provider(principal, job)
+                if approval_provider is not None
+                else approval
+            )
             if job_approval is None:
                 skipped_ids.append(job.reminder_id)
                 continue
@@ -78,6 +92,9 @@ class DispatchDueReminders:
             except Exception:
                 skipped_ids.append(job.reminder_id)
                 continue
+            if result.outcome != "success" or result.notification_id is None:
+                skipped_ids.append(job.reminder_id)
+                continue
             self.scheduler.mark_sent(principal, job.reminder_id)
             sent_ids.append(result.notification_id)
         return ReminderDispatchOutcome(
@@ -86,6 +103,8 @@ class DispatchDueReminders:
             skipped_reminder_ids=tuple(skipped_ids),
         )
 
-    def run(self, principal: Principal, now: datetime, approval: ApprovalGrant) -> list[str]:
+    def run(
+        self, principal: Principal, now: datetime, approval: ApprovalGrant
+    ) -> list[str]:
         outcome = self.dispatch(principal, now, approval=approval)
         return list(outcome.sent_notification_ids)
