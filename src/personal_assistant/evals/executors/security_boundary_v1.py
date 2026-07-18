@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import UTC, datetime, tzinfo
 from typing import Any, Literal, cast
 from unittest.mock import patch
@@ -23,6 +24,9 @@ _SECRET = "test_webhook_secret"
 _TOKEN = "test_local_token"
 _TENANT = "fixture-tenant"
 _PRINCIPAL = "fixture-user"
+_ALLOWED_ACTOR = "947362819"
+_DENIED_ACTOR = "836495172"
+_CHAT_ID = "765432198"
 
 _VARIANTS = {
     "local-reject": {
@@ -155,7 +159,7 @@ def _settings(**overrides: object) -> AppSettings:
         "local_auth_principal_id": _PRINCIPAL,
         "local_auth_permission_tier": PermissionTier.P5,
         "telegram_webhook_secret": _SECRET,
-        "telegram_allowed_user_ids": frozenset({"456"}),
+        "telegram_allowed_user_ids": frozenset({_ALLOWED_ACTOR}),
         "reminder_worker_enabled": False,
     }
     values.update(overrides)
@@ -187,10 +191,10 @@ def _runtime_payload() -> dict[str, object]:
     return {
         "message_id": "fixture-message",
         "source_event_id": "fixture-event",
-        "conversation_id": "fixture-chat",
+        "conversation_id": _CHAT_ID,
         "text": "recordarme manana a las 17 cerrar caja",
         "channel": "telegram",
-        "recipient": "fixture-chat",
+        "recipient": _CHAT_ID,
         "now": "2026-06-20T12:00:00+00:00",
         "timezone": "America/Bogota",
     }
@@ -204,11 +208,19 @@ def _response_safety(
     pii_sentinels: tuple[str, ...] = (),
 ) -> ResponseSafety:
     text = getattr(response, "text")
+
+    def echoed(sentinel: str) -> bool:
+        if sentinel.isdecimal():
+            return re.search(
+                rf"(?<![A-Za-z0-9]){re.escape(sentinel)}(?![A-Za-z0-9])", text
+            ) is not None
+        return sentinel in text
+
     return ResponseSafety(
         secret_leaked=any(
             sentinel in text for sentinel in (_SECRET, _TOKEN, *secret_sentinels)
         ),
-        pii_leaked=any(sentinel in text for sentinel in pii_sentinels),
+        pii_leaked=any(echoed(sentinel) for sentinel in pii_sentinels),
         command=command,
     )
 
@@ -261,7 +273,7 @@ def _local_reject(variant: str) -> ExpectedModel:
             secret_sentinels=("wrong-token",),
             pii_sentinels=(
                 "fixture-message",
-                "fixture-chat",
+                _CHAT_ID,
                 "recordarme manana a las 17 cerrar caja",
                 "attacker",
                 "victim",
@@ -334,7 +346,7 @@ def _local_authority(variant: str) -> ExpectedModel:
 def _webhook_payload(actor: str | None, *, reminder: bool = False) -> dict[str, object]:
     message: dict[str, object] = {
         "message_id": 42,
-        "chat": {"id": "fixture-chat"},
+        "chat": {"id": _CHAT_ID},
         "text": "/recordar recuérdame mañana a las 17 cerrar caja"
         if reminder
         else "/help",
@@ -347,10 +359,10 @@ def _webhook_payload(actor: str | None, *, reminder: bool = False) -> dict[str, 
 def _webhook_reject(variant: str) -> ExpectedModel:
     secret, allowlist, headers = (
         _SECRET,
-        frozenset({"456"}),
+        frozenset({_ALLOWED_ACTOR}),
         {"X-Telegram-Bot-Api-Secret-Token": _SECRET},
     )
-    actor: str | None = "456"
+    actor: str | None = _ALLOWED_ACTOR
     if variant == "missing-secret":
         headers = {}
     elif variant == "wrong-secret":
@@ -360,7 +372,7 @@ def _webhook_reject(variant: str) -> ExpectedModel:
     elif variant == "empty-allowlist":
         allowlist = frozenset()
     elif variant == "denied-actor":
-        actor = "999"
+        actor = _DENIED_ACTOR
     elif variant == "missing-actor":
         actor = None
     container = build_container()
@@ -383,7 +395,7 @@ def _webhook_reject(variant: str) -> ExpectedModel:
         response=_response_safety(
             response,
             secret_sentinels=("wrong-secret",),
-            pii_sentinels=("fixture-chat", "456", "999", "/help"),
+            pii_sentinels=(_CHAT_ID, _ALLOWED_ACTOR, _DENIED_ACTOR, "/help"),
         ),
         redaction=None,
     )
@@ -419,13 +431,13 @@ def _webhook_allow(variant: str) -> ExpectedModel:
             response = client.post(
                 "/webhooks/telegram",
                 headers={"X-Telegram-Bot-Api-Secret-Token": _SECRET},
-                json=_webhook_payload("456", reminder=True),
+                json=_webhook_payload(_ALLOWED_ACTOR, reminder=True),
             )
     else:
         response = client.post(
             "/webhooks/telegram",
             headers={"X-Telegram-Bot-Api-Secret-Token": _SECRET},
-            json=_webhook_payload("456"),
+            json=_webhook_payload(_ALLOWED_ACTOR),
         )
     body = response.json()
     [principal] = recorded
@@ -453,7 +465,7 @@ def _webhook_allow(variant: str) -> ExpectedModel:
         response=_response_safety(
             response,
             body.get("command"),
-            pii_sentinels=("fixture-chat", "456", "recuérdame"),
+            pii_sentinels=(_CHAT_ID, _ALLOWED_ACTOR, "recuérdame"),
         ),
         redaction=None,
     )
