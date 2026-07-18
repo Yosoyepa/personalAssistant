@@ -1,0 +1,3336 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "idem-v2-replay-01",
+      "category": "replay",
+      "tier": "golden",
+      "failureMode": "same-event-same-payload-reuses-workflow",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "replayed",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "replay",
+        "normalization"
+      ]
+    },
+    {
+      "id": "idem-v2-replay-02",
+      "category": "replay",
+      "tier": "golden",
+      "failureMode": "same-event-same-payload-reuses-workflow",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": " tenant-a ",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "replayed",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "replay",
+        "normalization"
+      ]
+    },
+    {
+      "id": "idem-v2-replay-03",
+      "category": "replay",
+      "tier": "golden",
+      "failureMode": "same-event-same-payload-reuses-workflow",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": " TELEGRAM ",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "replayed",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "replay",
+        "normalization"
+      ]
+    },
+    {
+      "id": "idem-v2-replay-04",
+      "category": "replay",
+      "tier": "golden",
+      "failureMode": "same-event-same-payload-reuses-workflow",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram ",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "replayed",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "replay",
+        "normalization"
+      ]
+    },
+    {
+      "id": "idem-v2-replay-05",
+      "category": "replay",
+      "tier": "golden",
+      "failureMode": "same-event-same-payload-reuses-workflow",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": " chat-1 ",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "replayed",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "replay",
+        "normalization"
+      ]
+    },
+    {
+      "id": "idem-v2-replay-06",
+      "category": "replay",
+      "tier": "golden",
+      "failureMode": "same-event-same-payload-reuses-workflow",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": " event-42 ",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "replayed",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "replay",
+        "normalization"
+      ]
+    },
+    {
+      "id": "idem-v2-replay-07",
+      "category": "replay",
+      "tier": "golden",
+      "failureMode": "same-event-same-payload-reuses-workflow",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": " recordar clase ",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "replayed",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "replay",
+        "normalization"
+      ]
+    },
+    {
+      "id": "idem-v2-replay-08",
+      "category": "replay",
+      "tier": "golden",
+      "failureMode": "same-event-same-payload-reuses-workflow",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": " chat-1 ",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "replayed",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "replay",
+        "normalization"
+      ]
+    },
+    {
+      "id": "idem-v2-replay-09",
+      "category": "replay",
+      "tier": "golden",
+      "failureMode": "same-event-same-payload-reuses-workflow",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": " UTC "
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "replayed",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "replay",
+        "normalization"
+      ]
+    },
+    {
+      "id": "idem-v2-tenant-isolation-01",
+      "category": "tenant",
+      "tier": "failure-mode",
+      "failureMode": "tenant-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-b",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "tenant",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-tenant-isolation-02",
+      "category": "tenant",
+      "tier": "failure-mode",
+      "failureMode": "tenant-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-prod",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "tenant",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-tenant-isolation-03",
+      "category": "tenant",
+      "tier": "failure-mode",
+      "failureMode": "tenant-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant:blue",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "tenant",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-tenant-isolation-04",
+      "category": "tenant",
+      "tier": "failure-mode",
+      "failureMode": "tenant-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-004",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "tenant",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-channel-isolation-01",
+      "category": "channel",
+      "tier": "failure-mode",
+      "failureMode": "channel-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "whatsapp",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "channel",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-channel-isolation-02",
+      "category": "channel",
+      "tier": "failure-mode",
+      "failureMode": "channel-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "signal",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "channel",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-channel-isolation-03",
+      "category": "channel",
+      "tier": "failure-mode",
+      "failureMode": "channel-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram-v2",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "channel",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-channel-isolation-04",
+      "category": "channel",
+      "tier": "failure-mode",
+      "failureMode": "channel-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "email",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "channel",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-actor-isolation-01",
+      "category": "actor",
+      "tier": "failure-mode",
+      "failureMode": "actor-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-2",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "actor",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-actor-isolation-02",
+      "category": "actor",
+      "tier": "failure-mode",
+      "failureMode": "actor-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "user-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "actor",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-actor-isolation-03",
+      "category": "actor",
+      "tier": "failure-mode",
+      "failureMode": "actor-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "actor:1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "actor",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-actor-isolation-04",
+      "category": "actor",
+      "tier": "failure-mode",
+      "failureMode": "actor-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "principal-004",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "actor",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-conversation-isolation-01",
+      "category": "conversation",
+      "tier": "failure-mode",
+      "failureMode": "conversation-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-2",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conversation",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-conversation-isolation-02",
+      "category": "conversation",
+      "tier": "failure-mode",
+      "failureMode": "conversation-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat:1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conversation",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-conversation-isolation-03",
+      "category": "conversation",
+      "tier": "failure-mode",
+      "failureMode": "conversation-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "dm-004",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conversation",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-conversation-isolation-04",
+      "category": "conversation",
+      "tier": "failure-mode",
+      "failureMode": "conversation-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "thread-99",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conversation",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-event-isolation-01",
+      "category": "event",
+      "tier": "failure-mode",
+      "failureMode": "event-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-43",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "event",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-event-isolation-02",
+      "category": "event",
+      "tier": "failure-mode",
+      "failureMode": "event-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event:42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "event",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-event-isolation-03",
+      "category": "event",
+      "tier": "failure-mode",
+      "failureMode": "event-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "message-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "event",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-event-isolation-04",
+      "category": "event",
+      "tier": "failure-mode",
+      "failureMode": "event-dimension-must-prevent-key-collision",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "update-004",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "event",
+        "isolation"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-01",
+      "category": "payload-fingerprint",
+      "tier": "regression",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar pagar arriendo",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "text"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-02",
+      "category": "payload-fingerprint",
+      "tier": "regression",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar pagar servicios",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "text"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-03",
+      "category": "payload-fingerprint",
+      "tier": "failure-mode",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase ma\u00f1ana",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "text"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-04",
+      "category": "payload-fingerprint",
+      "tier": "failure-mode",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase a las 17",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "text"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-05",
+      "category": "payload-fingerprint",
+      "tier": "failure-mode",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase urgente",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "text"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-06",
+      "category": "payload-fingerprint",
+      "tier": "failure-mode",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-2",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "recipient"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-07",
+      "category": "payload-fingerprint",
+      "tier": "failure-mode",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat:1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "recipient"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-08",
+      "category": "payload-fingerprint",
+      "tier": "failure-mode",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "recipient-004",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "recipient"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-09",
+      "category": "payload-fingerprint",
+      "tier": "failure-mode",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "room-7",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "recipient"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-10",
+      "category": "payload-fingerprint",
+      "tier": "failure-mode",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "America/Bogota"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "timezone"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-11",
+      "category": "payload-fingerprint",
+      "tier": "failure-mode",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "Europe/Madrid"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "timezone"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-12",
+      "category": "payload-fingerprint",
+      "tier": "failure-mode",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC+00:00"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "timezone"
+      ]
+    },
+    {
+      "id": "idem-v2-payload-conflict-13",
+      "category": "payload-fingerprint",
+      "tier": "failure-mode",
+      "failureMode": "same-event-with-changed-effect-payload-conflicts",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "America/Lima"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "conflict",
+        "fingerprint",
+        "timezone"
+      ]
+    },
+    {
+      "id": "idem-v2-adversarial-boundary-01",
+      "category": "adversarial-collision",
+      "tier": "failure-mode",
+      "failureMode": "distinct-canonical-identities-must-not-collide",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "a:b",
+          "channel": "c",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "a",
+          "channel": "b:c",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "collision",
+        "canonical-json"
+      ]
+    },
+    {
+      "id": "idem-v2-adversarial-boundary-02",
+      "category": "adversarial-collision",
+      "tier": "failure-mode",
+      "failureMode": "distinct-canonical-identities-must-not-collide",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "a:b",
+          "conversationId": "c",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "a",
+          "conversationId": "b:c",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "collision",
+        "canonical-json"
+      ]
+    },
+    {
+      "id": "idem-v2-adversarial-boundary-03",
+      "category": "adversarial-collision",
+      "tier": "failure-mode",
+      "failureMode": "distinct-canonical-identities-must-not-collide",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "a:b",
+          "sourceEventId": "c",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "a",
+          "sourceEventId": "b:c",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "collision",
+        "canonical-json"
+      ]
+    },
+    {
+      "id": "idem-v2-adversarial-boundary-04",
+      "category": "adversarial-collision",
+      "tier": "failure-mode",
+      "failureMode": "distinct-canonical-identities-must-not-collide",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42:alpha",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a:event-42",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "alpha",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "collision",
+        "canonical-json"
+      ]
+    },
+    {
+      "id": "idem-v2-adversarial-boundary-05",
+      "category": "adversarial-collision",
+      "tier": "failure-mode",
+      "failureMode": "distinct-canonical-identities-must-not-collide",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-10",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1:0",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "collision",
+        "canonical-json"
+      ]
+    },
+    {
+      "id": "idem-v2-adversarial-boundary-06",
+      "category": "adversarial-collision",
+      "tier": "failure-mode",
+      "failureMode": "distinct-canonical-identities-must-not-collide",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-10",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1:0",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "collision",
+        "canonical-json"
+      ]
+    },
+    {
+      "id": "idem-v2-adversarial-boundary-07",
+      "category": "adversarial-collision",
+      "tier": "failure-mode",
+      "failureMode": "distinct-canonical-identities-must-not-collide",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "Caf\u00e9",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "Cafe",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "collision",
+        "canonical-json"
+      ]
+    },
+    {
+      "id": "idem-v2-adversarial-boundary-08",
+      "category": "adversarial-collision",
+      "tier": "failure-mode",
+      "failureMode": "distinct-canonical-identities-must-not-collide",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1:0",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "user-1:0",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "collision",
+        "canonical-json"
+      ]
+    },
+    {
+      "id": "idem-v2-effect-namespace-01",
+      "category": "deterministic-effect-ids",
+      "tier": "golden",
+      "failureMode": "effect-identifiers-must-be-deterministic-and-domain-separated",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-effects",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "effect-ids",
+        "deterministic"
+      ]
+    },
+    {
+      "id": "idem-v2-effect-namespace-02",
+      "category": "deterministic-effect-ids",
+      "tier": "golden",
+      "failureMode": "effect-identifiers-must-be-deterministic-and-domain-separated",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram-effect",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "effect-ids",
+        "deterministic"
+      ]
+    },
+    {
+      "id": "idem-v2-effect-namespace-03",
+      "category": "deterministic-effect-ids",
+      "tier": "golden",
+      "failureMode": "effect-identifiers-must-be-deterministic-and-domain-separated",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "effects-user",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "effect-ids",
+        "deterministic"
+      ]
+    },
+    {
+      "id": "idem-v2-effect-namespace-04",
+      "category": "deterministic-effect-ids",
+      "tier": "golden",
+      "failureMode": "effect-identifiers-must-be-deterministic-and-domain-separated",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "store",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-42",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "User-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "effects-event",
+          "text": "recordar clase",
+          "recipient": "chat-1",
+          "timezone": "UTC"
+        }
+      },
+      "expected": {
+        "keyRelation": "different",
+        "fingerprintRelation": "same",
+        "effectIdsRelation": "different",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "registered",
+        "approvalRows": 0,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [],
+        "firstTenantWorkflowRows": 2,
+        "secondTenantWorkflowRows": 2,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "effect-ids",
+        "deterministic"
+      ]
+    },
+    {
+      "id": "idem-v2-http-changed-text-conflict",
+      "category": "http-conflict",
+      "tier": "failure-mode",
+      "failureMode": "http-replay-with-changed-text-returns-409-without-new-effects",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "http",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "user-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-500",
+          "text": "recuerdame clase el martes a las 17",
+          "recipient": "chat-1",
+          "timezone": "America/Bogota"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "user-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-500",
+          "text": "recuerdame pagar arriendo manana a las 17",
+          "recipient": "chat-1",
+          "timezone": "America/Bogota"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 1,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [
+          202,
+          409
+        ],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": true
+      },
+      "tags": [
+        "http",
+        "409",
+        "conflict"
+      ]
+    },
+    {
+      "id": "idem-v2-http-changed-recipient-conflict",
+      "category": "http-conflict",
+      "tier": "failure-mode",
+      "failureMode": "http-replay-with-changed-recipient-returns-409-without-new-effects",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "http",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "user-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-501",
+          "text": "recuerdame clase el martes a las 17",
+          "recipient": "chat-1",
+          "timezone": "America/Bogota"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "user-1",
+          "conversationId": "chat-1",
+          "sourceEventId": "event-501",
+          "text": "recuerdame clase el martes a las 17",
+          "recipient": "chat-2",
+          "timezone": "America/Bogota"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 1,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [
+          202,
+          409
+        ],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": true
+      },
+      "tags": [
+        "http",
+        "409",
+        "recipient"
+      ]
+    },
+    {
+      "id": "idem-v2-telegram-changed-text-acknowledged",
+      "category": "telegram-conflict",
+      "tier": "failure-mode",
+      "failureMode": "telegram-conflict-is-acknowledged-without-effects",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "executor": "reminder.idempotency.v2",
+      "input": {
+        "transport": "telegram",
+        "first": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "456",
+          "conversationId": "100",
+          "sourceEventId": "event-510",
+          "text": "/recordar recuerdame clase el martes a las 17",
+          "recipient": "100",
+          "timezone": "America/Bogota"
+        },
+        "second": {
+          "tenantId": "tenant-a",
+          "channel": "telegram",
+          "principalId": "456",
+          "conversationId": "100",
+          "sourceEventId": "event-510",
+          "text": "/recordar recuerdame pagar manana a las 17",
+          "recipient": "100",
+          "timezone": "America/Bogota"
+        }
+      },
+      "expected": {
+        "keyRelation": "same",
+        "fingerprintRelation": "different",
+        "effectIdsRelation": "same",
+        "keyVersion": 2,
+        "keyDigestLength": 64,
+        "effectIdsAreDomainSeparated": true,
+        "firstOutcome": "registered",
+        "secondOutcome": "conflict",
+        "approvalRows": 1,
+        "calendarRows": 0,
+        "schedulerRows": 0,
+        "eventRows": 0,
+        "outboxRows": 0,
+        "transportStatuses": [
+          200,
+          200
+        ],
+        "firstTenantWorkflowRows": 1,
+        "secondTenantWorkflowRows": 1,
+        "crossTenantVisibleRows": 0,
+        "internalMetadataLeaked": false
+      },
+      "tags": [
+        "telegram",
+        "200",
+        "conflict"
+      ]
+    }
+  ]
+}
