@@ -222,6 +222,21 @@ class AdminDashboard:
             "items": [_outbox_item(message) for message in messages[: clamp_limit(limit)]],
         }
 
+    def delivery_counts(self, principal: Principal) -> dict[str, int]:
+        """Return only the closed delivery-state metric set, never row metadata."""
+
+        observed = Counter(
+            message.dispatch_status.value
+            for message in _tenant_outbox_messages(
+                self.container,
+                principal.tenant_id,
+            )
+        )
+        return {
+            status.value: int(observed.get(status.value, 0))
+            for status in OutboxStatus
+        }
+
     def scheduler(
         self,
         principal: Principal,
