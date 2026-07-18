@@ -6,14 +6,26 @@ import hashlib
 import json
 from uuid import uuid4
 
-from personal_assistant.application.ports.notifications import NotificationRequest, NotificationResult
+from personal_assistant.application.ports.notifications import (
+    NotificationRequest,
+    NotificationResult,
+)
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier, require_approval
-from personal_assistant.domain.common.identity import Principal, require_trusted_principal
+from personal_assistant.domain.common.permissions import (
+    ApprovalGrant,
+    PermissionTier,
+    require_approval,
+)
+from personal_assistant.domain.common.identity import (
+    Principal,
+    require_trusted_principal,
+)
 
 
 def _fingerprint(request: NotificationRequest) -> str:
-    payload = json.dumps(request.model_dump(mode="json"), sort_keys=True, separators=(",", ":"))
+    payload = json.dumps(
+        request.model_dump(mode="json"), sort_keys=True, separators=(",", ":")
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -54,7 +66,6 @@ class LocalNotificationTool:
         result = NotificationResult(
             notification_id=f"msg_{uuid4().hex}",
             channel=request.channel,
-            recipient=request.recipient,
             idempotency_key=request.idempotency_key,
         )
         self._sent_by_key[key] = result

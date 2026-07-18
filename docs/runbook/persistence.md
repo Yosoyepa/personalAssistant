@@ -278,6 +278,31 @@ TEST_POSTGRES_DSN="$DATABASE_URL" uv run pytest -q \
   tests/test_postgres_persistence.py
 ```
 
+The reminder worker is intentionally PostgreSQL-only. It claims one
+`notification.requested` row at a time, commits `sending` plus the scheduler
+mirror before Telegram I/O, and increments attempts only at that boundary.
+Expired pre-I/O claims are reclaimable; expired `sending` rows are swept to
+`uncertain` and are never resent automatically. Known transient failures use
+30-second, 2-minute, and 5-minute delays, with four total attempts. A larger
+provider `Retry-After` wins.
+
+Operational reconciliation:
+
+```bash
+uv run python -m personal_assistant.infrastructure.worker list-uncertain
+uv run python -m personal_assistant.infrastructure.worker resolve-uncertain \
+  --message-id <id> --resolution delivered --confirm <id>
+uv run python -m personal_assistant.infrastructure.worker resolve-uncertain \
+  --message-id <id> --resolution retry --confirm <id>
+```
+
+CLI output is deliberately limited to IDs, statuses, attempts, timestamps, and
+sanitized codes. It never prints notification bodies, recipients, tokens, raw
+provider responses, or raw exception text. Automatic retries are limited to
+known outcomes. Unknown outcomes stop for manual reconciliation, deliberately
+biasing the workflow against duplicate sends. Manual `retry` is rejected once
+the message has reached four attempts.
+
 Manual replay checks:
 
 - Create a reminder that requires approval.
@@ -293,8 +318,8 @@ Manual replay checks:
   by the former `ensure_schema()` path with idempotent/additive SQL and without
   deleting data. Manually edited schema drift is unsupported: audit and repair
   it before `apply`; this migration is not a general-purpose drift verifier.
-- Notification delivery records are still adapter-local; they are not persisted
-  in Postgres yet.
+- Durable reminder delivery is PostgreSQL-only; memory delivery state is for
+  explicit development and test use and does not survive process restart.
 - There is no data migration path from existing in-memory sessions to Postgres;
   memory sessions are disposable by design.
 - External calendar sync is not implemented. `calendar_events` represents the

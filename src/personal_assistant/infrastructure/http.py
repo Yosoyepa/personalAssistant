@@ -360,6 +360,12 @@ def _reminder_response(
 
 
 def build_runtime_container(settings: AppSettings) -> AppContainer:
+    if settings.reminder_worker_enabled and settings.persistence_backend != "postgres":
+        raise RuntimeError(
+            "REMINDER_WORKER_ENABLED requires PERSISTENCE_BACKEND=postgres"
+        )
+    if settings.reminder_worker_enabled and not settings.telegram_bot_token:
+        raise RuntimeError("REMINDER_WORKER_ENABLED requires TELEGRAM_BOT_TOKEN")
     prompts = build_prompt_catalog()
     llm = build_llm_provider(settings, prompt_catalog=prompts)
     transcription = build_transcription_provider(settings)
@@ -394,6 +400,10 @@ def _run_reminder_worker_loop(
     settings: AppSettings,
     stop_event: threading.Event,
 ) -> None:
+    if settings.persistence_backend != "postgres":
+        raise RuntimeError("durable reminder delivery requires PostgreSQL")
+    if not settings.telegram_bot_token:
+        raise RuntimeError("durable reminder delivery requires Telegram configuration")
     principal = local_admin_principal(
         tenant_id=settings.tenant_id,
         principal_id="reminder-worker",
@@ -402,16 +412,20 @@ def _run_reminder_worker_loop(
     while not stop_event.is_set():
         try:
             container.reminder_worker.run_once(principal)
-        except Exception as exc:
-            container.traces.write(
-                TraceEvent(
-                    run_id="reminder-worker",
-                    agent_id="personal_assistant",
-                    event_type=TraceEventType.agent_failed,
-                    tenant_id=settings.tenant_id,
-                    error={"type": exc.__class__.__name__, "message": str(exc)[:240]},
+        except Exception:
+            try:
+                container.traces.write(
+                    TraceEvent(
+                        run_id="reminder-worker",
+                        agent_id="personal_assistant",
+                        event_type=TraceEventType.agent_failed,
+                        tenant_id=settings.tenant_id,
+                        error={"code": "worker_tick_failed"},
+                    )
                 )
-            )
+            except Exception:
+                # A shared persistence outage must not terminate the worker loop.
+                pass
         stop_event.wait(settings.reminder_worker_interval_seconds)
 
 
@@ -733,6 +747,16 @@ def create_app(
     container: AppContainer | None = None, settings: AppSettings | None = None
 ) -> FastAPI:
     runtime_settings = settings or AppSettings.from_env()
+    if (
+        runtime_settings.reminder_worker_enabled
+        and runtime_settings.persistence_backend != "postgres"
+    ):
+        raise RuntimeError("durable reminder delivery requires PostgreSQL")
+    if (
+        runtime_settings.reminder_worker_enabled
+        and not runtime_settings.telegram_bot_token
+    ):
+        raise RuntimeError("durable reminder delivery requires Telegram configuration")
     runtime_container = container or build_runtime_container(runtime_settings)
     runtime_replies = runtime_container.commands.replies
     local_principal_provider = (
