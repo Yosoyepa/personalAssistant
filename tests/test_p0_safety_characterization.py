@@ -1,7 +1,7 @@
-"""Strict characterization tests for known P0 runtime safety gaps.
+"""Mandatory regressions derived from historical P0 safety characterizations.
 
-Each xfail is limited to ``AssertionError`` so an unexpected exception remains a
-real failure instead of being hidden by the known-gap marker.
+The delivery gaps these cases originally documented are fixed, so every assertion
+is now required to remain green without an xfail marker.
 """
 
 from __future__ import annotations
