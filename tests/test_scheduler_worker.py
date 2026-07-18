@@ -20,6 +20,7 @@ from personal_assistant.domain.common.permissions import ApprovalGrant, Permissi
 from personal_assistant.infrastructure.bootstrap import build_container
 from personal_assistant.infrastructure.config import AppSettings
 from personal_assistant.infrastructure.http import build_runtime_container
+from personal_assistant.infrastructure import bootstrap as bootstrap_module
 from personal_assistant.infrastructure import worker as worker_module
 from personal_assistant.infrastructure.worker import main as worker_main
 
@@ -619,3 +620,107 @@ def test_cli_exact_confirmation_resolves_uncertain(
     assert rows[0]["message_id"] == message_id
     assert rows[0]["status"] == "published"
     assert rows[0]["attempts"] == 1
+
+
+def test_cli_lists_uncertain_without_message_content(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    provider = FakeNotificationTool([TimeoutError("private provider detail")])
+    container, actor, _clock = build_worker(provider)
+    private_body = "confidential-body-a5"
+    message_id = add_due(container, actor, body=private_body)
+    container.reminder_worker.run_once(actor, now=NOW)
+    monkeypatch.setattr(
+        worker_module,
+        "_runtime",
+        lambda *, require_provider: (container, actor, None),
+    )
+
+    assert worker_main(["list-uncertain"]) == 0
+    rows = json.loads(capsys.readouterr().out)
+    assert [row["message_id"] for row in rows] == [message_id]
+    assert rows[0]["status"] == "uncertain"
+    assert "private provider detail" not in str(rows)
+    assert "chat-1" not in str(rows)
+    assert private_body not in str(rows)
+
+
+@pytest.mark.parametrize(
+    ("runtime_error", "expected_code"),
+    [
+        (RuntimeError("postgres_required"), "postgres_required"),
+        (RuntimeError("telegram_not_configured"), "telegram_not_configured"),
+        (RuntimeError("private runtime detail"), "runtime_error"),
+    ],
+)
+def test_cli_maps_runtime_failures_to_closed_safe_codes(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime_error: RuntimeError,
+    expected_code: str,
+) -> None:
+    def fail_runtime(*, require_provider: bool) -> tuple[Any, Principal, Any]:
+        del require_provider
+        raise runtime_error
+
+    monkeypatch.setattr(worker_module, "_runtime", fail_runtime)
+
+    assert worker_main(["list-uncertain"]) == 1
+    rows = json.loads(capsys.readouterr().out)
+    assert rows == [{"code": expected_code, "status": "error"}]
+    assert "private runtime detail" not in str(rows)
+
+
+def test_cli_sanitizes_unexpected_operation_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fail_runtime(*, require_provider: bool) -> tuple[Any, Principal, Any]:
+        del require_provider
+        raise ValueError("private operation detail")
+
+    monkeypatch.setattr(worker_module, "_runtime", fail_runtime)
+
+    assert worker_main(["list-uncertain"]) == 1
+    rows = json.loads(capsys.readouterr().out)
+    assert rows == [{"code": "operation_failed", "status": "error"}]
+    assert "private operation detail" not in str(rows)
+
+
+def test_cli_runtime_builds_trusted_p5_worker_without_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = AppSettings(
+        persistence_backend="postgres",
+        database_url="postgresql://not-opened",
+        telegram_bot_token=None,
+        tenant_id="tenant-runtime",
+    )
+    container = object()
+    captured: dict[str, object] = {}
+
+    monkeypatch.setattr(
+        AppSettings,
+        "from_env",
+        classmethod(lambda cls: settings),
+    )
+
+    def fake_build_container(**kwargs: object) -> object:
+        captured.update(kwargs)
+        return container
+
+    monkeypatch.setattr(bootstrap_module, "build_container", fake_build_container)
+
+    built, principal, returned_settings = worker_module._runtime(
+        require_provider=False
+    )
+
+    assert built is container
+    assert returned_settings is settings
+    assert captured["settings"] is settings
+    assert captured["notifications"] is None
+    assert captured["approve_reminder_notifications"] is True
+    assert principal.tenant_id == settings.tenant_id
+    assert principal.permission_tier is PermissionTier.P5
+    assert principal.is_trusted
