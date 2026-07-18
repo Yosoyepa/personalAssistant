@@ -269,39 +269,47 @@ class PostgresPersistenceTests(unittest.TestCase):
 
     def test_outbox_claim_updates_payload_and_attempts(self) -> None:
         principal = self.principal()
+        now = datetime(2026, 6, 28, 12, tzinfo=UTC)
         message = OutboxMessage(
             tenant_id=principal.tenant_id,
             event=self.cloud_event(principal),
             idempotency_key="idem-outbox-1",
             attempts=2,
         )
+        claimed_message = message.model_copy(
+            update={
+                "dispatch_status": OutboxStatus.claimed,
+                "claim_token": "claim_generated-token",
+                "claim_owner": "worker-1",
+                "claimed_until": now + timedelta(seconds=30),
+                "attempts": 2,
+            }
+        )
         connection = RecordingConnection(
-            fetchall_results=[[("idem-outbox-1", message.model_dump(mode="json"))]]
+            fetchall_results=[[{"payload": claimed_message.model_dump(mode="json")}]]
         )
         store = postgres.PostgresOutbox(connection=connection)
 
-        claimed = store.claim(principal, limit=1, owner="worker-1", lease_seconds=30)
+        claimed = store.claim_due(
+            principal,
+            now,
+            limit=1,
+            owner="worker-1",
+            lease_seconds=30,
+        )
 
-        select_sql, select_params = connection.statements[0]
-        update_sql, update_params = connection.statements[1]
-        assert select_params is not None
-        assert update_params is not None
-        self.assertIn("FOR UPDATE SKIP LOCKED", select_sql)
-        self.assertEqual(select_params[0], principal.tenant_id)
-        self.assertEqual(select_params[1], OutboxStatus.published.value)
-        self.assertEqual(select_params[-1], 1)
-        self.assertIn("payload = %s::jsonb", update_sql)
-        self.assertEqual(update_params[0], OutboxStatus.claimed.value)
-        self.assertTrue(str(update_params[1]).startswith("claim_"))
-        self.assertEqual(update_params[2], "worker-1")
-        self.assertEqual(update_params[5], 3)
-        self.assertEqual(update_params[-2:], (principal.tenant_id, "idem-outbox-1"))
-        updated_payload = json.loads(update_params[7])
-        self.assertEqual(updated_payload["dispatch_status"], OutboxStatus.claimed.value)
-        self.assertEqual(updated_payload["claim_owner"], "worker-1")
-        self.assertEqual(updated_payload["attempts"], 3)
+        claim_sql, claim_params = connection.statements[0]
+        assert claim_params is not None
+        self.assertIn("FOR UPDATE SKIP LOCKED", claim_sql)
+        self.assertIn("UPDATE", claim_sql)
+        self.assertIn("RETURNING target.payload", claim_sql)
+        self.assertEqual(claim_params[0], principal.tenant_id)
+        self.assertEqual(claim_params[1], OutboxStatus.pending.value)
+        self.assertEqual(claim_params[3], OutboxStatus.claimed.value)
+        self.assertEqual(claim_params[5], 1)
+        self.assertEqual(claim_params[7], "worker-1")
         self.assertEqual(claimed[0].dispatch_status, OutboxStatus.claimed)
-        self.assertEqual(claimed[0].attempts, 3)
+        self.assertEqual(claimed[0].attempts, 2)
 
     def test_calendar_create_event_writes_request_and_result_payloads(self) -> None:
         principal = self.principal()
