@@ -19,6 +19,7 @@ env:
   LLM_PROVIDER: disabled
   TRANSCRIPTION_PROVIDER: disabled
   TTS_PROVIDER: disabled
+  TELEGRAM_BOT_TOKEN: ""
   PYTHONUNBUFFERED: "1"
 
 jobs:
@@ -182,6 +183,9 @@ jobs:
           uv run python -m personal_assistant.infrastructure.migrations apply
           uv run python -m personal_assistant.infrastructure.migrations apply
           uv run python -m personal_assistant.infrastructure.migrations status
+
+      - name: Run deterministic release eval gate
+        run: uv run python -m personal_assistant.evals --suite eval/cases
 
       - name: Run PostgreSQL adapter and configuration tests
         run: >-

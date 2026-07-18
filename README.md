@@ -140,9 +140,12 @@ PYTHONPATH=src python3 -m uvicorn personal_assistant.infrastructure.http:app \
 Check the process:
 
 ```bash
-curl -sS http://127.0.0.1:8000/healthz | python3 -m json.tool
+curl -sS http://127.0.0.1:8000/livez | python3 -m json.tool
 curl -sS http://127.0.0.1:8000/readyz | python3 -m json.tool
 ```
+
+`/healthz` is a deprecated compatibility alias for `/livez` in
+`0.2.0-alpha.1`.
 
 Create a reminder through the loopback-only trusted runtime API. It requires the
 server's fixed authority and an admin bearer token; request identity headers do
@@ -360,6 +363,8 @@ Forbidden by contract:
 - `docs/runbook/admin-dashboard.md` - local admin dashboard and JSON endpoint
   guide.
 - `docs/runbook/persistence.md` - memory/Postgres persistence guide.
+- `docs/runbook/v0.2.0-alpha.1.md` - installation, migration, startup,
+  uncertain-delivery, rollback, and no-secret smoke procedure for this alpha.
 - `docs/runbook/minimax.md` - MiniMax LLM and TTS provider notes.
 - `docs/adr/` - accepted architecture decisions.
 - `docs/architecture/` - architecture reviews and short design notes.
