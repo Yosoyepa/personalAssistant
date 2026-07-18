@@ -4,7 +4,8 @@
   "caseFiles": [
     "legacy-contracts.v1.json",
     "temporal.v1.json",
-    "idempotency.v2.json"
+    "idempotency.v2.json",
+    "security-privacy.v1.json"
   ],
   "legacySource": {
     "path": "../cases.json",
