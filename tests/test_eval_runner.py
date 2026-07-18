@@ -67,14 +67,18 @@ def write_suite(tmp_path: Path, cases_by_file: list[list[dict]]) -> Path:
 
 
 def test_repository_suite_migrates_legacy_and_executes_sixty_temporal_cases() -> None:
-    _, cases = load_suite(SUITE)
+    manifest, cases = load_suite(SUITE)
     ids = {case.id for case in cases}
+    assert manifest.legacySource is not None
+    legacy_ids = set(manifest.legacySource.ids)
+    active_legacy = [case for case in cases if case.id in legacy_ids]
+    retired_ids = {case.id for case in manifest.retiredLegacyCases}
 
-    assert len(cases) == 86
-    assert len(ids) == 86
     assert sum(case.executor == "reminder.extract.v1" for case in cases) == 60
-    assert sum(case.category == "temporal" for case in cases) == 61
+    assert len(active_legacy) == 26
+    assert all("migrated" in case.tags for case in active_legacy)
     assert "golden-contract-a2a-serializable" in ids
+    assert retired_ids == {"regression-PROD-0001-placeholder"}
     assert "regression-PROD-0001-placeholder" not in ids
 
 
