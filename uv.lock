@@ -921,9 +921,12 @@ dev = [
     { name = "build" },
     { name = "coverage", extra = ["toml"] },
     { name = "diff-cover" },
+    { name = "fastapi" },
+    { name = "httpx" },
     { name = "mypy" },
     { name = "pip-audit" },
     { name = "pre-commit" },
+    { name = "pytest" },
     { name = "ruff" },
 ]
 
@@ -945,9 +948,12 @@ dev = [
     { name = "build", specifier = ">=1.2" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.6" },
     { name = "diff-cover", specifier = ">=9.2" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", specifier = ">=0.27" },
     { name = "mypy", specifier = ">=1.13" },
     { name = "pip-audit", specifier = ">=2.8" },
     { name = "pre-commit", specifier = ">=4.0" },
+    { name = "pytest", specifier = ">=8" },
     { name = "ruff", specifier = ">=0.8" },
 ]
 
