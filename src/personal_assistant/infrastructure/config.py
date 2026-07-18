@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from math import isfinite
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -66,6 +67,15 @@ def _optional_env(name: str, file_values: dict[str, str]) -> str | None:
 def _env_bool(name: str, file_values: dict[str, str], default: bool = False) -> bool:
     value = _env(name, file_values, "true" if default else "false").strip().lower()
     return value in {"1", "true", "yes", "y", "on"}
+
+
+def _finite_seconds(name: str, value: str) -> float:
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise ValueError(f"{name} must be finite")
+    if parsed <= 0:
+        raise ValueError(f"{name} must be greater than zero")
+    return parsed
 
 
 def _env_permission_tier(
@@ -142,6 +152,7 @@ class AppSettings:
     public_base_url: str | None = None
     reminder_worker_enabled: bool = False
     reminder_worker_interval_seconds: float = 15.0
+    reminder_worker_heartbeat_timeout_seconds: float = 45.0
     reminder_minutes_before: int = 30
 
     def __post_init__(self) -> None:
@@ -150,6 +161,29 @@ class AppSettings:
             "database_schema",
             validate_identifier(self.database_schema, field="schema"),
         )
+        if not isfinite(self.reminder_worker_interval_seconds):
+            raise ValueError("REMINDER_WORKER_INTERVAL_SECONDS must be finite")
+        if self.reminder_worker_interval_seconds <= 0:
+            raise ValueError(
+                "REMINDER_WORKER_INTERVAL_SECONDS must be greater than zero"
+            )
+        if not isfinite(self.reminder_worker_heartbeat_timeout_seconds):
+            raise ValueError(
+                "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS must be finite"
+            )
+        if self.reminder_worker_heartbeat_timeout_seconds <= 0:
+            raise ValueError(
+                "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS must be greater than zero"
+            )
+        if (
+            self.reminder_worker_enabled
+            and self.reminder_worker_heartbeat_timeout_seconds
+            <= self.reminder_worker_interval_seconds
+        ):
+            raise ValueError(
+                "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS must exceed "
+                "REMINDER_WORKER_INTERVAL_SECONDS when the worker is enabled"
+            )
         try:
             timezone = ZoneInfo(self.timezone)
         except (ValueError, ZoneInfoNotFoundError) as exc:
@@ -187,6 +221,9 @@ class AppSettings:
             _env("TTS_PROVIDER", file_values, "disabled").strip().lower() or "disabled"
         )
         interval = _env("REMINDER_WORKER_INTERVAL_SECONDS", file_values, "15")
+        heartbeat_timeout = _env(
+            "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS", file_values, "45"
+        )
         reminder_minutes_before = _env("REMINDER_MINUTES_BEFORE", file_values, "30")
         llm_timeout = _env("LLM_TIMEOUT_SECONDS", file_values, "30")
         llm_max_tokens = _env("LLM_MAX_TOKENS", file_values, "512")
@@ -319,7 +356,12 @@ class AppSettings:
             ),
             public_base_url=_optional_env("PUBLIC_BASE_URL", file_values),
             reminder_worker_enabled=_env_bool("REMINDER_WORKER_ENABLED", file_values),
-            reminder_worker_interval_seconds=max(float(interval), 1.0),
+            reminder_worker_interval_seconds=_finite_seconds(
+                "REMINDER_WORKER_INTERVAL_SECONDS", interval
+            ),
+            reminder_worker_heartbeat_timeout_seconds=_finite_seconds(
+                "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS", heartbeat_timeout
+            ),
             reminder_minutes_before=max(int(reminder_minutes_before), 1),
         )
 

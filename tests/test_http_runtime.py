@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import os
 import threading
+from datetime import UTC, datetime
 from pathlib import Path
 import unittest
 import warnings
@@ -357,7 +358,7 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(health.status_code, 200)
         self.assertEqual(health.json()["status"], "ok")
         self.assertEqual(ready.status_code, 200)
-        self.assertEqual(ready.json()["checks"]["scheduler"], "ok")
+        self.assertEqual(ready.json()["checks"], {"process": "ok"})
 
     def test_reminder_requires_local_bearer_credentials(self) -> None:
         response = self.client.post("/v1/runtime/reminders", json=self.payload())
@@ -971,6 +972,16 @@ class HttpRuntimeTests(unittest.TestCase):
             )
 
     def test_reminder_worker_survives_tick_and_trace_store_failures(self) -> None:
+        class StaleHeartbeat:
+            def __init__(self) -> None:
+                self.observed_at = datetime(2026, 6, 20, 11, 59, tzinfo=UTC)
+
+            def record(self, observed_at: datetime) -> None:
+                self.observed_at = observed_at
+
+            def latest(self) -> datetime:
+                return self.observed_at
+
         class FailingWorker:
             def __init__(self) -> None:
                 self.calls = 0
@@ -1014,16 +1025,22 @@ class HttpRuntimeTests(unittest.TestCase):
             reminder_worker_enabled=True,
             reminder_worker_interval_seconds=1,
         )
+        heartbeat = StaleHeartbeat()
 
         _run_reminder_worker_loop(
             container=container,
             settings=settings,
             stop_event=stop_event,
+            heartbeat_store=heartbeat,
+            clock=lambda: datetime(2026, 6, 20, 12, 1, tzinfo=UTC),
         )
 
         self.assertEqual(worker.calls, 2)
         self.assertEqual(traces.calls, 2)
         self.assertEqual(stop_event.waits, 2)
+        self.assertEqual(
+            heartbeat.latest(), datetime(2026, 6, 20, 11, 59, tzinfo=UTC)
+        )
 
     def test_admin_endpoints_use_default_settings_tenant(self) -> None:
         settings = AppSettings(
@@ -1090,7 +1107,8 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(health.status_code, 200, health.text)
         self.assertEqual(health.json()["components"]["traces"]["status"], "ok")
         for path in sorted(
-            admin_paths - {"/admin", "/admin/snapshot", "/admin/health"}
+            admin_paths
+            - {"/admin", "/admin/snapshot", "/admin/health", "/admin/metrics"}
         ):
             response = client.get(path, headers=self.headers)
             self.assertEqual(response.status_code, 200, response.text)
