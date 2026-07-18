@@ -4,12 +4,12 @@
 
 | Field | Value |
 |---|---|
-| Status | `READY_FOR_PR` |
+| Status | `LOCAL_ACCEPTED` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
 | Phase branch | `codex/phase-4-durable-delivery` |
 | Base commit | `a0117ec` |
 | Accepted implementation head | `442e3df` |
-| Local acceptance commit | pending (this history change) |
+| Local acceptance commit | `4ae3001` |
 | Pull request | pending |
 | Merge commit | pending |
 | Date | `2026-07-17` |
