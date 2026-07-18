@@ -1,0 +1,2174 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "security-local-reject-basic-admin",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-basic-admin",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "basic-admin"
+      },
+      "expected": {
+        "status": 401,
+        "error": "authentication_required",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-reject-basic-runtime",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-basic-runtime",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "basic-runtime"
+      },
+      "expected": {
+        "status": 401,
+        "error": "authentication_required",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-reject-legacy-admin",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-legacy-admin",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "legacy-admin"
+      },
+      "expected": {
+        "status": 401,
+        "error": "authentication_required",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-reject-legacy-runtime",
+      "category": "rejection-effects",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-legacy-runtime",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "legacy-runtime"
+      },
+      "expected": {
+        "status": 401,
+        "error": "authentication_required",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-reject-malformed-runtime",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-malformed-runtime",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "malformed-runtime"
+      },
+      "expected": {
+        "status": 401,
+        "error": "authentication_required",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-reject-missing-admin",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-missing-admin",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "missing-admin"
+      },
+      "expected": {
+        "status": 401,
+        "error": "authentication_required",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-reject-missing-runtime",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-missing-runtime",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "missing-runtime"
+      },
+      "expected": {
+        "status": 401,
+        "error": "authentication_required",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-reject-remote-admin",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-remote-admin",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "remote-admin"
+      },
+      "expected": {
+        "status": 403,
+        "error": "permission_denied",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-reject-remote-runtime",
+      "category": "rejection-effects",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-remote-runtime",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "remote-runtime"
+      },
+      "expected": {
+        "status": 403,
+        "error": "permission_denied",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-reject-unconfigured-runtime",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-unconfigured-runtime",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "unconfigured-runtime"
+      },
+      "expected": {
+        "status": 401,
+        "error": "authentication_required",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-reject-wrong-admin",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-wrong-admin",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "wrong-admin"
+      },
+      "expected": {
+        "status": 401,
+        "error": "authentication_required",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-reject-wrong-runtime",
+      "category": "rejection-effects",
+      "tier": "failure-mode",
+      "failureMode": "local-reject-wrong-runtime",
+      "contractRefs": [
+        "AC-01",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-reject",
+        "variant": "wrong-runtime"
+      },
+      "expected": {
+        "status": 401,
+        "error": "authentication_required",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "loopback",
+        "headers",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-local-authority-fixed-principal",
+      "category": "authorization",
+      "tier": "failure-mode",
+      "failureMode": "local-authority-fixed-principal",
+      "contractRefs": [
+        "AC-02",
+        "AC-03"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-authority",
+        "variant": "fixed-principal"
+      },
+      "expected": {
+        "status": 202,
+        "error": null,
+        "effects": {
+          "approvals": 1,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 1,
+          "traces": 4
+        },
+        "authority": {
+          "tenant": "fixture-tenant",
+          "principal": "fixture-user",
+          "tier": "P5",
+          "provider": "local-bearer"
+        },
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "tenant",
+        "headers",
+        "p5"
+      ]
+    },
+    {
+      "id": "security-local-authority-forged-headers",
+      "category": "tenant-isolation",
+      "tier": "failure-mode",
+      "failureMode": "local-authority-forged-headers",
+      "contractRefs": [
+        "AC-02",
+        "AC-03"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-authority",
+        "variant": "forged-headers"
+      },
+      "expected": {
+        "status": 202,
+        "error": null,
+        "effects": {
+          "approvals": 1,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 1,
+          "traces": 4
+        },
+        "authority": {
+          "tenant": "fixture-tenant",
+          "principal": "fixture-user",
+          "tier": "P5",
+          "provider": "local-bearer"
+        },
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "tenant",
+        "headers",
+        "p5"
+      ]
+    },
+    {
+      "id": "security-local-authority-forged-query",
+      "category": "tenant-isolation",
+      "tier": "failure-mode",
+      "failureMode": "local-authority-forged-query",
+      "contractRefs": [
+        "AC-02",
+        "AC-03"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-authority",
+        "variant": "forged-query"
+      },
+      "expected": {
+        "status": 202,
+        "error": null,
+        "effects": {
+          "approvals": 1,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 1,
+          "traces": 4
+        },
+        "authority": {
+          "tenant": "fixture-tenant",
+          "principal": "fixture-user",
+          "tier": "P5",
+          "provider": "local-bearer"
+        },
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "tenant",
+        "headers",
+        "p5"
+      ]
+    },
+    {
+      "id": "security-local-authority-forwarded-remote",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "local-authority-forwarded-remote",
+      "contractRefs": [
+        "AC-02",
+        "AC-03"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "local-authority",
+        "variant": "forwarded-remote"
+      },
+      "expected": {
+        "status": 403,
+        "error": "permission_denied",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "tenant",
+        "headers",
+        "p5"
+      ]
+    },
+    {
+      "id": "security-webhook-reject-denied-actor",
+      "category": "rejection-effects",
+      "tier": "failure-mode",
+      "failureMode": "webhook-reject-denied-actor",
+      "contractRefs": [
+        "AC-45",
+        "AC-46",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "webhook-reject",
+        "variant": "denied-actor"
+      },
+      "expected": {
+        "status": 403,
+        "error": "permission_denied",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "webhook",
+        "default-deny",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-webhook-reject-empty-allowlist",
+      "category": "allowlist",
+      "tier": "failure-mode",
+      "failureMode": "webhook-reject-empty-allowlist",
+      "contractRefs": [
+        "AC-45",
+        "AC-46",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "webhook-reject",
+        "variant": "empty-allowlist"
+      },
+      "expected": {
+        "status": 403,
+        "error": "permission_denied",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "webhook",
+        "default-deny",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-webhook-reject-missing-actor",
+      "category": "rejection-effects",
+      "tier": "failure-mode",
+      "failureMode": "webhook-reject-missing-actor",
+      "contractRefs": [
+        "AC-45",
+        "AC-46",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "webhook-reject",
+        "variant": "missing-actor"
+      },
+      "expected": {
+        "status": 403,
+        "error": "permission_denied",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "webhook",
+        "default-deny",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-webhook-reject-missing-secret",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "webhook-reject-missing-secret",
+      "contractRefs": [
+        "AC-45",
+        "AC-46",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "webhook-reject",
+        "variant": "missing-secret"
+      },
+      "expected": {
+        "status": 403,
+        "error": "permission_denied",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "webhook",
+        "default-deny",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-webhook-reject-unconfigured-secret",
+      "category": "authentication",
+      "tier": "failure-mode",
+      "failureMode": "webhook-reject-unconfigured-secret",
+      "contractRefs": [
+        "AC-45",
+        "AC-46",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "webhook-reject",
+        "variant": "unconfigured-secret"
+      },
+      "expected": {
+        "status": 403,
+        "error": "permission_denied",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "webhook",
+        "default-deny",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-webhook-reject-wrong-secret",
+      "category": "rejection-effects",
+      "tier": "failure-mode",
+      "failureMode": "webhook-reject-wrong-secret",
+      "contractRefs": [
+        "AC-45",
+        "AC-46",
+        "AC-48"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "webhook-reject",
+        "variant": "wrong-secret"
+      },
+      "expected": {
+        "status": 403,
+        "error": "permission_denied",
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": null
+      },
+      "tags": [
+        "webhook",
+        "default-deny",
+        "no-effects"
+      ]
+    },
+    {
+      "id": "security-webhook-allow-help",
+      "category": "authorization",
+      "tier": "golden",
+      "failureMode": "webhook-allow-help",
+      "contractRefs": [
+        "AC-32",
+        "AC-46"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "webhook-allow",
+        "variant": "help"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 0
+        },
+        "authority": {
+          "tenant": "fixture-tenant",
+          "principal": "456",
+          "tier": "P5",
+          "provider": "telegram"
+        },
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": "help"
+        },
+        "redaction": null
+      },
+      "tags": [
+        "webhook",
+        "p3",
+        "p5"
+      ]
+    },
+    {
+      "id": "security-webhook-allow-p3-reminder",
+      "category": "authorization",
+      "tier": "golden",
+      "failureMode": "webhook-allow-p3-reminder",
+      "contractRefs": [
+        "AC-32",
+        "AC-46"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "webhook-allow",
+        "variant": "p3-reminder"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 1,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 1,
+          "traces": 4
+        },
+        "authority": {
+          "tenant": "fixture-tenant",
+          "principal": "456",
+          "tier": "P5",
+          "provider": "telegram"
+        },
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": "recordar"
+        },
+        "redaction": null
+      },
+      "tags": [
+        "webhook",
+        "p3",
+        "p5"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-audio",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-audio",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "audio"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 0,
+          "redacted_urls": 0,
+          "binary": 1,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "audio"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-authorization",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-authorization",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "authorization"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 1,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "authorization",
+        "token"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-binary",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-binary",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "binary"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 0,
+          "redacted_urls": 0,
+          "binary": 1,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "binary",
+        "audio"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-context-ref",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-context-ref",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "context-ref"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 2,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "context-ref"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-error",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-error",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "error"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 4,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "error"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-error-context",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-error-context",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "error-context"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 4,
+          "redacted_urls": 2,
+          "binary": 2,
+          "unsafe_present": false,
+          "omitted": 1
+        }
+      },
+      "tags": [
+        "trace",
+        "error-context",
+        "error"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-idempotent",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-idempotent",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "idempotent"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 2
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 1,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "idempotent"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-input-list",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-input-list",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "input-list"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 2,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "input-list",
+        "message"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-message",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-message",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "message"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 1,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "message"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-metadata",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-metadata",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "metadata"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 2,
+          "redacted_urls": 1,
+          "binary": 1,
+          "unsafe_present": false,
+          "omitted": 1
+        }
+      },
+      "tags": [
+        "trace",
+        "metadata"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-nested",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-nested",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "nested"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 2,
+          "redacted_urls": 1,
+          "binary": 1,
+          "unsafe_present": false,
+          "omitted": 1
+        }
+      },
+      "tags": [
+        "trace",
+        "nested"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-output",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-output",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "output"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 1,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "output",
+        "message"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-output-url",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-output-url",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "output-url"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 0,
+          "redacted_urls": 2,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "output-url",
+        "url"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-query",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-query",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "query"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 1,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "query",
+        "url"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-run-id",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-run-id",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "run-id"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 1,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "run-id"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-safe-category",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-safe-category",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "safe-category"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 0,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "safe-category"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-safe-list",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-safe-list",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "safe-list"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 0,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "safe-list"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-safe-metric",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-safe-metric",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "safe-metric"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 0,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "safe-metric"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-token",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-token",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "token"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 1,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "token"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-tool-call",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-tool-call",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "tool-call"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 2,
+          "redacted_urls": 1,
+          "binary": 1,
+          "unsafe_present": false,
+          "omitted": 1
+        }
+      },
+      "tags": [
+        "trace",
+        "tool-call"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-tool-url",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-tool-url",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "tool-url"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 0,
+          "redacted_urls": 2,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "tool-url",
+        "url"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-transcript",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-transcript",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "transcript"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 2,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "transcript"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-unknown",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-unknown",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "unknown"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 0,
+          "redacted_urls": 0,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 1
+        }
+      },
+      "tags": [
+        "trace",
+        "unknown"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-url",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-url",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "url"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 0,
+          "redacted_urls": 1,
+          "binary": 0,
+          "unsafe_present": false,
+          "omitted": 0
+        }
+      },
+      "tags": [
+        "trace",
+        "url"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-validation",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-validation",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "validation"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 3,
+          "redacted_urls": 1,
+          "binary": 1,
+          "unsafe_present": false,
+          "omitted": 1
+        }
+      },
+      "tags": [
+        "trace",
+        "validation"
+      ]
+    },
+    {
+      "id": "security-trace-redaction-validation-list",
+      "category": "redaction",
+      "tier": "golden",
+      "failureMode": "trace-redaction-validation-list",
+      "contractRefs": [
+        "AC-31",
+        "AC-34"
+      ],
+      "executor": "security.boundary.v1",
+      "input": {
+        "scenario": "trace-redaction",
+        "variant": "validation-list"
+      },
+      "expected": {
+        "status": 200,
+        "error": null,
+        "effects": {
+          "approvals": 0,
+          "calendar": 0,
+          "scheduler": 0,
+          "events": 0,
+          "outbox": 0,
+          "states": 0,
+          "traces": 1
+        },
+        "authority": null,
+        "response": {
+          "secret_leaked": false,
+          "pii_leaked": false,
+          "command": null
+        },
+        "redaction": {
+          "redacted": 4,
+          "redacted_urls": 2,
+          "binary": 2,
+          "unsafe_present": false,
+          "omitted": 1
+        }
+      },
+      "tags": [
+        "trace",
+        "validation-list"
+      ]
+    }
+  ]
+}
