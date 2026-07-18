@@ -100,6 +100,7 @@ class ArchitectureBoundaryTests(unittest.TestCase):
             "application",
             "contracts",
             "domain",
+            "evals",
             "infrastructure",
         }
         directories = {path.name for path in SRC_ROOT.iterdir() if path.is_dir()}

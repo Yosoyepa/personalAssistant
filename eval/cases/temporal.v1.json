@@ -1,0 +1,1531 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "temporal-utc-tomorrow-13",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "absolute-wall-clock",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 13",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T13:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-utc-tomorrow-14",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "absolute-wall-clock",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 14",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T14:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-utc-tomorrow-15",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "absolute-wall-clock",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 15",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T15:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-utc-tomorrow-16",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "absolute-wall-clock",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 16",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T16:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-utc-tomorrow-17",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "absolute-wall-clock",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 17",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T17:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-utc-tomorrow-18",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "absolute-wall-clock",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 18",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T18:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-utc-tomorrow-19",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "absolute-wall-clock",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 19",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T19:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-utc-tomorrow-20",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "absolute-wall-clock",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 20",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T20:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-utc-tomorrow-21",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "absolute-wall-clock",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 21",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T21:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-utc-tomorrow-22",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "absolute-wall-clock",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 22",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T22:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-utc-tomorrow-23",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "absolute-wall-clock",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 23",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T23:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-bogota-tomorrow-13",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "iana-timezone",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 13",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T18:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-bogota-tomorrow-14",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "iana-timezone",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 14",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T19:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-bogota-tomorrow-15",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "iana-timezone",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 15",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T20:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-bogota-tomorrow-16",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "iana-timezone",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 16",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T21:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-bogota-tomorrow-17",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "iana-timezone",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 17",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T22:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-bogota-tomorrow-18",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "iana-timezone",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 18",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T23:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "absolute"
+      ]
+    },
+    {
+      "id": "temporal-tokyo-tomorrow-13",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "iana-timezone",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 13",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "Asia/Tokyo"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "Asia/Tokyo",
+        "startsAt": "2026-06-21T04:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana"
+      ]
+    },
+    {
+      "id": "temporal-tokyo-tomorrow-18",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "iana-timezone",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 18",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "Asia/Tokyo"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "Asia/Tokyo",
+        "startsAt": "2026-06-21T09:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana"
+      ]
+    },
+    {
+      "id": "temporal-madrid-summer-tomorrow-17",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "iana-timezone",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 17",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "Europe/Madrid"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "Europe/Madrid",
+        "startsAt": "2026-06-21T15:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "dst"
+      ]
+    },
+    {
+      "id": "temporal-relative-1-minutes",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "relative-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame en 1 minutos pagar el arriendo",
+        "now": "2026-06-20T23:30:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-20T23:31:00Z",
+        "notifyAt": "2026-06-20T23:31:00Z"
+      },
+      "tags": [
+        "relative"
+      ]
+    },
+    {
+      "id": "temporal-relative-2-minutes",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "relative-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame en 2 minutos pagar el arriendo",
+        "now": "2026-06-20T23:30:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-20T23:32:00Z",
+        "notifyAt": "2026-06-20T23:32:00Z"
+      },
+      "tags": [
+        "relative"
+      ]
+    },
+    {
+      "id": "temporal-relative-15-minutes",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "relative-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame en 15 minutos pagar el arriendo",
+        "now": "2026-06-20T23:30:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-20T23:45:00Z",
+        "notifyAt": "2026-06-20T23:45:00Z"
+      },
+      "tags": [
+        "relative"
+      ]
+    },
+    {
+      "id": "temporal-relative-30-minutes",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "relative-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame en 30 minutos pagar el arriendo",
+        "now": "2026-06-20T23:30:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T00:00:00Z",
+        "notifyAt": "2026-06-21T00:00:00Z"
+      },
+      "tags": [
+        "relative"
+      ]
+    },
+    {
+      "id": "temporal-relative-60-minutes",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "relative-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame en 60 minutos pagar el arriendo",
+        "now": "2026-06-20T23:30:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T00:30:00Z",
+        "notifyAt": "2026-06-21T00:30:00Z"
+      },
+      "tags": [
+        "relative"
+      ]
+    },
+    {
+      "id": "temporal-relative-90-minutes",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "relative-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame en 90 minutos pagar el arriendo",
+        "now": "2026-06-20T23:30:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T01:00:00Z",
+        "notifyAt": "2026-06-21T01:00:00Z"
+      },
+      "tags": [
+        "relative"
+      ]
+    },
+    {
+      "id": "temporal-relative-120-minutes",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "relative-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame en 120 minutos pagar el arriendo",
+        "now": "2026-06-20T23:30:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T01:30:00Z",
+        "notifyAt": "2026-06-21T01:30:00Z"
+      },
+      "tags": [
+        "relative"
+      ]
+    },
+    {
+      "id": "temporal-relative-1440-minutes",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "relative-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame en 1440 minutos pagar el arriendo",
+        "now": "2026-06-20T23:30:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T23:30:00Z",
+        "notifyAt": "2026-06-21T23:30:00Z"
+      },
+      "tags": [
+        "relative"
+      ]
+    },
+    {
+      "id": "temporal-relative-dos-hours",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "relative-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame dentro de dos horas llamar",
+        "now": "2026-06-20T23:30:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T01:30:00Z",
+        "notifyAt": "2026-06-21T01:30:00Z"
+      },
+      "tags": [
+        "relative"
+      ]
+    },
+    {
+      "id": "temporal-relative-tres-hours",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "relative-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame dentro de tres horas llamar",
+        "now": "2026-06-20T23:30:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T02:30:00Z",
+        "notifyAt": "2026-06-21T02:30:00Z"
+      },
+      "tags": [
+        "relative"
+      ]
+    },
+    {
+      "id": "temporal-ambiguous-hour-1",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "ambiguous-hour",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 1",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "ambiguous_hour",
+        "timezone": "America/Bogota",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "clarification"
+      ]
+    },
+    {
+      "id": "temporal-ambiguous-hour-2",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "ambiguous-hour",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 2",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "ambiguous_hour",
+        "timezone": "America/Bogota",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "clarification"
+      ]
+    },
+    {
+      "id": "temporal-ambiguous-hour-3",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "ambiguous-hour",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 3",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "ambiguous_hour",
+        "timezone": "America/Bogota",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "clarification"
+      ]
+    },
+    {
+      "id": "temporal-ambiguous-hour-5",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "ambiguous-hour",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 5",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "ambiguous_hour",
+        "timezone": "America/Bogota",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "clarification"
+      ]
+    },
+    {
+      "id": "temporal-ambiguous-hour-7",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "ambiguous-hour",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 7",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "ambiguous_hour",
+        "timezone": "America/Bogota",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "clarification"
+      ]
+    },
+    {
+      "id": "temporal-ambiguous-hour-9",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "ambiguous-hour",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 9",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "ambiguous_hour",
+        "timezone": "America/Bogota",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "clarification"
+      ]
+    },
+    {
+      "id": "temporal-ambiguous-hour-10",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "ambiguous-hour",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 10",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "ambiguous_hour",
+        "timezone": "America/Bogota",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "clarification"
+      ]
+    },
+    {
+      "id": "temporal-ambiguous-hour-12",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "ambiguous-hour",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 12",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "ambiguous_hour",
+        "timezone": "America/Bogota",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "clarification"
+      ]
+    },
+    {
+      "id": "temporal-invalid-24",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "invalid-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 24",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "unsupported",
+        "reason": "invalid_time",
+        "timezone": null,
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "invalid"
+      ]
+    },
+    {
+      "id": "temporal-invalid-25",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "invalid-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 25",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "unsupported",
+        "reason": "invalid_time",
+        "timezone": null,
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "invalid"
+      ]
+    },
+    {
+      "id": "temporal-invalid-minute-short",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "invalid-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 17:5",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "unsupported",
+        "reason": "invalid_time",
+        "timezone": null,
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "invalid"
+      ]
+    },
+    {
+      "id": "temporal-invalid-minute-60",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "invalid-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 17:60",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "unsupported",
+        "reason": "invalid_time",
+        "timezone": null,
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "invalid"
+      ]
+    },
+    {
+      "id": "temporal-invalid-minute-999",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "invalid-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 13:999",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "unsupported",
+        "reason": "invalid_time",
+        "timezone": null,
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "invalid"
+      ]
+    },
+    {
+      "id": "temporal-invalid-suffix",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "invalid-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 17x",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "unsupported",
+        "reason": "invalid_time",
+        "timezone": null,
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "invalid"
+      ]
+    },
+    {
+      "id": "temporal-invalid-range",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "invalid-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 17:05-18",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "unsupported",
+        "reason": "invalid_time",
+        "timezone": null,
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "invalid"
+      ]
+    },
+    {
+      "id": "temporal-invalid-slash",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "invalid-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 17:05/18",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "unsupported",
+        "reason": "invalid_time",
+        "timezone": null,
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "invalid"
+      ]
+    },
+    {
+      "id": "temporal-invalid-double-clock",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "invalid-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 17 y a las 18",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "unsupported",
+        "reason": "conflicting_temporal_expression",
+        "timezone": null,
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "invalid"
+      ]
+    },
+    {
+      "id": "temporal-invalid-double-weekday",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "invalid-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame el lunes y el martes a las 17",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "unsupported",
+        "reason": "conflicting_temporal_expression",
+        "timezone": null,
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "invalid"
+      ]
+    },
+    {
+      "id": "temporal-dst-gap-new-york",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "dst-gap",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 2:30 am",
+        "now": "2026-03-07T12:00:00Z",
+        "timezone": "America/New_York"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "nonexistent_local_time",
+        "timezone": "America/New_York",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "dst",
+        "gap"
+      ]
+    },
+    {
+      "id": "temporal-dst-fold-new-york",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "dst-fold",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a la 1:30 am",
+        "now": "2026-10-31T12:00:00Z",
+        "timezone": "America/New_York"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "ambiguous_local_time",
+        "timezone": "America/New_York",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "dst",
+        "fold"
+      ]
+    },
+    {
+      "id": "temporal-dst-gap-madrid",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "dst-gap",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 2:30 am",
+        "now": "2026-03-28T12:00:00Z",
+        "timezone": "Europe/Madrid"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "nonexistent_local_time",
+        "timezone": "Europe/Madrid",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "dst",
+        "gap"
+      ]
+    },
+    {
+      "id": "temporal-dst-fold-madrid",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "dst-fold",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 2:30 am",
+        "now": "2026-10-24T12:00:00Z",
+        "timezone": "Europe/Madrid"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "ambiguous_local_time",
+        "timezone": "Europe/Madrid",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "dst",
+        "fold"
+      ]
+    },
+    {
+      "id": "temporal-midnight-utc",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "midnight-day-boundary",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a la medianoche",
+        "now": "2026-06-20T23:59:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-21T00:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "midnight"
+      ]
+    },
+    {
+      "id": "temporal-midnight-bogota",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "midnight-day-boundary",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 00:00",
+        "now": "2026-06-20T23:59:00Z",
+        "timezone": "America/Bogota"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "America/Bogota",
+        "startsAt": "2026-06-21T05:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "midnight",
+        "iana"
+      ]
+    },
+    {
+      "id": "temporal-weekday-rollover",
+      "category": "temporal",
+      "tier": "golden",
+      "failureMode": "day-rollover",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame el sábado a las 13",
+        "now": "2026-06-20T20:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "parsed",
+        "reason": null,
+        "timezone": "UTC",
+        "startsAt": "2026-06-27T13:00:00Z",
+        "notifyAt": null
+      },
+      "tags": [
+        "weekday"
+      ]
+    },
+    {
+      "id": "temporal-missing-date",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "missing-date",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame la cita a las 17",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "missing_date",
+        "timezone": "UTC",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "clarification"
+      ]
+    },
+    {
+      "id": "temporal-missing-time",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "missing-time",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana la cita",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "missing_time",
+        "timezone": "UTC",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "clarification"
+      ]
+    },
+    {
+      "id": "temporal-missing-datetime",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "missing-datetime",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame la cita",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "missing_datetime",
+        "timezone": "UTC",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "clarification"
+      ]
+    },
+    {
+      "id": "temporal-invalid-timezone",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "invalid-timezone",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame mañana a las 17",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "Mars/Olympus_Mons"
+      },
+      "expected": {
+        "status": "needs_clarification",
+        "reason": "invalid_timezone",
+        "timezone": "Mars/Olympus_Mons",
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "iana",
+        "invalid"
+      ]
+    },
+    {
+      "id": "temporal-relative-conflict",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "conflicting-expression",
+      "contractRefs": [
+        "AC-05"
+      ],
+      "executor": "reminder.extract.v1",
+      "input": {
+        "text": "recuérdame en 2 minutos mañana a las 17",
+        "now": "2026-06-20T12:00:00Z",
+        "timezone": "UTC"
+      },
+      "expected": {
+        "status": "unsupported",
+        "reason": "conflicting_temporal_expression",
+        "timezone": null,
+        "startsAt": null,
+        "notifyAt": null
+      },
+      "tags": [
+        "relative",
+        "invalid"
+      ]
+    }
+  ]
+}
+

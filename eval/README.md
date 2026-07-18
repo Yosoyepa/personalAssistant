@@ -1,35 +1,57 @@
-# Eval Fixtures
+# Executable Evaluation Gates
 
-The first eval layer is deterministic code assertions. These cases seed golden,
-failure-mode, and regression tests for the local MVP.
+The release suite is a versioned Level 1 evaluation gate: every active case
+executes deterministic application or domain behavior without an LLM or network
+access. A mismatch, invalid schema, corrupt legacy inventory, unknown executor,
+duplicate ID, or filter that selects zero cases exits nonzero.
 
-Run:
+Run the complete suite with human-readable output:
 
 ```bash
-PYTHONPATH=src python3 -B -m unittest discover -s tests
-PYTHONPATH=src python3 -B -m compileall src tests
-python3 -m json.tool eval/cases.json >/dev/null
+uv run python -m personal_assistant.evals --suite eval/cases
 ```
 
-## Case Tiers
+Use `--json` for machine-readable stdout. Filters may be repeated and are
+combined across dimensions:
 
-- `golden` - expected supported behavior for the local deterministic MVP.
-- `failure-mode` - named contract failure modes and forbidden-action probes.
-- `regression` - permanent cases created after observed defects.
+```bash
+uv run python -m personal_assistant.evals --suite eval/cases --category temporal --tier failure-mode --failure-mode dst-gap --json
+```
 
-Each case should map to `agents/personal_assistant/contract.md` via
-`contractRefs`. Prefer code assertions for any behavior that can be checked
-deterministically: tenancy, permissions, idempotency, schema validity, trace
-shape, prompt-injection blocking, and tool allowlists.
+## Version 1 layout
 
-LLM-as-judge is intentionally absent for v0 because the current high-risk
-behaviors are code-checkable. Add a judge only when a subjective behavior cannot
-be asserted with code, and keep judge output binary pass/fail.
+`eval/cases/suite.json` is the only discovery manifest. Its ordered `caseFiles`
+list is explicit; files are never imported by glob. Absolute paths, parent
+traversal, resolved path escapes, and duplicates are rejected. Each case file
+has this envelope:
 
-## Merge Gate
+```json
+{"schemaVersion": 1, "cases": []}
+```
 
-- Every existing deterministic test passes.
-- Every new failure mode gets a fixture in `eval/cases.json`.
-- Every forbidden action in the contract has either a code test or an eval case.
-- No accepted regression lowers the route-level pass rate below the ADR target.
-- Any accepted regression documents the reason and owner in the case metadata.
+Every case requires `id`, `category`, `tier`, `failureMode`, non-empty
+`contractRefs`, `executor`, `input`, and static `expected`; `tags` is optional.
+IDs are unique across the complete suite. Tiers are `golden`, `failure-mode`,
+or `regression`.
+
+Executor slug `example.probe.v1` resolves only to
+`personal_assistant.evals.executors.example_probe_v1`. The module must export
+strict Pydantic `InputModel` and `ExpectedModel` schemas plus callable
+`execute(input_model)`. The runner validates both declared expected output and
+actual output through `ExpectedModel` before making one binary pass/fail
+decision. Error reports omit inputs and actual values.
+
+## Legacy migration
+
+The original 27 fixtures remain byte- and ID-verifiable through
+`legacySource`. Twenty-six were migrated to executable deterministic probes in
+`legacy-contracts.v1.json`. The empty production placeholder is explicitly
+retired in manifest metadata and never counts as a passing case.
+
+`legacy.pytest.v1` has an immutable exact allowlist and a scrubbed subprocess
+environment. It exists only to bridge those named migrated cases; new evals
+must use a dedicated executor and must never extend this adapter.
+
+New production failures become permanent executable regression cases. Do not
+add placeholders, skips, generated expected values, or LLM judges for behavior
+that code can verify.
