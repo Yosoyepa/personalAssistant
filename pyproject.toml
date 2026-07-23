@@ -21,7 +21,7 @@ api = [
 test = [
   "fastapi>=0.115",
   "httpx>=0.27",
-  "pytest>=8",
+  "pytest>=9.1.1",
 ]
 postgres = [
   "psycopg[binary]>=3.2,<4",
