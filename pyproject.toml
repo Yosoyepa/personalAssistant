@@ -33,7 +33,7 @@ dev = [
   "coverage[toml]>=7.6",
   "diff-cover>=9.2",
   "mypy>=1.13",
-  "pip-audit>=2.8",
+  "pip-audit>=2.10.1",
   "pre-commit>=4.0",
   "ruff>=0.8",
 ]
