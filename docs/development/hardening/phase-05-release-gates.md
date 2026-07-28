@@ -4,14 +4,14 @@
 
 | Field | Value |
 |---|---|
-| Status | `LOCAL ACCEPTED; PULL REQUEST PENDING` |
+| Status | `PULL REQUEST OPEN; REMOTE ACCEPTANCE PENDING` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
 | Phase branch | `codex/phase-5-release-gates` |
 | Remote base commit | `23fc2b4` |
 | Local starting commit | `58a5d22` |
-| Accepted implementation head | `12b45f9` |
-| Local acceptance commit | `40f82c0` |
-| Pull request | pending push |
+| Accepted implementation head | `bb503c9` |
+| Local acceptance records | `40f82c0`, `c1c00ec` |
+| Pull request | `#12` open; protected checks rerunning |
 | Merge commit | pending pull request |
 | Release | pending pull request, tag, and prerelease |
 | Date | `2026-07-27` |
@@ -50,6 +50,7 @@ a pass.
 | P5-R4 | Prevent `/admin/errors` from reflecting a raw Telegram run identifier | `99eee3d` | accepted with exact raw/digest lookup and HTTP response privacy regression |
 | P5-R5 | Preserve lookup compatibility for legacy PostgreSQL trace rows without returning raw identifiers | `b86084c` | accepted with dual lookup limited to validated Telegram run IDs and sanitized reconstruction |
 | P5-R6 | Provide an explicit operator-controlled sanitizer for historical trace rows at rest | `37e62e3` | accepted with dry-run default, literal confirmation, transactional rewrite, zero deletes, and real PostgreSQL verification |
+| P5-R7 | Make the legacy eval inventory hash portable across Git line endings without weakening content integrity | `bb503c9` | accepted after LF/CRLF/CR equivalence, non-line-ending mutation rejection, 293/293 evals, PostgreSQL corpus, and complete coverage gates |
 
 Every implementation diff was reviewed before explicit-path staging. Accepted
 branches were merged with merge commits. No implementation branch was rebased,
@@ -145,18 +146,18 @@ Migration `0005` is additive and may remain during binary rollback.
 | `uv lock --check` | pass; 76 packages resolved |
 | `uv sync --frozen --all-extras --group dev` | pass; local package installed as `0.2.0a1` |
 | `uv run ruff check .` | pass |
-| `uv run mypy src` | pass; 112 source files and zero diagnostics |
+| `uv run mypy src` | pass; 113 source files and zero diagnostics |
 | eval runner | 293/293 passed, 0 failed |
-| `uv run pytest -q` with PostgreSQL 16 | 644 passed, 3 allowlisted skips, 36 subtests passed |
-| coverage execution | 644 passed, 3 allowlisted skips |
+| `uv run pytest -q` with PostgreSQL 16 | 648 passed, 3 allowlisted skips, 36 subtests passed |
+| coverage execution | 648 passed, 3 allowlisted skips |
 | coverage | 91% total line coverage, threshold 85% |
-| diff-cover against `origin/main` | 92% over 1,655 changed lines, threshold 90% |
+| diff-cover against `origin/main` | 92% over 1,658 changed lines, threshold 90% |
 | `uv run python -m compileall -q src` | pass |
 | `uv build` | sdist and wheel built for `0.2.0a1`; wheel contains migration 0005, operational and trace-sanitizer modules, and matching metadata |
 | `uv run pip-audit` | no known dependency vulnerabilities; unpublished local package not present on PyPI |
 | `uv run pre-commit run --all-files` | all hooks passed |
-| Gitleaks `v8.24.2` read-only container scan | no leaks in 108 commits / approximately 2.76 MB |
-| `git diff --check origin/main...HEAD` | pass after release fixture normalization |
+| Gitleaks `v8.24.2` read-only container scan | no leaks in 110 commits / approximately 2.78 MB |
+| `git diff --check origin/main...HEAD` | pass after release fixture and cross-platform eval-hash remediation |
 | fresh migration smoke | `status -> apply 0001..0005 -> apply no-op -> status ready`; schema removed |
 | historical trace sanitizer smoke | dry-run left the legacy row unchanged; confirmed apply rewrote one row; raw/digest lookup and idempotent rerun passed; schema removed |
 
@@ -181,9 +182,13 @@ security, atomicity, delivery, or eval case is skipped or expected to fail.
 - Both Python matrix jobs and the integration job use PostgreSQL 16. External
   provider variables are disabled in CI.
 
-Hosted CI evidence remains pending because the accepted phase branch has not
-yet been pushed. The pull request must pass all five protected checks before
-merge.
+The first hosted CI run on pull request `#12` passed `quality` and `security`
+but exposed one cross-platform defect: the immutable legacy inventory hash was
+calculated from CRLF bytes on Windows while Git's Linux checkout contained the
+same JSON with LF bytes. Commit `bb503c9` now hashes repository-canonical LF
+line endings, retains rejection of every tested non-line-ending mutation, and
+passes the complete local gate. All five protected checks must rerun and pass
+before merge.
 
 ## Data and privacy review
 
