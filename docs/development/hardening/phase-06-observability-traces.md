@@ -4,12 +4,12 @@
 
 | Field | Value |
 |---|---|
-| Status | `IN_PROGRESS` |
+| Status | `MERGED` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
-| Phase branch | `codex/phase-6-observability-traces` (created from `ac1278d`; four Conventional Commits integrated) |
+| Phase branch | `codex/phase-6-observability-traces` (merged and deleted, local and remote) |
 | Base commit | `ac1278d` |
-| Pull request | `PENDING` |
-| Merge commit | `PENDING` |
+| Pull request | `#13` (https://github.com/Yosoyepa/personalAssistant/pull/13) |
+| Merge commit | `6e95c1f` |
 | Release | `PENDING` |
 | Date | `2026-07-28` |
 
@@ -32,11 +32,12 @@ The audit addendum records this reframing. GAP #3 (compaction) is untouched
 and remains a GAP pending a conversation-history design decision.
 
 All phase changes are additive or fail-closed tightenings on top of the
-phase-05 contracts. Deterministic and PostgreSQL-backed verification now both
-pass locally: ruff, mypy, targeted pytest, the full suite with PostgreSQL 16,
-the complete eval gate, coverage, diff-cover, and the static gates. The phase
-branch, commits, pull request, and hosted CI remain pending and must not be
-represented as complete until their separate evidence exists. The launch
+phase-05 contracts. Deterministic, PostgreSQL-backed, and hosted-CI
+verification all pass: ruff, mypy, targeted pytest, the full suite with
+PostgreSQL 16, the complete eval gate, coverage, diff-cover, the static
+gates, and the required PR checks (quality, tests 3.11/3.12,
+postgres-integration, security). The phase merged as `6e95c1f` via PR #13.
+The launch
 classification remains **hardened alpha, not GA**; the audit scorecard is
 unchanged by this phase.
 
@@ -239,7 +240,7 @@ local scan is claimed as evidence.
 | Element | Definition |
 |---|---|
 | Trigger | Any regression in trace writes, admin snapshot, startup validation, or delivery after integration |
-| Rollback point | Phase merge commit `PENDING` (before merge: the uncommitted tree on `ac1278d`) |
+| Rollback point | Phase merge commit `6e95c1f` (before merge: the uncommitted tree on `ac1278d`) |
 | Planned command | Before staging: `git restore --worktree -- <path>` per reviewed path. After merge: `git revert -m 1 <merge-commit>` from a `codex/rollback-phase-6-observability-traces` branch per workflow section 6 |
 | Data impact | None. No migrations, no schema changes, no deletions at runtime. Write-time completeness validation rejects incomplete new events but never rewrites or deletes historical rows; previously persisted rows remain readable |
 | Configuration or flags | All changes are additive with safe defaults: `LLM_CONTEXT_WINDOW_TOKENS=200000` and `TRACE_RETENTION_DAYS=30` apply only when unset; the retention CLI is not wired into any runtime path; the dashboard component degrades fail-closed. No feature flag is required to revert |
@@ -289,8 +290,10 @@ not exist yet.
 - [x] No open blockages; no repeated failure cycles.
 - [x] Rollback rehearsed (pre-staging restore/re-apply rehearsal passed; see
       the rollback plan).
-- [ ] Single phase PR opened with green CI. **PENDING.**
-- [ ] Merge commit integration; worktree/branch cleanup. **PENDING.**
+- [x] Single phase PR opened with green CI (#13; quality, tests 3.11/3.12,
+      postgres-integration, and security all pass).
+- [x] Merge commit integration (`6e95c1f`); phase branch deleted local and
+      remote; no worktrees remained.
 
 ## Approvals
 
@@ -298,6 +301,6 @@ not exist yet.
 |---|---|---|---|
 | Authorize staging | `Yosoyepa` | 2026-07-28 | Approved in session ("dale continua") after full gate evidence was presented |
 | Authorize commit | `Yosoyepa` | 2026-07-28 | Same approval; four Conventional Commits `21b6506`, `3d40f13`, `a18b853`, `669fddb` |
-| Authorize PR | `PENDING` | | |
-| Authorize merge commit | `PENDING` | | |
+| Authorize PR | `Yosoyepa` | 2026-07-28 | Approved in session after CI+Security green on #13 |
+| Authorize merge commit | `Yosoyepa` | 2026-07-28 | Merge commit `6e95c1f` |
 | Close objective | `PENDING` | | Requires a full audit re-run; this phase alone does not close any scorecard row |
