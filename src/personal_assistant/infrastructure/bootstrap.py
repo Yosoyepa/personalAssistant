@@ -55,6 +55,7 @@ from personal_assistant.adapters.persistence.in_memory import (
 )
 from personal_assistant.adapters.persistence.memory import TenantMemoryStore
 from personal_assistant.infrastructure.config import (
+    DEFAULT_LLM_CONTEXT_WINDOW_TOKENS,
     AppSettings,
     load_database_settings_from_env,
     load_persistence_settings_from_env,
@@ -320,6 +321,7 @@ def build_container(
     prompt_catalog: PromptCatalogPort | None = None,
     approve_reminder_notifications: bool = False,
     reminder_minutes_before: int = 30,
+    llm_context_window_tokens: int = DEFAULT_LLM_CONTEXT_WINDOW_TOKENS,
 ) -> AppContainer:
     """Build application adapters for local development, tests, and runtime startup."""
     notification_adapter = notifications or LocalNotificationTool()
@@ -360,6 +362,7 @@ def build_container(
         prompt_catalog=prompts,
         replies=replies,
         reminder_minutes_before=reminder_minutes_before,
+        llm_context_window_tokens=llm_context_window_tokens,
         unit_of_work=persistence.reminder_uow,
     )
     commands = ConversationCommandService(
@@ -373,6 +376,7 @@ def build_container(
         prompt_catalog=prompts,
         traces=traces,
         replies=replies,
+        llm_context_window_tokens=llm_context_window_tokens,
     )
     return AppContainer(
         approvals=approvals,

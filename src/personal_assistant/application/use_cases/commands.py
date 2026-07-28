@@ -37,6 +37,7 @@ from personal_assistant.application.services.prompts import (
 from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.use_cases.reminders import (
     ReminderWorkflow,
+    llm_usage_metrics,
     reminder_idempotency_key,
 )
 from personal_assistant.domain.common.exceptions import AssistantError
@@ -113,6 +114,7 @@ class ConversationCommandService:
     prompt_catalog: PromptCatalogPort = field(default_factory=DefaultPromptCatalog)
     traces: TraceRecorderPort | None = None
     replies: AssistantReplies = field(default_factory=AssistantReplies)
+    llm_context_window_tokens: int = 200_000
 
     def handle(
         self,
@@ -447,6 +449,10 @@ class ConversationCommandService:
                     "reminder_text": inferred.reminder_text,
                     "accepted": accepted,
                     "threshold": LLM_INTENT_CONFIDENCE_THRESHOLD,
+                    **llm_usage_metrics(
+                        result,
+                        context_window_tokens=self.llm_context_window_tokens,
+                    ),
                 },
             )
         )

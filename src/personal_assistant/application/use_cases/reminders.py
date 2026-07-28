@@ -75,7 +75,12 @@ from personal_assistant.domain.reminders.workflow_state import (
 )
 
 
-__all__ = ["ReminderWorkflow", "reminder_idempotency", "reminder_idempotency_key"]
+__all__ = [
+    "ReminderWorkflow",
+    "llm_usage_metrics",
+    "reminder_idempotency",
+    "reminder_idempotency_key",
+]
 
 
 def reminder_idempotency(
@@ -144,12 +149,15 @@ class ReminderWorkflow:
     unit_of_work: ReminderUnitOfWork | None = None
     llm: LLMProvider | None = None
     reminder_minutes_before: int = 30
+    llm_context_window_tokens: int = 200_000
     prompt_catalog: PromptCatalogPort = field(default_factory=DefaultPromptCatalog)
     replies: AssistantReplies = field(default_factory=AssistantReplies)
 
     def __post_init__(self) -> None:
         if self.reminder_minutes_before < 1:
             raise ValueError("reminder_minutes_before must be greater than zero")
+        if self.llm_context_window_tokens < 1:
+            raise ValueError("llm_context_window_tokens must be greater than zero")
 
     def run(
         self, principal: Principal, request: ReminderWorkflowInput
@@ -206,6 +214,10 @@ class ReminderWorkflow:
             event_type=TraceEventType.context_selected,
             tenant_id=principal.tenant_id,
             context_refs=["agent_contract", "current_message", "principal"],
+            input_summary={
+                "text_length": len(request.text),
+                "estimated_tokens": max(len(request.text) // 4, 1),
+            },
             parent_event_id=guardrail_trace.trace_id,
         )
         self.traces.write(guardrail_trace)
@@ -762,6 +774,7 @@ class ReminderWorkflow:
                 llm_result=llm_result,
                 extraction=extraction,
                 prompt=rendered_prompt,
+                context_window_tokens=self.llm_context_window_tokens,
             )
         except Exception as exc:
             trace = TraceEvent(
@@ -842,6 +855,28 @@ def _notice_minutes_before(
     return max(int(seconds_before // 60), 0)
 
 
+def llm_usage_metrics(
+    llm_result: LLMResult, *, context_window_tokens: int
+) -> dict[str, int | float]:
+    """Build token-usage metrics for ``llm.called`` trace payloads.
+
+    Providers that do not report usage coerce token counts to zero; in that
+    case no metric keys are emitted instead of misleading zeros.
+    """
+
+    if llm_result.input_tokens <= 0 and llm_result.output_tokens <= 0:
+        return {}
+    metrics: dict[str, int | float] = {
+        "input_tokens": llm_result.input_tokens,
+        "output_tokens": llm_result.output_tokens,
+    }
+    if llm_result.input_tokens > 0 and context_window_tokens > 0:
+        metrics["context_utilization"] = round(
+            llm_result.input_tokens / context_window_tokens, 4
+        )
+    return metrics
+
+
 def _llm_trace(
     *,
     principal: Principal,
@@ -850,6 +885,7 @@ def _llm_trace(
     llm_result: LLMResult,
     extraction: ReminderExtraction | None,
     prompt: RenderedPrompt,
+    context_window_tokens: int,
 ) -> TraceEvent:
     return TraceEvent(
         run_id=run_id,
@@ -864,8 +900,9 @@ def _llm_trace(
         },
         output_summary={
             "matched": extraction is not None,
-            "input_tokens": llm_result.input_tokens,
-            "output_tokens": llm_result.output_tokens,
+            **llm_usage_metrics(
+                llm_result, context_window_tokens=context_window_tokens
+            ),
         },
         parent_event_id=parent_event_id,
     )

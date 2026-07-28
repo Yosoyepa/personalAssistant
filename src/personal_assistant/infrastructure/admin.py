@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from collections import Counter
 from datetime import UTC, datetime
 from html import escape
@@ -29,6 +30,11 @@ from personal_assistant.infrastructure.bootstrap import AppContainer
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
+
+#: Attention threshold for per-call LLM context utilization. Audit DoD #1
+#: expects typical utilization below 40%, so a p95 above this value is
+#: surfaced as an attention signal.
+CONTEXT_UTILIZATION_ATTENTION_THRESHOLD = 0.4
 _LOCAL_NETWORKS = (
     ip_network("127.0.0.0/8"),
     ip_network("::1/128"),
@@ -98,6 +104,7 @@ class AdminDashboard:
         memory = self.memory(principal, limit=safe_limit)
         approvals = self.approvals(principal, limit=safe_limit)
         errors = self.errors(principal, limit=safe_limit)
+        context = self.context(principal)
         health = self.health(
             traces=traces,
             outbox=outbox,
@@ -109,6 +116,7 @@ class AdminDashboard:
             memory=memory,
             approvals=approvals,
             errors=errors,
+            context=context,
         )
 
         return {
@@ -130,6 +138,7 @@ class AdminDashboard:
             "states": states,
             "memory": memory,
             "errors": errors,
+            "context": context,
         }
 
     def health(
@@ -145,10 +154,16 @@ class AdminDashboard:
         memory: dict[str, Any],
         approvals: dict[str, Any],
         errors: dict[str, Any],
+        context: dict[str, Any],
     ) -> dict[str, Any]:
         outbox_counts = outbox["counts"]
         state_counts = states["counts"]
         scheduler_counts = scheduler["counts"]
+        context_p95 = context["p95"]
+        high_context_utilization = int(
+            context_p95 is not None
+            and context_p95 > CONTEXT_UTILIZATION_ATTENTION_THRESHOLD
+        )
         attention = {
             "pending_approvals": approvals["pending_count"],
             "due_reminders": scheduler_counts["due"],
@@ -157,6 +172,7 @@ class AdminDashboard:
             "claimed_outbox": outbox_counts.get(OutboxStatus.claimed.value, 0),
             "failed_outbox": outbox_counts.get(OutboxStatus.failed.value, 0),
             "failed_workflows": state_counts.get(WorkflowStatus.failed.value, 0),
+            "high_context_utilization": high_context_utilization,
         }
         status = "needs_attention" if any(attention.values()) else "ok"
         return {
@@ -189,6 +205,11 @@ class AdminDashboard:
                 "events": {"status": "ok", "total": events["total"]},
                 "states": {"status": "ok", "total": states["total"], "counts": state_counts},
                 "memory": {"status": "ok", "total": memory["total"], "confirmed": memory["confirmed_count"]},
+                "context": {
+                    "status": "needs_attention" if high_context_utilization else "ok",
+                    "samples": context["samples"],
+                    "p95": context_p95,
+                },
             },
         }
 
@@ -426,6 +447,39 @@ class AdminDashboard:
             "items": items[:safe_limit],
         }
 
+    def context(self, principal: Principal) -> dict[str, Any]:
+        """Aggregate LLM context-utilization stats from persisted traces.
+
+        Reads ``llm.called`` events through the same public trace port as the
+        other components and summarizes the ``context_utilization`` values
+        recorded in their ``output_summary``. The source is read fail-closed:
+        a failing or empty trace adapter degrades to the empty component
+        instead of raising out of ``snapshot()``. Only numeric aggregates and
+        model names leave this method, never event payloads.
+        """
+        try:
+            events = self.container.traces.list_for_tenant(principal)
+        except Exception:
+            return _empty_context_component()
+        llm_events = [
+            event
+            for event in events
+            if event.event_type == TraceEventType.llm_called
+        ]
+        samples = [
+            utilization
+            for event in llm_events
+            if (utilization := _context_utilization_value(event)) is not None
+        ]
+        return {
+            "samples": len(samples),
+            "p50": round(percentile_nearest_rank(samples, 50), 4) if samples else None,
+            "p95": round(percentile_nearest_rank(samples, 95), 4) if samples else None,
+            "calls_by_model": dict(
+                Counter(event.model or "unknown" for event in llm_events)
+            ),
+        }
+
     def render_html(
         self,
         principal: Principal,
@@ -463,6 +517,7 @@ def render_dashboard_html(snapshot: dict[str, Any]) -> str:
             '<a href="#errors">Errors</a>',
             '<a href="#approvals">Approvals</a>',
             '<a href="#traces">Traces</a>',
+            '<a href="#context">Context</a>',
             '<a href="#outbox">Outbox</a>',
             '<a href="#scheduler">Scheduler</a>',
             '<a href="#events">Events</a>',
@@ -488,6 +543,7 @@ def render_dashboard_html(snapshot: dict[str, Any]) -> str:
                 ["timestamp", "run_id", "event_type", "agent_id", "tool_call", "validation", "error"],
                 snapshot["traces"]["items"],
             ),
+            _render_context(snapshot["context"]),
             _render_table_section(
                 "outbox",
                 "Outbox",
@@ -727,6 +783,56 @@ def _render_errors(errors: dict[str, Any]) -> str:
     )
 
 
+def _render_context(context: dict[str, Any]) -> str:
+    p95 = context["p95"]
+    over_threshold = p95 is not None and p95 > CONTEXT_UTILIZATION_ATTENTION_THRESHOLD
+    cards = [
+        {
+            "label": "Samples",
+            "value": context["samples"],
+            "detail": "llm.called events with usage data",
+        },
+        {
+            "label": "P50 utilization",
+            "value": _format_percent(context["p50"]),
+            "detail": "nearest-rank median of input tokens over context window",
+        },
+        {
+            "label": "P95 utilization",
+            "value": _format_percent(p95),
+            "detail": f"attention above {CONTEXT_UTILIZATION_ATTENTION_THRESHOLD:.0%}",
+            "tone": "attention" if over_threshold else "neutral",
+        },
+        {
+            "label": "Models",
+            "value": len(context["calls_by_model"]),
+            "detail": "models with llm.called events",
+        },
+    ]
+    model_rows = [
+        {"model": model, "calls": calls}
+        for model, calls in sorted(context["calls_by_model"].items())
+    ]
+    return "\n".join(
+        [
+            '<section id="context">',
+            '<div class="section-heading">',
+            "<h2>Context</h2>",
+            '<p class="section-note">Per-call LLM context utilization from persisted traces.</p>',
+            "</div>",
+            _render_summary_cards(cards),
+            _render_table(["model", "calls"], model_rows),
+            "</section>",
+        ]
+    )
+
+
+def _format_percent(value: float | None) -> str:
+    if value is None:
+        return "n/a"
+    return f"{value:.2%}"
+
+
 def _render_error_filters(errors: dict[str, Any]) -> str:
     categories = ["all", *sorted(errors["category_counts"])]
     category_options = "\n".join(
@@ -846,6 +952,34 @@ def _tenant_calendar_events(container: AppContainer, principal: Principal) -> li
     if not callable(list_events):
         return []
     return list_events(principal)
+
+
+def percentile_nearest_rank(values: list[float], percentile: float) -> float:
+    """Return the nearest-rank percentile of a non-empty sample list.
+
+    Deterministic rule: sort ascending and pick the observed sample at rank
+    ``ceil(percentile / 100 * n)`` (1-based). No interpolation: the result is
+    always an observed value, so p95 only exceeds the attention threshold when
+    an actual call did. ``percentile`` must be in (0, 100].
+    """
+    if not values:
+        raise ValueError("percentile_nearest_rank requires at least one sample")
+    if not 0 < percentile <= 100:
+        raise ValueError("percentile must be in (0, 100]")
+    ordered = sorted(values)
+    rank = math.ceil(percentile / 100 * len(ordered))
+    return ordered[max(rank, 1) - 1]
+
+
+def _context_utilization_value(event: TraceEvent) -> float | None:
+    value = event.output_summary.get("context_utilization")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def _empty_context_component() -> dict[str, Any]:
+    return {"samples": 0, "p50": None, "p95": None, "calls_by_model": {}}
 
 
 def _trace_item(event: TraceEvent) -> dict[str, Any]:
