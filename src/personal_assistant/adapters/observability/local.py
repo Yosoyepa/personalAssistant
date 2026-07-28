@@ -7,6 +7,7 @@ from personal_assistant.domain.common.identity import (
     Principal,
     require_trusted_principal,
 )
+from personal_assistant.domain.common.privacy import safe_trace_run_id
 
 
 class TraceRecorder:
@@ -28,10 +29,11 @@ class TraceRecorder:
 
     def list_for_run(self, principal: Principal | str, run_id: str) -> list[TraceEvent]:
         tenant_id = _tenant_id_from_principal(principal)
+        safe_run_id = safe_trace_run_id(run_id)
         return [
             event.for_persistence()
             for event in self._events
-            if event.tenant_id == tenant_id and event.run_id == run_id
+            if event.tenant_id == tenant_id and event.run_id == safe_run_id
         ]
 
 

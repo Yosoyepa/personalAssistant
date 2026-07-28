@@ -571,6 +571,30 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertEqual(payload["output_summary"]["audio"]["size_bytes"], 21)
         self.assertEqual(payload["error"]["ApiToken"], "[REDACTED]")
 
+    def test_trace_recorder_queries_telegram_run_by_raw_or_opaque_id(self) -> None:
+        principal = self.principal()
+        raw_run_id = "telegram:918273645001:675849302004:audio-reply"
+        trace = TraceEvent(
+            trace_id="trace-telegram",
+            run_id=raw_run_id,
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_failed,
+            tenant_id=principal.tenant_id,
+        )
+        self.assertNotEqual(trace.run_id, raw_run_id)
+        for query_run_id in (raw_run_id, trace.run_id):
+            connection = RecordingConnection(
+                fetchall_results=[[{"payload": trace.model_dump(mode="json")}]]
+            )
+
+            [restored] = postgres.PostgresTraceRecorder(
+                connection=connection
+            ).list_for_run(principal, query_run_id)
+
+            _, select_params = connection.statements[0]
+            self.assertEqual(select_params, (principal.tenant_id, trace.run_id))
+            self.assertEqual(restored.run_id, trace.run_id)
+
     def test_trace_recorder_redacts_legacy_postgres_payload_on_read(self) -> None:
         principal = self.principal()
         legacy_payload = TraceEvent(

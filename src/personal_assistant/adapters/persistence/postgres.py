@@ -72,6 +72,7 @@ from personal_assistant.domain.common.permissions import (
     require_approval,
     require_permission,
 )
+from personal_assistant.domain.common.privacy import safe_trace_run_id
 from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
 from personal_assistant.domain.reminders.idempotency import (
     ReminderIdempotencyConflict,
@@ -2433,6 +2434,7 @@ class PostgresTraceRecorder(_PostgresStore):
 
     def list_for_run(self, principal: Principal | str, run_id: str) -> list[TraceEvent]:
         tenant_id = _tenant_id_from_principal(principal)
+        safe_run_id = safe_trace_run_id(run_id)
         with self._db.cursor() as cursor:
             cursor.execute(
                 f"""
@@ -2441,7 +2443,7 @@ class PostgresTraceRecorder(_PostgresStore):
                 WHERE tenant_id = %s AND run_id = %s
                 ORDER BY timestamp, trace_id
                 """,
-                (tenant_id, run_id),
+                (tenant_id, safe_run_id),
             )
             return [
                 TraceEvent.model_validate(_payload_from_row(row))

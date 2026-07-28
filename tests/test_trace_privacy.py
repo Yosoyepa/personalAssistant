@@ -21,6 +21,96 @@ AUDIO_FIXTURE = b"test-only-audio-bytes"
 
 
 class TracePrivacyTests(unittest.TestCase):
+    def test_hex_shaped_external_identifier_is_hashed_not_trusted_as_a_digest(
+        self,
+    ) -> None:
+        attacker_controlled_id = "a" * 64
+        trace = TraceEvent(
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_started,
+            tenant_id="tenant-fixture",
+            input_summary={"actor_id": attacker_controlled_id},
+        )
+
+        opaque_actor_id = trace.input_summary["actor_id"]
+        self.assertTrue(opaque_actor_id.startswith("sha256:"))
+        self.assertNotEqual(opaque_actor_id, f"sha256:{attacker_controlled_id}")
+        self.assertNotIn(attacker_controlled_id, trace.model_dump_json())
+
+    def test_telegram_identifiers_are_opaque_but_still_correlatable(self) -> None:
+        recorder = TraceRecorder()
+        raw_run_id = (
+            "command:telegram:918273645001:564738291002:intent"
+        )
+        trace = TraceEvent(
+            trace_id="trace-telegram-identifiers",
+            run_id=raw_run_id,
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_started,
+            tenant_id="tenant-fixture",
+            input_summary={
+                "channel": "telegram",
+                "actor_id": "192837465003",
+                "chat_id": "918273645001",
+                "conversation_id": "918273645001",
+                "message_id": "564738291002",
+                "update_id": "675849302004",
+                "source_event_id": "675849302004",
+                "provider_message_id": 564738291002,
+                "idempotency_key": "telegram:675849302004",
+            },
+        )
+
+        recorder.write(trace)
+        [stored_from_raw] = recorder.list_for_run("tenant-fixture", raw_run_id)
+        [stored_from_opaque] = recorder.list_for_run(
+            "tenant-fixture", stored_from_raw.run_id
+        )
+        payload = stored_from_raw.model_dump(mode="json")
+        serialized = json.dumps(payload, sort_keys=True)
+
+        self.assertEqual(stored_from_raw, stored_from_opaque)
+        self.assertTrue(payload["run_id"].startswith("sha256:"))
+        self.assertEqual(payload["input_summary"]["channel"], "telegram")
+        self.assertEqual(
+            payload["input_summary"]["chat_id"],
+            payload["input_summary"]["conversation_id"],
+        )
+        self.assertEqual(
+            payload["input_summary"]["update_id"],
+            payload["input_summary"]["source_event_id"],
+        )
+        for key in (
+            "actor_id",
+            "chat_id",
+            "conversation_id",
+            "message_id",
+            "update_id",
+            "source_event_id",
+            "provider_message_id",
+            "idempotency_key",
+        ):
+            self.assertTrue(payload["input_summary"][key].startswith("sha256:"))
+        for clear_identifier in (
+            raw_run_id,
+            "192837465003",
+            "918273645001",
+            "564738291002",
+            "675849302004",
+            "telegram:675849302004",
+        ):
+            self.assertNotIn(clear_identifier, serialized)
+
+    def test_non_telegram_internal_run_id_contract_is_unchanged(self) -> None:
+        trace = TraceEvent(
+            run_id="workflow:reminder-worker",
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_started,
+            tenant_id="tenant-fixture",
+        )
+
+        self.assertEqual(trace.run_id, "workflow:reminder-worker")
+
     def test_trace_serialization_is_recursive_allowlisted_and_idempotent(self) -> None:
         trace = TraceEvent(
             trace_id="trace-fixture",

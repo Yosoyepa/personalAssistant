@@ -870,12 +870,14 @@ class HttpRuntimeTests(unittest.TestCase):
         assert error is not None
         self.assertIn("No pude transcribir", error)
         trace_errors = [
-            event.error
+            event
             for event in container.traces.list_for_tenant("tenant-a")
-            if event.run_id.endswith(":transcription")
+            if event.event_type == TraceEventType.agent_failed
+            and event.error.get("type") == "RuntimeError"
         ]
         self.assertEqual(len(trace_errors), 1)
-        self.assertEqual(trace_errors[0]["type"], "RuntimeError")
+        self.assertTrue(trace_errors[0].run_id.startswith("sha256:"))
+        self.assertNotIn("chat-1", trace_errors[0].model_dump_json())
 
     def test_telegram_voice_oga_extension_is_normalized_for_transcription(self) -> None:
         settings = AppSettings(
