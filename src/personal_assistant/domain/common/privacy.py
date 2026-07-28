@@ -121,6 +121,7 @@ _HASH_KEYS = {
 _METRIC_KEYS = {
     "accepted",
     "confidence",
+    "contextutilization",
     "count",
     "durationms",
     "end",

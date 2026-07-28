@@ -182,6 +182,7 @@ def _runtime(*, require_provider: bool) -> tuple[Any, Principal, Any]:
         notifications=notifications,
         approve_reminder_notifications=True,
         reminder_minutes_before=settings.reminder_minutes_before,
+        llm_context_window_tokens=settings.llm_context_window_tokens,
     )
     principal = Principal(
         principal_id="reminder-worker",

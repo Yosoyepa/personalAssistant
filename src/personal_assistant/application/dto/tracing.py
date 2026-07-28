@@ -30,6 +30,25 @@ class TraceEventType(str, Enum):
     agent_failed = "agent.failed"
 
 
+#: Fields that must be present and non-empty for each event type before the
+#: event may be persisted. Grounded in what the application legitimately
+#: emits today; enforced fail-closed at write time by every trace recorder.
+REQUIRED_TRACE_FIELDS: dict[TraceEventType, tuple[str, ...]] = {
+    TraceEventType.agent_started: ("input_summary",),
+    TraceEventType.context_selected: ("context_refs",),
+    TraceEventType.llm_called: ("model",),
+    TraceEventType.tool_called: ("tool_call",),
+    TraceEventType.guardrail_checked: ("validation",),
+    TraceEventType.approval_requested: ("tool_call",),
+    TraceEventType.agent_completed: ("output_summary",),
+    TraceEventType.agent_failed: ("error",),
+}
+
+
+class IncompleteTraceEventError(ValueError):
+    """A trace event is missing fields required by its event type."""
+
+
 class TraceEvent(BaseModel):
     model_config = ConfigDict(
         extra="forbid", str_strip_whitespace=True, validate_assignment=True
@@ -117,3 +136,26 @@ class TraceEvent(BaseModel):
         """Materialize a privacy-safe copy even after mutable-field changes."""
 
         return type(self).model_validate(self.model_dump(mode="python"))
+
+
+def require_trace_completeness(event: TraceEvent) -> TraceEvent:
+    """Fail closed when an event lacks a field its event type requires.
+
+    Shared by every trace recorder so an incomplete event raises a clear
+    error at write time and a partial row is never persisted. The event is
+    validated as emitted, before privacy redaction may legitimately strip
+    non-allowlisted payload keys. The message only names static
+    identifiers (event type and field names), never event payloads.
+    """
+
+    missing = tuple(
+        field_name
+        for field_name in REQUIRED_TRACE_FIELDS[event.event_type]
+        if not getattr(event, field_name)
+    )
+    if missing:
+        required = ", ".join(missing)
+        raise IncompleteTraceEventError(
+            f"incomplete trace event: {event.event_type.value} requires {required}"
+        )
+    return event

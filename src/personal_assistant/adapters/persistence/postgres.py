@@ -37,7 +37,10 @@ from personal_assistant.application.dto.events import (
     OutboxMessage,
     OutboxStatus,
 )
-from personal_assistant.application.dto.tracing import TraceEvent
+from personal_assistant.application.dto.tracing import (
+    TraceEvent,
+    require_trace_completeness,
+)
 from personal_assistant.application.dto.workflows import (
     WorkflowState,
     WorkflowStateRegistration,
@@ -2365,7 +2368,7 @@ class PostgresMemoryStore(_PostgresStore):
 
 class PostgresTraceRecorder(_PostgresStore):
     def write(self, event: TraceEvent) -> None:
-        safe_event = event.for_persistence()
+        safe_event = require_trace_completeness(event).for_persistence()
         payload = safe_event.model_dump(mode="json")
         trace_fingerprint = _fingerprint(payload)
         with self._db.cursor() as cursor:

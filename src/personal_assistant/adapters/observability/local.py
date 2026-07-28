@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from personal_assistant.application.dto.tracing import TraceEvent
+from personal_assistant.application.dto.tracing import (
+    TraceEvent,
+    require_trace_completeness,
+)
 from personal_assistant.domain.common.identity import (
     Principal,
     require_trusted_principal,
@@ -17,7 +20,7 @@ class TraceRecorder:
         self._events: list[TraceEvent] = []
 
     def write(self, event: TraceEvent) -> None:
-        self._events.append(event.for_persistence())
+        self._events.append(require_trace_completeness(event).for_persistence())
 
     def list_for_tenant(self, principal: Principal | str) -> list[TraceEvent]:
         tenant_id = _tenant_id_from_principal(principal)

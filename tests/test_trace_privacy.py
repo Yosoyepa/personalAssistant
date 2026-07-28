@@ -174,6 +174,7 @@ class TracePrivacyTests(unittest.TestCase):
             agent_id="personal_assistant",
             event_type=TraceEventType.tool_called,
             tenant_id="tenant-fixture",
+            tool_call={"name": "memory.write"},
         )
         trace.input_summary["message"] = TEXT_FIXTURE
         trace.output_summary["audio"] = AUDIO_FIXTURE

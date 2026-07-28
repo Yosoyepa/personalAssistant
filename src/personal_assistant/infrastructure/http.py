@@ -418,6 +418,7 @@ def build_runtime_container(settings: AppSettings) -> AppContainer:
             prompt_catalog=prompts,
             approve_reminder_notifications=True,
             reminder_minutes_before=settings.reminder_minutes_before,
+            llm_context_window_tokens=settings.llm_context_window_tokens,
         )
     return build_container(
         settings=settings,
@@ -426,6 +427,7 @@ def build_runtime_container(settings: AppSettings) -> AppContainer:
         tts=tts,
         prompt_catalog=prompts,
         reminder_minutes_before=settings.reminder_minutes_before,
+        llm_context_window_tokens=settings.llm_context_window_tokens,
     )
 
 

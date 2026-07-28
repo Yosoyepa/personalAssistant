@@ -24,7 +24,11 @@ from personal_assistant.application.use_cases.reminders import reminder_idempote
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.domain.memory.models import MemoryKind
-from personal_assistant.infrastructure.admin import AdminDashboard, is_local_client
+from personal_assistant.infrastructure.admin import (
+    AdminDashboard,
+    is_local_client,
+    percentile_nearest_rank,
+)
 from personal_assistant.infrastructure.bootstrap import build_container
 
 
@@ -162,6 +166,7 @@ class AdminDashboardTests(unittest.TestCase):
             "errors",
             "approvals",
             "traces",
+            "context",
             "outbox",
             "scheduler",
             "events",
@@ -698,6 +703,194 @@ class AdminDashboardTests(unittest.TestCase):
         self.assertFalse(is_local_client("10.0.0.2:8000"))
         self.assertFalse(is_local_client("example.com"))
         self.assertFalse(is_local_client(None))
+
+
+class FailingTraceAdapter:
+    def list_for_tenant(self, principal: Principal) -> list[object]:
+        raise RuntimeError("trace store unavailable")
+
+
+def _llm_called_event(
+    trace_id: str,
+    *,
+    tenant_id: str = "tenant-a",
+    utilization: float | None = None,
+    model: str | None = "test-model-a",
+    input_summary: dict[str, object] | None = None,
+) -> TraceEvent:
+    output_summary: dict[str, object] = {"input_tokens": 100, "output_tokens": 10}
+    if utilization is not None:
+        output_summary["context_utilization"] = utilization
+    return TraceEvent(
+        trace_id=trace_id,
+        run_id=f"run-{trace_id}",
+        agent_id="personal_assistant",
+        event_type=TraceEventType.llm_called,
+        tenant_id=tenant_id,
+        timestamp=datetime(2026, 6, 23, 16, 0, tzinfo=UTC),
+        model=model,
+        input_summary=input_summary or {},
+        output_summary=output_summary,
+    )
+
+
+class AdminDashboardContextTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.principal = Principal.for_test(
+            principal_id="user-1",
+            tenant_id="tenant-a",
+            permission_tier=PermissionTier.P5,
+        )
+
+    def dashboard_with_traces(self, traces: list[object]) -> AdminDashboard:
+        return AdminDashboard(
+            SimpleNamespace(
+                traces=PublicOnlyTenantListAdapter(traces),
+                outbox=PublicOnlyTenantListAdapter([]),
+                scheduler=PublicOnlyTenantListAdapter([]),
+                calendar=PublicOnlyCalendarAdapter([]),
+                event_store=PublicOnlyTenantListAdapter([]),
+                states=PublicOnlyTenantListAdapter([]),
+                memory=PublicOnlyTenantListAdapter([]),
+            )
+        )
+
+    def test_context_component_aggregates_llm_utilization(self) -> None:
+        dashboard = self.dashboard_with_traces(
+            [
+                _llm_called_event("trace-1", utilization=0.10),
+                _llm_called_event("trace-2", utilization=0.20),
+                _llm_called_event("trace-3", utilization=0.30, model="test-model-b"),
+                _llm_called_event("trace-4", utilization=0.35, model="test-model-b"),
+                _llm_called_event("trace-5", model=None),
+                TraceEvent(
+                    trace_id="trace-6",
+                    run_id="run-6",
+                    agent_id="personal_assistant",
+                    event_type=TraceEventType.agent_completed,
+                    tenant_id="tenant-a",
+                    timestamp=datetime(2026, 6, 23, 16, 5, tzinfo=UTC),
+                ),
+                _llm_called_event("trace-7", tenant_id="tenant-b", utilization=0.99),
+            ]
+        )
+
+        snapshot = dashboard.snapshot(self.principal)
+
+        self.assertEqual(
+            snapshot["context"],
+            {
+                "samples": 4,
+                "p50": 0.20,
+                "p95": 0.35,
+                "calls_by_model": {"test-model-a": 2, "test-model-b": 2, "unknown": 1},
+            },
+        )
+        self.assertEqual(snapshot["health"]["attention"]["high_context_utilization"], 0)
+        self.assertEqual(
+            snapshot["health"]["components"]["context"],
+            {"status": "ok", "samples": 4, "p95": 0.35},
+        )
+
+    def test_context_component_empty_state_has_null_percentiles(self) -> None:
+        dashboard = self.dashboard_with_traces([])
+
+        snapshot = dashboard.snapshot(self.principal)
+
+        self.assertEqual(
+            snapshot["context"],
+            {"samples": 0, "p50": None, "p95": None, "calls_by_model": {}},
+        )
+        self.assertEqual(snapshot["health"]["attention"]["high_context_utilization"], 0)
+        self.assertEqual(snapshot["health"]["components"]["context"]["status"], "ok")
+
+    def test_context_attention_triggers_only_above_threshold(self) -> None:
+        high = self.dashboard_with_traces(
+            [
+                _llm_called_event("trace-low", utilization=0.10),
+                _llm_called_event("trace-high", utilization=0.45),
+            ]
+        ).snapshot(self.principal)
+        boundary = self.dashboard_with_traces(
+            [_llm_called_event("trace-boundary", utilization=0.40)]
+        ).snapshot(self.principal)
+
+        self.assertEqual(high["health"]["attention"]["high_context_utilization"], 1)
+        self.assertEqual(high["health"]["status"], "needs_attention")
+        self.assertEqual(high["health"]["components"]["context"]["status"], "needs_attention")
+        self.assertEqual(high["health"]["components"]["context"]["p95"], 0.45)
+        self.assertEqual(boundary["context"]["p95"], 0.40)
+        self.assertEqual(boundary["health"]["attention"]["high_context_utilization"], 0)
+        self.assertEqual(boundary["health"]["components"]["context"]["status"], "ok")
+
+    def test_context_degrades_fail_closed_when_trace_source_fails(self) -> None:
+        dashboard = AdminDashboard(SimpleNamespace(traces=FailingTraceAdapter()))
+
+        component = dashboard.context(self.principal)
+
+        self.assertEqual(
+            component,
+            {"samples": 0, "p50": None, "p95": None, "calls_by_model": {}},
+        )
+
+    def test_context_component_has_no_pii_and_is_tenant_scoped(self) -> None:
+        dashboard = self.dashboard_with_traces(
+            [
+                _llm_called_event(
+                    "trace-private",
+                    utilization=0.20,
+                    input_summary={
+                        "text": "context-test-placeholder-message",
+                        "recipient": "context-test-placeholder-recipient",
+                    },
+                ),
+                _llm_called_event(
+                    "trace-other-tenant",
+                    tenant_id="tenant-b",
+                    utilization=0.99,
+                    model="tenant-b-model",
+                ),
+            ]
+        )
+
+        component = dashboard.snapshot(self.principal)["context"]
+        payload = json.dumps(component, sort_keys=True)
+
+        self.assertEqual(component["samples"], 1)
+        self.assertEqual(component["calls_by_model"], {"test-model-a": 1})
+        for marker in (
+            "context-test-placeholder-message",
+            "context-test-placeholder-recipient",
+            "tenant-b",
+        ):
+            self.assertNotIn(marker, payload)
+
+
+class PercentileNearestRankTests(unittest.TestCase):
+    def test_single_sample_returns_that_sample(self) -> None:
+        self.assertEqual(percentile_nearest_rank([0.1234], 50), 0.1234)
+        self.assertEqual(percentile_nearest_rank([0.1234], 95), 0.1234)
+
+    def test_p50_of_even_count_picks_lower_middle_sample(self) -> None:
+        self.assertEqual(percentile_nearest_rank([0.1, 0.2, 0.3, 0.4], 50), 0.2)
+
+    def test_p95_is_always_an_observed_sample(self) -> None:
+        values = [0.1] * 19 + [0.5]
+        self.assertEqual(percentile_nearest_rank(values, 95), 0.1)
+        self.assertEqual(percentile_nearest_rank(values, 100), 0.5)
+
+    def test_input_is_sorted_before_ranking(self) -> None:
+        self.assertEqual(percentile_nearest_rank([0.4, 0.1, 0.3, 0.2], 50), 0.2)
+
+    def test_empty_input_raises(self) -> None:
+        with self.assertRaises(ValueError):
+            percentile_nearest_rank([], 50)
+
+    def test_out_of_range_percentile_raises(self) -> None:
+        with self.assertRaises(ValueError):
+            percentile_nearest_rank([0.1], 0)
+        with self.assertRaises(ValueError):
+            percentile_nearest_rank([0.1], 101)
 
 
 if __name__ == "__main__":

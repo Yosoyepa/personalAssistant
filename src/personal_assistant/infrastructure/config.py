@@ -17,6 +17,12 @@ DEFAULT_MINIMAX_MODEL = "MiniMax-M3"
 DEFAULT_MINIMAX_TTS_BASE_URL = "https://api.minimax.io"
 DEFAULT_MINIMAX_TTS_MODEL = "speech-2.8-turbo"
 DEFAULT_DATABASE_SCHEMA = "public"
+# Matches the 200k-token context window of the default MiniMax-M3 model and of
+# Anthropic Claude models served through the Anthropic-compatible provider.
+DEFAULT_LLM_CONTEXT_WINDOW_TOKENS = 200_000
+# Default production trace retention window; the audit policy allows 30-90
+# days. Pruning itself is operator-invoked, never automatic at runtime.
+DEFAULT_TRACE_RETENTION_DAYS = 30
 
 
 def _load_env_file() -> dict[str, str]:
@@ -131,6 +137,7 @@ class AppSettings:
     llm_anthropic_version: str = "2023-06-01"
     llm_timeout_seconds: float = 30.0
     llm_max_tokens: int = 512
+    llm_context_window_tokens: int = DEFAULT_LLM_CONTEXT_WINDOW_TOKENS
     transcription_provider: str = "disabled"
     transcription_api_key: str | None = field(default=None, repr=False)
     transcription_base_url: str | None = field(default=None, repr=False)
@@ -154,6 +161,7 @@ class AppSettings:
     reminder_worker_interval_seconds: float = 15.0
     reminder_worker_heartbeat_timeout_seconds: float = 45.0
     reminder_minutes_before: int = 30
+    trace_retention_days: int = DEFAULT_TRACE_RETENTION_DAYS
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -184,6 +192,18 @@ class AppSettings:
                 "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS must exceed "
                 "REMINDER_WORKER_INTERVAL_SECONDS when the worker is enabled"
             )
+        if (
+            not isinstance(self.llm_context_window_tokens, int)
+            or isinstance(self.llm_context_window_tokens, bool)
+            or self.llm_context_window_tokens <= 0
+        ):
+            raise ValueError("LLM_CONTEXT_WINDOW_TOKENS must be a positive integer")
+        if (
+            not isinstance(self.trace_retention_days, int)
+            or isinstance(self.trace_retention_days, bool)
+            or self.trace_retention_days <= 0
+        ):
+            raise ValueError("TRACE_RETENTION_DAYS must be a positive integer")
         try:
             timezone = ZoneInfo(self.timezone)
         except (ValueError, ZoneInfoNotFoundError) as exc:
@@ -225,8 +245,18 @@ class AppSettings:
             "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS", file_values, "45"
         )
         reminder_minutes_before = _env("REMINDER_MINUTES_BEFORE", file_values, "30")
+        trace_retention_days = _env(
+            "TRACE_RETENTION_DAYS",
+            file_values,
+            str(DEFAULT_TRACE_RETENTION_DAYS),
+        )
         llm_timeout = _env("LLM_TIMEOUT_SECONDS", file_values, "30")
         llm_max_tokens = _env("LLM_MAX_TOKENS", file_values, "512")
+        llm_context_window_tokens = _env(
+            "LLM_CONTEXT_WINDOW_TOKENS",
+            file_values,
+            str(DEFAULT_LLM_CONTEXT_WINDOW_TOKENS),
+        )
         transcription_timeout = _env("TRANSCRIPTION_TIMEOUT_SECONDS", file_values, "60")
         tts_timeout = _env("TTS_TIMEOUT_SECONDS", file_values, "30")
         tts_max_reply_characters = _env("TTS_MAX_REPLY_CHARACTERS", file_values, "280")
@@ -293,6 +323,7 @@ class AppSettings:
             or "2023-06-01",
             llm_timeout_seconds=max(float(llm_timeout), 1.0),
             llm_max_tokens=max(int(llm_max_tokens), 1),
+            llm_context_window_tokens=int(llm_context_window_tokens),
             transcription_provider=_env(
                 "TRANSCRIPTION_PROVIDER", file_values, "disabled"
             )
@@ -363,6 +394,7 @@ class AppSettings:
                 "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS", heartbeat_timeout
             ),
             reminder_minutes_before=max(int(reminder_minutes_before), 1),
+            trace_retention_days=int(trace_retention_days),
         )
 
 

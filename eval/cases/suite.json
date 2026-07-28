@@ -6,6 +6,7 @@
     "temporal.v1.json",
     "idempotency.v2.json",
     "security-privacy.v1.json",
+    "trace-completeness.v1.json",
     "atomicity-recovery-postgres.v1.json",
     "delivery-concurrency-postgres.v1.json"
   ],
