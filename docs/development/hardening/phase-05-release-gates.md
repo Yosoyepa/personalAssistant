@@ -10,7 +10,7 @@
 | Remote base commit | `23fc2b4` |
 | Local starting commit | `58a5d22` |
 | Accepted implementation head | `12b45f9` |
-| Local acceptance commit | pending documentation commit |
+| Local acceptance commit | `40f82c0` |
 | Pull request | pending push |
 | Merge commit | pending pull request |
 | Release | pending pull request, tag, and prerelease |
