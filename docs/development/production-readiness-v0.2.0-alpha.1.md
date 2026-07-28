@@ -1,18 +1,21 @@
 # Production-readiness audit — v0.2.0-alpha.1
 
-Audit scope: the PostgreSQL-backed, single-operator alpha. Evidence is limited
-to repository code, deterministic tests, and CI configuration. Absence of
-production traces is treated as a gap, not as proof of safety.
+Audit scope: the PostgreSQL-backed, single-operator alpha. Evidence includes
+repository code, deterministic tests, CI configuration, and the controlled
+PostgreSQL/Telegram delivery smoke recorded in the Phase 5 acceptance ledger.
+Absence of production traces is treated as a gap, not as proof of safety.
 
 Launch decision: **alpha endurecida, no GA**. Controlled alpha use is accepted
 with the gaps below; general availability is explicitly rejected.
 
+Scorecard: **4 PASS / 8 GAP / 0 N/A**.
+
 | # | Definition of Done | Result | Evidence / reason | Closure effort | Priority |
 |---:|---|---|---|---:|---|
 | 1 | Typical context utilization below 40% | **GAP** | No production context-utilization metric, median, or p95 exists. | 3–5 days | P0 |
-| 2 | State externalized | **PASS** | PostgreSQL persists approvals, workflow state, events, outbox, scheduler, memory, and traces; restart/replay tests exercise recovery. This pass applies only to Postgres mode. | 1–2 days/quarter to maintain | P2 |
+| 2 | State externalized | **PASS** | PostgreSQL persists approvals, workflow state, events, outbox, scheduler, memory, and traces; deterministic recovery tests and the controlled reminder smoke proved replay plus restart before delivery. This pass applies only to Postgres mode. | 1–2 days/quarter to maintain | P2 |
 | 3 | Compaction tested on long sessions | **GAP** | There is no compaction pipeline, metric-driven trigger, or >50-turn loss test. | 5–8 days | P0 |
-| 4 | Destructive actions require human approval | **N/A** | Destructive/bulk-delete tools are forbidden and absent. Existing P3/P5 sends and calendar effects use code-enforced approvals and auditable state. Reassess before adding any destructive tool. | 1 day when scope changes | P1 |
+| 4 | Destructive actions require human approval | **PASS** | The human's explicit reminder request authorizes the calendar write and its future notification; code binds calendar, send, and manual-reconciliation effects to resource-scoped P3/P5 grants and durable audit state. Delete/bulk-destructive tools remain forbidden and absent. Reassess before adding any new write, send, charge, or delete capability. | 1 day when scope changes | P1 |
 | 5 | Permissions enforced by code | **PASS** | Trusted principals are server-derived; tenant authority cannot come from request/model text; P3/P5 grants and webhook allowlists fail closed in code. | 1–2 days/quarter to maintain | P2 |
 | 6 | Tool execution sandboxed | **GAP** | The runtime has no container/VM execution sandbox or network-domain allowlist. Secrets are configured at adapter boundaries, but host/network isolation is incomplete. | 5–10 days | P0 |
 | 7 | Durable pause/resume/retry survives a killed process | **GAP** | Durable delivery, leases, approval resume, idempotency, and fault injection exist, but no automated kill/restart exercise proves the whole process lifecycle or multi-day human waits. | 3–5 days | P0 |
