@@ -21,6 +21,7 @@ from personal_assistant.domain.common.privacy import (
     redact_trace_mapping,
     redacted_text_metadata,
     safe_category,
+    safe_trace_run_id,
 )
 from personal_assistant.domain.memory.models import MemoryRecord
 from personal_assistant.infrastructure.bootstrap import AppContainer
@@ -877,7 +878,7 @@ def _filter_trace_errors(
     event_type: str | TraceEventType | None,
 ) -> list[TraceEvent]:
     normalized_category = _normalized_filter(category)
-    normalized_run_id = _normalized_filter(run_id)
+    normalized_run_id = _normalized_trace_run_id_filter(run_id)
     normalized_event_type = _event_type_value(event_type)
     return [
         event
@@ -1002,7 +1003,7 @@ def _error_item_matches_filters(
     source: str | None,
 ) -> bool:
     normalized_category = _normalized_filter(category)
-    normalized_run_id = _normalized_filter(run_id)
+    normalized_run_id = _normalized_trace_run_id_filter(run_id)
     normalized_event_type = _event_type_value(event_type)
     normalized_source = _normalized_filter(source)
     return (
@@ -1026,6 +1027,12 @@ def _normalized_filter(value: str | None) -> str | None:
         return None
     normalized = value.strip().lower()
     return normalized or None
+
+
+def _normalized_trace_run_id_filter(value: str | None) -> str | None:
+    if value is None:
+        return None
+    return _normalized_filter(safe_trace_run_id(value))
 
 
 def _string_value(value: Any) -> str:

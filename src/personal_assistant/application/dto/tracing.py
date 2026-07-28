@@ -15,6 +15,7 @@ from personal_assistant.domain.common.privacy import (
     safe_context_refs,
     safe_identifier,
     safe_optional_identifier,
+    safe_trace_run_id,
 )
 
 
@@ -49,10 +50,15 @@ class TraceEvent(BaseModel):
     error: dict[str, Any] = Field(default_factory=dict, repr=False)
     parent_event_id: str | None = None
 
-    @field_validator("trace_id", "run_id", "agent_id", "tenant_id", mode="before")
+    @field_validator("trace_id", "agent_id", "tenant_id", mode="before")
     @classmethod
     def _validate_identifiers(cls, value: object) -> str:
         return safe_identifier(value)
+
+    @field_validator("run_id", mode="before")
+    @classmethod
+    def _validate_run_id(cls, value: object) -> str:
+        return safe_trace_run_id(value)
 
     @field_validator("parent_event_id", mode="before")
     @classmethod
@@ -81,9 +87,13 @@ class TraceEvent(BaseModel):
     def _validate_metadata(cls, value: object) -> dict[str, Any]:
         return redact_trace_mapping(value)
 
-    @field_serializer("trace_id", "run_id", "agent_id", "tenant_id")
+    @field_serializer("trace_id", "agent_id", "tenant_id")
     def _serialize_identifiers(self, value: str) -> str:
         return safe_identifier(value)
+
+    @field_serializer("run_id")
+    def _serialize_run_id(self, value: str) -> str:
+        return safe_trace_run_id(value)
 
     @field_serializer("parent_event_id")
     def _serialize_optional_identifier(self, value: str | None) -> str | None:

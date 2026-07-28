@@ -43,6 +43,10 @@ _OPAQUE_SECRET_RE = re.compile(
     re.IGNORECASE,
 )
 _TELEGRAM_TOKEN_RE = re.compile(r"\b\d{6,12}:[A-Za-z0-9_-]{20,}\b")
+_TELEGRAM_TRACE_SOURCE_RE = re.compile(
+    r"(?:^|[:/_.@+-])telegram(?:$|[:/_.@+-])",
+    re.IGNORECASE,
+)
 
 _PUBLIC_ERROR_MESSAGES = {
     "authentication_required": "authentication required",
@@ -71,6 +75,7 @@ _IDENTIFIER_KEYS = {
     "approvalid",
     "calendareventid",
     "causationid",
+    "chatid",
     "conversationid",
     "correlationid",
     "eventid",
@@ -81,6 +86,7 @@ _IDENTIFIER_KEYS = {
     "messageid",
     "parenteventid",
     "principalid",
+    "providermessageid",
     "promptid",
     "reminderid",
     "replyid",
@@ -89,8 +95,20 @@ _IDENTIFIER_KEYS = {
     "sourceeventid",
     "tenantid",
     "traceid",
+    "updateid",
     "userid",
     "workflowid",
+}
+_EXTERNAL_IDENTIFIER_KEYS = {
+    "actorid",
+    "chatid",
+    "conversationid",
+    "messageid",
+    "principalid",
+    "providermessageid",
+    "sourceeventid",
+    "updateid",
+    "userid",
 }
 _HASH_KEYS = {
     "digest",
@@ -282,6 +300,26 @@ def safe_identifier(value: object) -> str:
     return text
 
 
+def opaque_trace_identifier(value: object) -> str:
+    """Replace an external identifier with a stable trace-only digest."""
+
+    text = str(value).strip()
+    if not text:
+        return text
+    if text.startswith("sha256:") and _SAFE_HASH_RE.fullmatch(text):
+        return text
+    return f"sha256:{_sha256(text.encode('utf-8'))}"
+
+
+def safe_trace_run_id(value: object) -> str:
+    """Keep internal run ids but make Telegram-derived run ids opaque."""
+
+    text = str(value).strip()
+    if _TELEGRAM_TRACE_SOURCE_RE.search(text):
+        return opaque_trace_identifier(text)
+    return safe_identifier(text)
+
+
 def safe_optional_identifier(value: object | None) -> str | None:
     """Optional form of :func:`safe_identifier`."""
 
@@ -359,7 +397,10 @@ def _sanitize_mapping(
                     _store_redacted(output, key, raw_value)
                 continue
             if canonical in _IDENTIFIER_KEYS:
-                output[key] = _sanitize_identifier_value(raw_value)
+                output[key] = _sanitize_identifier_value(
+                    raw_value,
+                    force_opaque=canonical in _EXTERNAL_IDENTIFIER_KEYS,
+                )
                 continue
             if canonical in _HASH_KEYS or canonical.endswith(
                 ("hash", "fingerprint", "sha256")
@@ -430,10 +471,18 @@ def _sanitize_container(value: object, *, key: str, depth: int, seen: set[int]) 
         seen.remove(id(value))
 
 
-def _sanitize_identifier_value(value: object) -> Any:
+def _sanitize_identifier_value(value: object, *, force_opaque: bool = False) -> Any:
+    sanitize = opaque_trace_identifier if force_opaque else _safe_trace_metadata_identifier
     if isinstance(value, (list, tuple)):
-        return [safe_identifier(item) for item in value[:_MAX_ITEMS]]
-    return safe_identifier(value)
+        return [sanitize(item) for item in value[:_MAX_ITEMS]]
+    return sanitize(value)
+
+
+def _safe_trace_metadata_identifier(value: object) -> str:
+    text = str(value).strip()
+    if _TELEGRAM_TRACE_SOURCE_RE.search(text):
+        return opaque_trace_identifier(text)
+    return safe_identifier(text)
 
 
 def _sanitize_hash(value: object) -> str:
