@@ -61,10 +61,10 @@ by the release owner; this document does not authorize GA.
 
 ## Phase 06 progress addendum (v0.2.0-alpha.1 + phase 06)
 
-Status of this addendum: phase 06 is `IN_PROGRESS` (hardening log:
-`docs/development/hardening/phase-06-observability-traces.md`). Work is
-verified locally but uncommitted; the phase branch, pull request, and hosted
-CI are pending at writing time. The PostgreSQL-dependent evidence that was
+Status of this addendum: phase 06 is `MERGED` (hardening log:
+`docs/development/hardening/phase-06-observability-traces.md`; PR #13, merge
+commit `6e95c1f`, hosted CI and Security green on the PR and post-merge on
+`main`). The PostgreSQL-dependent evidence that was
 initially pending has since been recorded against PostgreSQL 16 and is
 reflected below. The scorecard above is a published historical artifact of
 the alpha.1 decision and is
