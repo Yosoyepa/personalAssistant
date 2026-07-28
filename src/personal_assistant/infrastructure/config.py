@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from math import isfinite
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -68,6 +69,15 @@ def _env_bool(name: str, file_values: dict[str, str], default: bool = False) -> 
     return value in {"1", "true", "yes", "y", "on"}
 
 
+def _finite_seconds(name: str, value: str) -> float:
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise ValueError(f"{name} must be finite")
+    if parsed <= 0:
+        raise ValueError(f"{name} must be greater than zero")
+    return parsed
+
+
 def _env_permission_tier(
     name: str,
     file_values: dict[str, str],
@@ -104,31 +114,31 @@ def load_database_settings_from_env() -> tuple[str | None, str]:
 
 @dataclass(frozen=True, slots=True)
 class AppSettings:
-    tenant_id: str = "personal"
+    tenant_id: str = field(default="personal", repr=False)
     timezone: str = "America/Bogota"
     reply_locale: str = "es"
     persistence_backend: str = "memory"
-    database_url: str | None = None
+    database_url: str | None = field(default=None, repr=False)
     database_schema: str = DEFAULT_DATABASE_SCHEMA
-    telegram_webhook_secret: str = ""
-    telegram_bot_token: str | None = None
-    telegram_allowed_user_ids: frozenset[str] = frozenset()
+    telegram_webhook_secret: str = field(default="", repr=False)
+    telegram_bot_token: str | None = field(default=None, repr=False)
+    telegram_allowed_user_ids: frozenset[str] = field(default=frozenset(), repr=False)
     llm_provider: str = "disabled"
-    llm_api_key: str | None = None
-    llm_base_url: str | None = None
+    llm_api_key: str | None = field(default=None, repr=False)
+    llm_base_url: str | None = field(default=None, repr=False)
     llm_model: str | None = None
     llm_auth_header: str = "x-api-key"
     llm_anthropic_version: str = "2023-06-01"
     llm_timeout_seconds: float = 30.0
     llm_max_tokens: int = 512
     transcription_provider: str = "disabled"
-    transcription_api_key: str | None = None
-    transcription_base_url: str | None = None
+    transcription_api_key: str | None = field(default=None, repr=False)
+    transcription_base_url: str | None = field(default=None, repr=False)
     transcription_model: str | None = None
     transcription_timeout_seconds: float = 60.0
     tts_provider: str = "disabled"
-    tts_api_key: str | None = None
-    tts_base_url: str | None = None
+    tts_api_key: str | None = field(default=None, repr=False)
+    tts_base_url: str | None = field(default=None, repr=False)
     tts_model: str | None = None
     tts_voice_id: str = "male-qn-qingse"
     tts_audio_format: str = "mp3"
@@ -137,11 +147,12 @@ class AppSettings:
     tts_max_reply_characters: int = 280
     telegram_audio_reply_mode: str = "disabled"
     admin_token: str | None = field(default=None, repr=False)
-    local_auth_principal_id: str = "local-user"
+    local_auth_principal_id: str = field(default="local-user", repr=False)
     local_auth_permission_tier: PermissionTier = PermissionTier.P5
-    public_base_url: str | None = None
+    public_base_url: str | None = field(default=None, repr=False)
     reminder_worker_enabled: bool = False
     reminder_worker_interval_seconds: float = 15.0
+    reminder_worker_heartbeat_timeout_seconds: float = 45.0
     reminder_minutes_before: int = 30
 
     def __post_init__(self) -> None:
@@ -150,6 +161,29 @@ class AppSettings:
             "database_schema",
             validate_identifier(self.database_schema, field="schema"),
         )
+        if not isfinite(self.reminder_worker_interval_seconds):
+            raise ValueError("REMINDER_WORKER_INTERVAL_SECONDS must be finite")
+        if self.reminder_worker_interval_seconds <= 0:
+            raise ValueError(
+                "REMINDER_WORKER_INTERVAL_SECONDS must be greater than zero"
+            )
+        if not isfinite(self.reminder_worker_heartbeat_timeout_seconds):
+            raise ValueError(
+                "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS must be finite"
+            )
+        if self.reminder_worker_heartbeat_timeout_seconds <= 0:
+            raise ValueError(
+                "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS must be greater than zero"
+            )
+        if (
+            self.reminder_worker_enabled
+            and self.reminder_worker_heartbeat_timeout_seconds
+            <= self.reminder_worker_interval_seconds
+        ):
+            raise ValueError(
+                "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS must exceed "
+                "REMINDER_WORKER_INTERVAL_SECONDS when the worker is enabled"
+            )
         try:
             timezone = ZoneInfo(self.timezone)
         except (ValueError, ZoneInfoNotFoundError) as exc:
@@ -187,6 +221,9 @@ class AppSettings:
             _env("TTS_PROVIDER", file_values, "disabled").strip().lower() or "disabled"
         )
         interval = _env("REMINDER_WORKER_INTERVAL_SECONDS", file_values, "15")
+        heartbeat_timeout = _env(
+            "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS", file_values, "45"
+        )
         reminder_minutes_before = _env("REMINDER_MINUTES_BEFORE", file_values, "30")
         llm_timeout = _env("LLM_TIMEOUT_SECONDS", file_values, "30")
         llm_max_tokens = _env("LLM_MAX_TOKENS", file_values, "512")
@@ -319,7 +356,12 @@ class AppSettings:
             ),
             public_base_url=_optional_env("PUBLIC_BASE_URL", file_values),
             reminder_worker_enabled=_env_bool("REMINDER_WORKER_ENABLED", file_values),
-            reminder_worker_interval_seconds=max(float(interval), 1.0),
+            reminder_worker_interval_seconds=_finite_seconds(
+                "REMINDER_WORKER_INTERVAL_SECONDS", interval
+            ),
+            reminder_worker_heartbeat_timeout_seconds=_finite_seconds(
+                "REMINDER_WORKER_HEARTBEAT_TIMEOUT_SECONDS", heartbeat_timeout
+            ),
             reminder_minutes_before=max(int(reminder_minutes_before), 1),
         )
 

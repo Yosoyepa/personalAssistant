@@ -72,6 +72,7 @@ from personal_assistant.domain.common.permissions import (
     require_approval,
     require_permission,
 )
+from personal_assistant.domain.common.privacy import trace_run_id_lookup_candidates
 from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
 from personal_assistant.domain.reminders.idempotency import (
     ReminderIdempotencyConflict,
@@ -2433,16 +2434,28 @@ class PostgresTraceRecorder(_PostgresStore):
 
     def list_for_run(self, principal: Principal | str, run_id: str) -> list[TraceEvent]:
         tenant_id = _tenant_id_from_principal(principal)
+        run_id_candidates = trace_run_id_lookup_candidates(run_id)
         with self._db.cursor() as cursor:
-            cursor.execute(
-                f"""
-                SELECT payload
-                FROM {self._table("trace_events")}
-                WHERE tenant_id = %s AND run_id = %s
-                ORDER BY timestamp, trace_id
-                """,
-                (tenant_id, run_id),
-            )
+            if len(run_id_candidates) == 2:
+                cursor.execute(
+                    f"""
+                    SELECT payload
+                    FROM {self._table("trace_events")}
+                    WHERE tenant_id = %s AND run_id IN (%s, %s)
+                    ORDER BY timestamp, trace_id
+                    """,
+                    (tenant_id, *run_id_candidates),
+                )
+            else:
+                cursor.execute(
+                    f"""
+                    SELECT payload
+                    FROM {self._table("trace_events")}
+                    WHERE tenant_id = %s AND run_id = %s
+                    ORDER BY timestamp, trace_id
+                    """,
+                    (tenant_id, run_id_candidates[0]),
+                )
             return [
                 TraceEvent.model_validate(_payload_from_row(row))
                 for row in cursor.fetchall()

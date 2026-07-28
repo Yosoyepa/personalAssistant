@@ -21,6 +21,7 @@ from personal_assistant.domain.common.privacy import (
     redact_trace_mapping,
     redacted_text_metadata,
     safe_category,
+    safe_trace_run_id,
 )
 from personal_assistant.domain.memory.models import MemoryRecord
 from personal_assistant.infrastructure.bootstrap import AppContainer
@@ -222,6 +223,21 @@ class AdminDashboard:
             "items": [_outbox_item(message) for message in messages[: clamp_limit(limit)]],
         }
 
+    def delivery_counts(self, principal: Principal) -> dict[str, int]:
+        """Return only the closed delivery-state metric set, never row metadata."""
+
+        observed = Counter(
+            message.dispatch_status.value
+            for message in _tenant_outbox_messages(
+                self.container,
+                principal.tenant_id,
+            )
+        )
+        return {
+            status.value: int(observed.get(status.value, 0))
+            for status in OutboxStatus
+        }
+
     def scheduler(
         self,
         principal: Principal,
@@ -403,7 +419,7 @@ class AdminDashboard:
             "runs": _trace_error_runs(trace_events, limit=safe_limit),
             "filters": {
                 "category": _normalized_filter(category),
-                "run_id": _normalized_filter(run_id),
+                "run_id": _normalized_trace_run_id_filter(run_id),
                 "event_type": _event_type_value(event_type),
                 "source": _normalized_filter(source),
             },
@@ -862,7 +878,7 @@ def _filter_trace_errors(
     event_type: str | TraceEventType | None,
 ) -> list[TraceEvent]:
     normalized_category = _normalized_filter(category)
-    normalized_run_id = _normalized_filter(run_id)
+    normalized_run_id = _normalized_trace_run_id_filter(run_id)
     normalized_event_type = _event_type_value(event_type)
     return [
         event
@@ -987,7 +1003,7 @@ def _error_item_matches_filters(
     source: str | None,
 ) -> bool:
     normalized_category = _normalized_filter(category)
-    normalized_run_id = _normalized_filter(run_id)
+    normalized_run_id = _normalized_trace_run_id_filter(run_id)
     normalized_event_type = _event_type_value(event_type)
     normalized_source = _normalized_filter(source)
     return (
@@ -1010,6 +1026,21 @@ def _normalized_filter(value: str | None) -> str | None:
     if value is None:
         return None
     normalized = value.strip().lower()
+    return normalized or None
+
+
+def _normalized_trace_run_id_filter(value: str | None) -> str | None:
+    """Return the privacy-safe, case-sensitive run-id query value.
+
+    Run IDs are opaque identifiers, so matching is exact after surrounding
+    whitespace is removed. Telegram-derived values are converted to the same
+    stable digest used by trace persistence; an already-digested value remains
+    searchable without exposing the original identifier in admin responses.
+    """
+
+    if value is None:
+        return None
+    normalized = safe_trace_run_id(value)
     return normalized or None
 
 

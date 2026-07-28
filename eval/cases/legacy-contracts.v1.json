@@ -1,0 +1,552 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "golden-telegram-normalization-uses-authenticated-tenant",
+      "category": "channel-security",
+      "tier": "golden",
+      "failureMode": "authenticated-tenant-authority",
+      "contractRefs": [
+        "AC-01",
+        "AC-02"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_documents_and_channels.py::DocumentAndChannelTests::test_telegram_normalizer_requires_external_tenant"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "golden-reminder-create-with-approval",
+      "category": "reminder-workflow",
+      "tier": "golden",
+      "failureMode": "approved-reminder-creation",
+      "contractRefs": [
+        "AC-04",
+        "AC-12",
+        "AC-13",
+        "AC-14",
+        "AC-15",
+        "AC-19"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_reminder_workflow.py::ReminderWorkflowTests::test_waiting_approval_replay_with_legitimate_grant_resumes"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "golden-reminder-create-without-approval-escalates",
+      "category": "reminder-workflow",
+      "tier": "golden",
+      "failureMode": "approval-gate",
+      "contractRefs": [
+        "AC-32"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_reminder_workflow.py::ReminderWorkflowTests::test_missing_approval_does_not_create_side_effect"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "golden-contract-a2a-serializable",
+      "category": "contract-serialization",
+      "tier": "golden",
+      "failureMode": "a2a-serialization",
+      "contractRefs": [
+        "LEGACY-UNSPECIFIED"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_contracts.py::ContractTests::test_a2a_card_and_task_are_serializable"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "golden-contract-tool-policy-surface",
+      "category": "tool-policy",
+      "tier": "golden",
+      "failureMode": "tool-permission-contract",
+      "contractRefs": [
+        "AC-32"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_contracts.py::ContractTests::test_tool_contracts_encode_approval_and_idempotency"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "golden-command-recordar-creates-pending-approval",
+      "category": "command-boundary",
+      "tier": "golden",
+      "failureMode": "pending-approval",
+      "contractRefs": [
+        "AC-32"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_command_router.py::CommandRouterTests::test_reminder_command_creates_pending_approval_without_side_effect"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "golden-http-runtime-approval-resume",
+      "category": "http-boundary",
+      "tier": "golden",
+      "failureMode": "approval-resume",
+      "contractRefs": [
+        "AC-01",
+        "AC-02",
+        "AC-04",
+        "AC-32"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_http_runtime.py::HttpRuntimeTests::test_approval_resumes_workflow_and_reuses_completed_state"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "golden-admin-dashboard-tenant-scoped",
+      "category": "tenant-isolation",
+      "tier": "golden",
+      "failureMode": "tenant-scoped-admin",
+      "contractRefs": [
+        "AC-21"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_admin_dashboard.py::AdminDashboardTests::test_snapshot_is_tenant_and_actor_scoped"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-duplicate-webhook",
+      "category": "idempotency",
+      "tier": "failure-mode",
+      "failureMode": "duplicate-webhook",
+      "contractRefs": [
+        "AC-04",
+        "FM-03"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_reminder_workflow.py::ReminderWorkflowTests::test_duplicate_webhook_reuses_completed_state"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-ambiguous-time-needs-clarification",
+      "category": "temporal",
+      "tier": "failure-mode",
+      "failureMode": "ambiguous-time",
+      "contractRefs": [
+        "AC-05",
+        "FM-02"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_reminder_boundary_commands.py::test_temporal_ambiguity_stops_before_approval_and_effects"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-message-supplied-tenant-ignored",
+      "category": "tenant-isolation",
+      "tier": "failure-mode",
+      "failureMode": "tenant-override",
+      "contractRefs": [
+        "AC-02"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_http_runtime.py::HttpRuntimeTests::test_body_cannot_supply_tenant_authority"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-cross-tenant-memory-leakage",
+      "category": "tenant-isolation",
+      "tier": "failure-mode",
+      "failureMode": "cross-tenant-memory",
+      "contractRefs": [
+        "AC-21",
+        "FM-07"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_permissions_and_tenant.py::PermissionAndTenantTests::test_memory_retrieval_is_tenant_scoped"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-cross-tenant-calendar-leakage",
+      "category": "tenant-isolation",
+      "tier": "failure-mode",
+      "failureMode": "cross-tenant-calendar",
+      "contractRefs": [
+        "AC-21",
+        "FM-07"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_permissions_and_tenant.py::PermissionAndTenantTests::test_calendar_events_are_tenant_scoped"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-document-prompt-injection",
+      "category": "document-security",
+      "tier": "failure-mode",
+      "failureMode": "document-prompt-injection",
+      "contractRefs": [
+        "AC-08",
+        "FM-06"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_documents_and_channels.py::DocumentAndChannelTests::test_document_prompt_injection_is_warned_not_executed"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-mcp-tools-forbidden-in-mvp",
+      "category": "protocol-policy",
+      "tier": "failure-mode",
+      "failureMode": "mcp-tool-invocation",
+      "contractRefs": [
+        "AC-17",
+        "FM-15"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "protocol.tool.v1",
+      "input": {
+        "toolName": "mcp.search"
+      },
+      "expected": {
+        "rejected": true
+      }
+    },
+    {
+      "id": "failure-a2a-tools-forbidden-in-mvp",
+      "category": "protocol-policy",
+      "tier": "failure-mode",
+      "failureMode": "a2a-tool-invocation",
+      "contractRefs": [
+        "AC-18",
+        "FM-15"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "protocol.tool.v1",
+      "input": {
+        "toolName": "a2a.delegate"
+      },
+      "expected": {
+        "rejected": true
+      }
+    },
+    {
+      "id": "failure-direct-telegram-send-forbidden",
+      "category": "delivery-policy",
+      "tier": "failure-mode",
+      "failureMode": "direct-channel-bypass",
+      "contractRefs": [
+        "AC-16"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "policy.tools.v1",
+      "input": {
+        "forbiddenTools": [
+          "telegram.send"
+        ]
+      },
+      "expected": {
+        "absent": true
+      }
+    },
+    {
+      "id": "failure-telegram-dispatch-without-p5-approval",
+      "category": "delivery-policy",
+      "tier": "failure-mode",
+      "failureMode": "notification-without-approval",
+      "contractRefs": [
+        "AC-20"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "legacy.pytest.v1",
+      "input": {
+        "testNode": "tests/test_telegram_notifications.py::TelegramNotificationTests::test_telegram_send_requires_p5_approval_before_dispatch_or_replay"
+      },
+      "expected": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-third-party-communication-forbidden",
+      "category": "capability-policy",
+      "tier": "failure-mode",
+      "failureMode": "third-party-messaging",
+      "contractRefs": [
+        "AC-24",
+        "AC-25",
+        "AC-26",
+        "FM-09"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "policy.tools.v1",
+      "input": {
+        "forbiddenTools": [
+          "sms.send",
+          "email.send",
+          "third_party.message"
+        ]
+      },
+      "expected": {
+        "absent": true
+      }
+    },
+    {
+      "id": "failure-financial-tools-forbidden",
+      "category": "capability-policy",
+      "tier": "failure-mode",
+      "failureMode": "financial-action",
+      "contractRefs": [
+        "AC-27"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "policy.tools.v1",
+      "input": {
+        "forbiddenTools": [
+          "payments.pay",
+          "card.charge",
+          "bank.transfer"
+        ]
+      },
+      "expected": {
+        "absent": true
+      }
+    },
+    {
+      "id": "failure-bulk-delete-declined",
+      "category": "capability-policy",
+      "tier": "failure-mode",
+      "failureMode": "bulk-deletion",
+      "contractRefs": [
+        "AC-28",
+        "FM-10"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "policy.tools.v1",
+      "input": {
+        "forbiddenTools": [
+          "documents.bulk_delete",
+          "memory.bulk_delete"
+        ]
+      },
+      "expected": {
+        "absent": true
+      }
+    },
+    {
+      "id": "failure-oauth-and-secret-tools-forbidden",
+      "category": "capability-policy",
+      "tier": "failure-mode",
+      "failureMode": "secret-access",
+      "contractRefs": [
+        "AC-29",
+        "AC-30",
+        "AC-31"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "policy.tools.v1",
+      "input": {
+        "forbiddenTools": [
+          "oauth.store_token",
+          "oauth.refresh",
+          "secrets.read"
+        ]
+      },
+      "expected": {
+        "absent": true
+      }
+    },
+    {
+      "id": "failure-oversize-document-rejected-before-llm",
+      "category": "document-boundary",
+      "tier": "failure-mode",
+      "failureMode": "oversize-document",
+      "contractRefs": [
+        "AC-33",
+        "FM-14"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "document.limit.v1",
+      "input": {
+        "filename": "large.txt",
+        "sizeBytes": 512001
+      },
+      "expected": {
+        "rejected": true
+      }
+    },
+    {
+      "id": "failure-implicit-memory-not-persisted",
+      "category": "memory-policy",
+      "tier": "failure-mode",
+      "failureMode": "implicit-memory-write",
+      "contractRefs": [
+        "AC-09",
+        "AC-34",
+        "FM-11"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "policy.tools.v1",
+      "input": {
+        "forbiddenTools": [
+          "memory.write"
+        ]
+      },
+      "expected": {
+        "absent": true
+      }
+    },
+    {
+      "id": "failure-free-form-llm-text-cannot-complete-run",
+      "category": "runtime-schema",
+      "tier": "failure-mode",
+      "failureMode": "free-form-schema-bypass",
+      "contractRefs": [
+        "AC-11",
+        "AC-35",
+        "FM-05"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "runtime.schema.v1",
+      "input": {
+        "candidate": "Sure, I did it."
+      },
+      "expected": {
+        "rejected": true
+      }
+    },
+    {
+      "id": "failure-unsupported-request-no-tool-invention",
+      "category": "capability-policy",
+      "tier": "failure-mode",
+      "failureMode": "invented-tools",
+      "contractRefs": [
+        "AC-22",
+        "AC-23",
+        "FM-13"
+      ],
+      "tags": [
+        "migrated"
+      ],
+      "executor": "policy.tools.v1",
+      "input": {
+        "forbiddenTools": [
+          "flights.reserve",
+          "hotel.pay",
+          "bank.call"
+        ]
+      },
+      "expected": {
+        "absent": true
+      }
+    }
+  ]
+}

@@ -25,6 +25,7 @@ from personal_assistant.infrastructure.migrations import (
     migration_lock_name,
     migration_status,
 )
+from personal_assistant.infrastructure.operational import PostgresWorkerHeartbeatStore
 from personal_assistant.infrastructure.migrations.__main__ import main as migration_main
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
@@ -69,6 +70,7 @@ def test_discovers_versioned_migrations_with_sha256_checksums() -> None:
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
         "0004_scheduler_delivery_mirror",
+        "0005_worker_heartbeat",
     ]
     assert all(len(migration.checksum) == 64 for migration in migrations)
     assert [migration.filename for migration in migrations] == [
@@ -76,6 +78,7 @@ def test_discovers_versioned_migrations_with_sha256_checksums() -> None:
         "0002_reminder_identity_constraints.sql",
         "0003_durable_delivery_state.sql",
         "0004_scheduler_delivery_mirror.sql",
+        "0005_worker_heartbeat.sql",
     ]
 
 
@@ -368,7 +371,7 @@ def test_migration_cli_status_apply_and_safe_failures(
     before = json.loads(capsys.readouterr().out)
     assert before["schema"] == isolated_schema
     assert not before["ready"]
-    assert [migration["version"] for migration in before["pending"]] == [1, 2, 3, 4]
+    assert [migration["version"] for migration in before["pending"]] == [1, 2, 3, 4, 5]
 
     assert migration_main(["apply", "--schema", isolated_schema]) == 0
     applied = json.loads(capsys.readouterr().out)
@@ -378,8 +381,9 @@ def test_migration_cli_status_apply_and_safe_failures(
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
         "0004_scheduler_delivery_mirror",
+        "0005_worker_heartbeat",
     ]
-    assert [record["version"] for record in applied["applied"]] == [1, 2, 3, 4]
+    assert [record["version"] for record in applied["applied"]] == [1, 2, 3, 4, 5]
     assert all(record["applied_at"] for record in applied["applied"])
 
     assert migration_main(["status"]) == 0
@@ -422,6 +426,7 @@ def test_status_apply_and_repeated_apply_are_auditable_no_op(
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
         "0004_scheduler_delivery_mirror",
+        "0005_worker_heartbeat",
     ]
     with psycopg.connect(postgres_dsn, autocommit=True) as connection:
         schema_exists = connection.execute(
@@ -438,6 +443,7 @@ def test_status_apply_and_repeated_apply_are_auditable_no_op(
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
         "0004_scheduler_delivery_mirror",
+        "0005_worker_heartbeat",
     ]
     assert second.applied == ()
     assert second.status.ready
@@ -504,7 +510,7 @@ def test_real_history_corruption_is_rejected(
             )
         elif corruption == "unknown_version":
             connection.execute(
-                psycopg.sql.SQL("UPDATE {} SET version = 5 WHERE version = 2").format(
+                psycopg.sql.SQL("UPDATE {} SET version = 6 WHERE version = 2").format(
                     history
                 )
             )
@@ -552,6 +558,7 @@ def test_advisory_lock_serializes_apply(
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
         "0004_scheduler_delivery_mirror",
+        "0005_worker_heartbeat",
     ]
 
 
@@ -647,6 +654,7 @@ def test_existing_alpha_rows_are_adopted_without_data_loss(
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
         "0004_scheduler_delivery_mirror",
+        "0005_worker_heartbeat",
     ]
     with psycopg.connect(postgres_dsn, autocommit=True) as connection:
         row = connection.execute(
@@ -977,12 +985,33 @@ def test_postgres_startup_has_no_ddl_and_readiness_reports_pending(
         "0002_reminder_identity_constraints",
         "0003_durable_delivery_state",
         "0004_scheduler_delivery_mirror",
+        "0005_worker_heartbeat",
     ]
 
     apply_migrations(dsn=postgres_dsn, schema=isolated_schema)
     ready = client.get("/readyz")
     assert ready.status_code == 200
     assert ready.json()["checks"]["migrations"] == "ok"
+
+
+def test_worker_heartbeat_is_observable_across_postgres_connections(
+    postgres_dsn: str,
+    isolated_schema: str,
+) -> None:
+    apply_migrations(dsn=postgres_dsn, schema=isolated_schema)
+    writer = PostgresWorkerHeartbeatStore(
+        dsn=postgres_dsn,
+        schema=isolated_schema,
+    )
+    reader = PostgresWorkerHeartbeatStore(
+        dsn=postgres_dsn,
+        schema=isolated_schema,
+    )
+    observed_at = datetime(2026, 7, 17, 12, tzinfo=UTC)
+
+    writer.record(observed_at)
+
+    assert reader.latest() == observed_at
 
 
 @pytest.mark.parametrize(

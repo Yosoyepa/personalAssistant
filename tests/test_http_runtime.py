@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import os
 import threading
+from datetime import UTC, datetime
 from pathlib import Path
 import unittest
 import warnings
@@ -13,7 +14,7 @@ from personal_assistant.application.dto.runtime import (
     AudioSynthesisResult,
     AudioTranscriptionResult,
 )
-from personal_assistant.application.dto.tracing import TraceEventType
+from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
@@ -357,7 +358,7 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(health.status_code, 200)
         self.assertEqual(health.json()["status"], "ok")
         self.assertEqual(ready.status_code, 200)
-        self.assertEqual(ready.json()["checks"]["scheduler"], "ok")
+        self.assertEqual(ready.json()["checks"], {"process": "ok"})
 
     def test_reminder_requires_local_bearer_credentials(self) -> None:
         response = self.client.post("/v1/runtime/reminders", json=self.payload())
@@ -869,12 +870,14 @@ class HttpRuntimeTests(unittest.TestCase):
         assert error is not None
         self.assertIn("No pude transcribir", error)
         trace_errors = [
-            event.error
+            event
             for event in container.traces.list_for_tenant("tenant-a")
-            if event.run_id.endswith(":transcription")
+            if event.event_type == TraceEventType.agent_failed
+            and event.error.get("type") == "RuntimeError"
         ]
         self.assertEqual(len(trace_errors), 1)
-        self.assertEqual(trace_errors[0]["type"], "RuntimeError")
+        self.assertTrue(trace_errors[0].run_id.startswith("sha256:"))
+        self.assertNotIn("chat-1", trace_errors[0].model_dump_json())
 
     def test_telegram_voice_oga_extension_is_normalized_for_transcription(self) -> None:
         settings = AppSettings(
@@ -971,6 +974,16 @@ class HttpRuntimeTests(unittest.TestCase):
             )
 
     def test_reminder_worker_survives_tick_and_trace_store_failures(self) -> None:
+        class StaleHeartbeat:
+            def __init__(self) -> None:
+                self.observed_at = datetime(2026, 6, 20, 11, 59, tzinfo=UTC)
+
+            def record(self, observed_at: datetime) -> None:
+                self.observed_at = observed_at
+
+            def latest(self) -> datetime:
+                return self.observed_at
+
         class FailingWorker:
             def __init__(self) -> None:
                 self.calls = 0
@@ -1014,16 +1027,22 @@ class HttpRuntimeTests(unittest.TestCase):
             reminder_worker_enabled=True,
             reminder_worker_interval_seconds=1,
         )
+        heartbeat = StaleHeartbeat()
 
         _run_reminder_worker_loop(
             container=container,
             settings=settings,
             stop_event=stop_event,
+            heartbeat_store=heartbeat,
+            clock=lambda: datetime(2026, 6, 20, 12, 1, tzinfo=UTC),
         )
 
         self.assertEqual(worker.calls, 2)
         self.assertEqual(traces.calls, 2)
         self.assertEqual(stop_event.waits, 2)
+        self.assertEqual(
+            heartbeat.latest(), datetime(2026, 6, 20, 11, 59, tzinfo=UTC)
+        )
 
     def test_admin_endpoints_use_default_settings_tenant(self) -> None:
         settings = AppSettings(
@@ -1090,12 +1109,58 @@ class HttpRuntimeTests(unittest.TestCase):
         self.assertEqual(health.status_code, 200, health.text)
         self.assertEqual(health.json()["components"]["traces"]["status"], "ok")
         for path in sorted(
-            admin_paths - {"/admin", "/admin/snapshot", "/admin/health"}
+            admin_paths
+            - {"/admin", "/admin/snapshot", "/admin/health", "/admin/metrics"}
         ):
             response = client.get(path, headers=self.headers)
             self.assertEqual(response.status_code, 200, response.text)
             section = path.rsplit("/", 1)[-1]
             self.assertEqual(response.json(), snapshot_body[section])
+
+    def test_admin_errors_raw_telegram_run_id_filter_never_echoes_raw_value(
+        self,
+    ) -> None:
+        raw_run_id = (
+            "command:telegram:918273645001:CaseSensitiveMessage-564738291002:intent"
+        )
+        trace = TraceEvent(
+            trace_id="trace-admin-run-id-privacy",
+            run_id=raw_run_id,
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_failed,
+            tenant_id="tenant-a",
+            timestamp=datetime(2026, 6, 23, 16, 1, tzinfo=UTC),
+            error={"type": "RuntimeError", "message": "worker failed"},
+        )
+        self.container.traces.write(trace)
+
+        raw_query = self.client.get(
+            "/admin/errors",
+            params={"run_id": raw_run_id},
+            headers=self.headers,
+        )
+        digest_query = self.client.get(
+            "/admin/errors",
+            params={"run_id": trace.run_id},
+            headers=self.headers,
+        )
+        wrong_case_query = self.client.get(
+            "/admin/errors",
+            params={"run_id": raw_run_id.lower()},
+            headers=self.headers,
+        )
+
+        self.assertEqual(raw_query.status_code, 200, raw_query.text)
+        self.assertEqual(digest_query.status_code, 200, digest_query.text)
+        self.assertEqual(wrong_case_query.status_code, 200, wrong_case_query.text)
+        self.assertEqual(raw_query.json(), digest_query.json())
+        self.assertEqual(raw_query.json()["total"], 1)
+        self.assertEqual(raw_query.json()["filters"]["run_id"], trace.run_id)
+        self.assertEqual(raw_query.json()["items"][0]["run_id"], trace.run_id)
+        self.assertEqual(raw_query.json()["runs"][0]["run_id"], trace.run_id)
+        self.assertEqual(wrong_case_query.json()["total"], 0)
+        self.assertNotIn(raw_run_id, raw_query.text)
+        self.assertNotIn(raw_run_id, digest_query.text)
 
     def test_admin_token_is_required_when_configured(self) -> None:
         settings = AppSettings(tenant_id="tenant-a", admin_token="admin-secret")

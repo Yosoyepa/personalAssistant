@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "suiteId": "personal-assistant-release-gate",
+  "caseFiles": [
+    "legacy-contracts.v1.json",
+    "temporal.v1.json",
+    "idempotency.v2.json",
+    "security-privacy.v1.json",
+    "atomicity-recovery-postgres.v1.json",
+    "delivery-concurrency-postgres.v1.json"
+  ],
+  "legacySource": {
+    "path": "../cases.json",
+    "sha256": "f112a7f09161036cf6e96102ba6d988a99fcd52429679c402dffd73e73dc0c86",
+    "ids": [
+      "golden-telegram-normalization-uses-authenticated-tenant",
+      "golden-reminder-create-with-approval",
+      "golden-reminder-create-without-approval-escalates",
+      "golden-contract-a2a-serializable",
+      "golden-contract-tool-policy-surface",
+      "golden-command-recordar-creates-pending-approval",
+      "golden-http-runtime-approval-resume",
+      "golden-admin-dashboard-tenant-scoped",
+      "failure-duplicate-webhook",
+      "failure-ambiguous-time-needs-clarification",
+      "failure-message-supplied-tenant-ignored",
+      "failure-cross-tenant-memory-leakage",
+      "failure-cross-tenant-calendar-leakage",
+      "failure-document-prompt-injection",
+      "failure-mcp-tools-forbidden-in-mvp",
+      "failure-a2a-tools-forbidden-in-mvp",
+      "failure-direct-telegram-send-forbidden",
+      "failure-telegram-dispatch-without-p5-approval",
+      "failure-third-party-communication-forbidden",
+      "failure-financial-tools-forbidden",
+      "failure-bulk-delete-declined",
+      "failure-oauth-and-secret-tools-forbidden",
+      "failure-oversize-document-rejected-before-llm",
+      "failure-implicit-memory-not-persisted",
+      "failure-free-form-llm-text-cannot-complete-run",
+      "failure-unsupported-request-no-tool-invention",
+      "regression-PROD-0001-placeholder"
+    ]
+  },
+  "retiredLegacyCases": [
+    {
+      "id": "regression-PROD-0001-placeholder",
+      "reason": "No production behavior exists; retained as migration metadata and never counted as a passing case.",
+      "owner": "maintainers"
+    }
+  ]
+}

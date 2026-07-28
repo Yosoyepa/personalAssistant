@@ -25,6 +25,7 @@ from personal_assistant.adapters.persistence import postgres
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
+from personal_assistant.domain.common.privacy import safe_trace_run_id
 from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
 from personal_assistant.domain.reminders.idempotency import (
     ReminderIdempotencyConflict,
@@ -570,6 +571,75 @@ class PostgresPersistenceTests(unittest.TestCase):
         self.assertEqual(payload["output_summary"]["audio"]["kind"], "binary")
         self.assertEqual(payload["output_summary"]["audio"]["size_bytes"], 21)
         self.assertEqual(payload["error"]["ApiToken"], "[REDACTED]")
+
+    def test_trace_recorder_queries_new_telegram_row_by_raw_or_opaque_id(self) -> None:
+        principal = self.principal()
+        raw_run_id = "command:telegram:918273645001:675849302004:intent"
+        trace = TraceEvent(
+            trace_id="trace-telegram",
+            run_id=raw_run_id,
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_failed,
+            tenant_id=principal.tenant_id,
+        )
+        self.assertNotEqual(trace.run_id, raw_run_id)
+        raw_connection = RecordingConnection(
+            fetchall_results=[[{"payload": trace.model_dump(mode="json")}]]
+        )
+
+        [restored_from_raw] = postgres.PostgresTraceRecorder(
+            connection=raw_connection
+        ).list_for_run(principal, raw_run_id)
+
+        raw_select_sql, raw_select_params = raw_connection.statements[0]
+        self.assertIn("run_id IN (%s, %s)", " ".join(raw_select_sql.split()))
+        self.assertEqual(
+            raw_select_params, (principal.tenant_id, trace.run_id, raw_run_id)
+        )
+        self.assertEqual(restored_from_raw.run_id, trace.run_id)
+
+        opaque_connection = RecordingConnection(
+            fetchall_results=[[{"payload": trace.model_dump(mode="json")}]]
+        )
+
+        [restored_from_opaque] = postgres.PostgresTraceRecorder(
+            connection=opaque_connection
+        ).list_for_run(principal, trace.run_id)
+
+        opaque_select_sql, opaque_select_params = opaque_connection.statements[0]
+        self.assertIn("run_id = %s", " ".join(opaque_select_sql.split()))
+        self.assertEqual(opaque_select_params, (principal.tenant_id, trace.run_id))
+        self.assertEqual(restored_from_opaque.run_id, trace.run_id)
+
+    def test_trace_recorder_queries_legacy_raw_telegram_row_without_exposing_it(
+        self,
+    ) -> None:
+        principal = self.principal()
+        raw_run_id = "telegram:918273645001:675849302004:audio-reply"
+        safe_run_id = safe_trace_run_id(raw_run_id)
+        legacy_payload = TraceEvent(
+            trace_id="trace-legacy-telegram",
+            run_id="run-placeholder",
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_failed,
+            tenant_id=principal.tenant_id,
+        ).model_dump(mode="json")
+        legacy_payload["run_id"] = raw_run_id
+        connection = RecordingConnection(
+            fetchall_results=[[{"payload": legacy_payload}]]
+        )
+
+        [restored] = postgres.PostgresTraceRecorder(
+            connection=connection
+        ).list_for_run(principal, raw_run_id)
+
+        select_sql, select_params = connection.statements[0]
+        self.assertIn("run_id IN (%s, %s)", " ".join(select_sql.split()))
+        self.assertEqual(
+            select_params, (principal.tenant_id, safe_run_id, raw_run_id)
+        )
+        self.assertEqual(restored.run_id, safe_run_id)
+        self.assertNotIn(raw_run_id, restored.model_dump_json())
 
     def test_trace_recorder_redacts_legacy_postgres_payload_on_read(self) -> None:
         principal = self.principal()
