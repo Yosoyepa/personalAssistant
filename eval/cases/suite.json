@@ -11,7 +11,7 @@
   ],
   "legacySource": {
     "path": "../cases.json",
-    "sha256": "1c78dd2d3fec986f60cfde55e4ae4c40ef3cc89fc0931cd70bae0283d6e347ac",
+    "sha256": "f112a7f09161036cf6e96102ba6d988a99fcd52429679c402dffd73e73dc0c86",
     "ids": [
       "golden-telegram-normalization-uses-authenticated-tenant",
       "golden-reminder-create-with-approval",

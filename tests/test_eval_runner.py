@@ -304,6 +304,45 @@ def test_legacy_hash_or_inventory_corruption_is_rejected(tmp_path: Path) -> None
         load_suite(suite)
 
 
+@pytest.mark.parametrize("line_ending", [b"\n", b"\r\n", b"\r"])
+def test_legacy_hash_is_stable_across_line_endings(
+    tmp_path: Path, line_ending: bytes
+) -> None:
+    suite = write_suite(tmp_path, [[temporal_case(case_id="legacy-one")]])
+    legacy = tmp_path / "legacy.json"
+    canonical = b'[\n  {"id": "legacy-one"}\n]\n'
+    legacy.write_bytes(canonical.replace(b"\n", line_ending))
+    manifest = json.loads((suite / "suite.json").read_text())
+    manifest["legacySource"] = {
+        "path": "../legacy.json",
+        "sha256": hashlib.sha256(canonical).hexdigest(),
+        "ids": ["legacy-one"],
+    }
+    (suite / "suite.json").write_text(json.dumps(manifest))
+
+    loaded, _ = load_suite(suite)
+
+    assert loaded.legacySource is not None
+    assert loaded.legacySource.sha256 == hashlib.sha256(canonical).hexdigest()
+
+
+def test_legacy_hash_rejects_non_line_ending_mutation(tmp_path: Path) -> None:
+    suite = write_suite(tmp_path, [[temporal_case(case_id="legacy-two")]])
+    legacy = tmp_path / "legacy.json"
+    canonical = b'[\n  {"id": "legacy-one"}\n]\n'
+    legacy.write_bytes(canonical.replace(b"legacy-one", b"legacy-two"))
+    manifest = json.loads((suite / "suite.json").read_text())
+    manifest["legacySource"] = {
+        "path": "../legacy.json",
+        "sha256": hashlib.sha256(canonical).hexdigest(),
+        "ids": ["legacy-two"],
+    }
+    (suite / "suite.json").write_text(json.dumps(manifest))
+
+    with pytest.raises(SuiteValidationError, match="legacy source hash mismatch"):
+        load_suite(suite)
+
+
 def test_missing_active_legacy_case_cannot_silently_pass(tmp_path: Path) -> None:
     suite = write_suite(tmp_path, [[temporal_case(case_id="legacy-one")]])
     legacy = tmp_path / "legacy.json"

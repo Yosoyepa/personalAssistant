@@ -55,6 +55,12 @@ def _read_json(path: Path) -> object:
         raise SuiteValidationError(f"cannot read valid JSON from {path}: {exc}") from exc
 
 
+def _canonical_text_digest(content: bytes) -> str:
+    """Hash text with repository-canonical LF line endings on every platform."""
+    canonical = content.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(canonical).hexdigest()
+
+
 def _validate_legacy(manifest: SuiteManifest, suite_dir: Path) -> None:
     legacy = manifest.legacySource
     if legacy is None:
@@ -67,7 +73,7 @@ def _validate_legacy(manifest: SuiteManifest, suite_dir: Path) -> None:
         payload = json.loads(content)
     except (OSError, json.JSONDecodeError) as exc:
         raise SuiteValidationError(f"invalid legacy source {source}: {exc}") from exc
-    digest = hashlib.sha256(content).hexdigest()
+    digest = _canonical_text_digest(content)
     if digest != legacy.sha256:
         raise SuiteValidationError(
             f"legacy source hash mismatch: expected {legacy.sha256}, got {digest}"
