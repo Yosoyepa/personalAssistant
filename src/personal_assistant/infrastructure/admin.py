@@ -419,7 +419,7 @@ class AdminDashboard:
             "runs": _trace_error_runs(trace_events, limit=safe_limit),
             "filters": {
                 "category": _normalized_filter(category),
-                "run_id": _normalized_filter(run_id),
+                "run_id": _normalized_trace_run_id_filter(run_id),
                 "event_type": _event_type_value(event_type),
                 "source": _normalized_filter(source),
             },
@@ -1030,9 +1030,18 @@ def _normalized_filter(value: str | None) -> str | None:
 
 
 def _normalized_trace_run_id_filter(value: str | None) -> str | None:
+    """Return the privacy-safe, case-sensitive run-id query value.
+
+    Run IDs are opaque identifiers, so matching is exact after surrounding
+    whitespace is removed. Telegram-derived values are converted to the same
+    stable digest used by trace persistence; an already-digested value remains
+    searchable without exposing the original identifier in admin responses.
+    """
+
     if value is None:
         return None
-    return _normalized_filter(safe_trace_run_id(value))
+    normalized = safe_trace_run_id(value)
+    return normalized or None
 
 
 def _string_value(value: Any) -> str:

@@ -14,7 +14,7 @@ from personal_assistant.application.dto.runtime import (
     AudioSynthesisResult,
     AudioTranscriptionResult,
 )
-from personal_assistant.application.dto.tracing import TraceEventType
+from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
@@ -1116,6 +1116,51 @@ class HttpRuntimeTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200, response.text)
             section = path.rsplit("/", 1)[-1]
             self.assertEqual(response.json(), snapshot_body[section])
+
+    def test_admin_errors_raw_telegram_run_id_filter_never_echoes_raw_value(
+        self,
+    ) -> None:
+        raw_run_id = (
+            "command:telegram:918273645001:CaseSensitiveMessage-564738291002:intent"
+        )
+        trace = TraceEvent(
+            trace_id="trace-admin-run-id-privacy",
+            run_id=raw_run_id,
+            agent_id="personal_assistant",
+            event_type=TraceEventType.agent_failed,
+            tenant_id="tenant-a",
+            timestamp=datetime(2026, 6, 23, 16, 1, tzinfo=UTC),
+            error={"type": "RuntimeError", "message": "worker failed"},
+        )
+        self.container.traces.write(trace)
+
+        raw_query = self.client.get(
+            "/admin/errors",
+            params={"run_id": raw_run_id},
+            headers=self.headers,
+        )
+        digest_query = self.client.get(
+            "/admin/errors",
+            params={"run_id": trace.run_id},
+            headers=self.headers,
+        )
+        wrong_case_query = self.client.get(
+            "/admin/errors",
+            params={"run_id": raw_run_id.lower()},
+            headers=self.headers,
+        )
+
+        self.assertEqual(raw_query.status_code, 200, raw_query.text)
+        self.assertEqual(digest_query.status_code, 200, digest_query.text)
+        self.assertEqual(wrong_case_query.status_code, 200, wrong_case_query.text)
+        self.assertEqual(raw_query.json(), digest_query.json())
+        self.assertEqual(raw_query.json()["total"], 1)
+        self.assertEqual(raw_query.json()["filters"]["run_id"], trace.run_id)
+        self.assertEqual(raw_query.json()["items"][0]["run_id"], trace.run_id)
+        self.assertEqual(raw_query.json()["runs"][0]["run_id"], trace.run_id)
+        self.assertEqual(wrong_case_query.json()["total"], 0)
+        self.assertNotIn(raw_run_id, raw_query.text)
+        self.assertNotIn(raw_run_id, digest_query.text)
 
     def test_admin_token_is_required_when_configured(self) -> None:
         settings = AppSettings(tenant_id="tenant-a", admin_token="admin-secret")
