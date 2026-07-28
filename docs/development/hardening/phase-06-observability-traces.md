@@ -6,7 +6,7 @@
 |---|---|
 | Status | `IN_PROGRESS` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
-| Phase branch | `codex/phase-6-observability-traces` (not yet created; work is uncommitted on top of `main`) |
+| Phase branch | `codex/phase-6-observability-traces` (created from `ac1278d`; four Conventional Commits integrated) |
 | Base commit | `ac1278d` |
 | Pull request | `PENDING` |
 | Merge commit | `PENDING` |
@@ -53,23 +53,24 @@ unchanged by this phase.
 Executed as two waves: wave 1 delivered A1, A2, and ADR-004 in parallel;
 wave 2 delivered A4 and A5 (retention and dashboard) on top of wave 1. The
 orchestrator ran integrity verification (ruff, mypy, targeted pytest, and the
-non-PostgreSQL eval subset) after each delivery. Worktrees, per-slot branches,
-explicit staging, and the phase branch itself have not been created yet: the
-work currently exists as an uncommitted tree on top of `ac1278d`, so commit
-SHAs are `PENDING` throughout this log until staging and integration occur.
+non-PostgreSQL eval subset) after each delivery. Work proceeded without
+per-slot worktrees: all slots landed on a single uncommitted tree on top of
+`ac1278d`, then explicit-path staging integrated them into the phase branch
+as four Conventional Commits (`21b6506`, `3d40f13`, `a18b853`, `669fddb`).
 
 ## Agent ledger
 
 | Role | Goal | Commit(s) | Decision |
 |---|---|---|---|
-| P6-A1 | Record `input_tokens`/`output_tokens`/`context_utilization` on both `llm.called` call sites and `text_length`/`estimated_tokens` on `context.selected`; new `llm_context_window_tokens` setting (env `LLM_CONTEXT_WINDOW_TOKENS`, default 200000, positive-int validated) plumbed env -> `AppSettings` -> `build_container()` -> use cases -> `http.py`/`worker.py`, following the `reminder_minutes_before` pattern | `PENDING` | verified locally; staging pending |
-| P6-A2 | Module-level `REQUIRED_TRACE_FIELDS` contract and shared `require_trace_completeness()` validator raising `IncompleteTraceEventError`, enforced at write time by both the local and PostgreSQL trace recorders before `for_persistence()` redaction; new `trace.completeness.v1` eval executor with 2 cases (evals 293 -> 295; legacy corpus and sha256 pin untouched); emitter-side fixture fixes in `security_boundary_v1.py` and `test_trace_privacy.py` | `PENDING` | verified locally; staging pending |
-| P6-A3 | ADR-004 two-layer GAP #6 design (adapter-level deny-by-default egress allowlist plus single locked-down container), Status: Proposed | `PENDING` | accepted as design only; implementation deferred to roadmap days 8-14 |
-| P6-A4 | `trace_retention_days` setting (env `TRACE_RETENTION_DAYS`, default 30, positive-int validated); operator-invoked CLI `infrastructure/trace_retention.py` mirroring `trace_sanitizer.py` (dry-run default, `--apply --confirm PRUNE_TRACES`, `--days` > env > default, range 1..3650, single transaction, cutoff computed once in-transaction, JSON output with totals only); runbook "Trace retention" section documenting the 30-90 day policy | `PENDING` | verified locally; staging pending |
-| P6-A5 | `context` component in `AdminDashboard.snapshot()` with `samples`, `p50`, `p95` (nearest-rank on observed samples, stdlib only) and `calls_by_model`; `high_context_utilization` health signal when p95 > 0.40 (audit DoD #1 threshold); fail-closed empty state on adapter failure; HTML section; closed `/admin/metrics` contract untouched | `PENDING` | verified locally; staging pending |
+| P6-A1 | Record `input_tokens`/`output_tokens`/`context_utilization` on both `llm.called` call sites and `text_length`/`estimated_tokens` on `context.selected`; new `llm_context_window_tokens` setting (env `LLM_CONTEXT_WINDOW_TOKENS`, default 200000, positive-int validated) plumbed env -> `AppSettings` -> `build_container()` -> use cases -> `http.py`/`worker.py`, following the `reminder_minutes_before` pattern | `21b6506` | ACCEPTED |
+| P6-A2 | Module-level `REQUIRED_TRACE_FIELDS` contract and shared `require_trace_completeness()` validator raising `IncompleteTraceEventError`, enforced at write time by both the local and PostgreSQL trace recorders before `for_persistence()` redaction; new `trace.completeness.v1` eval executor with 2 cases (evals 293 -> 295; legacy corpus and sha256 pin untouched); emitter-side fixture fixes in `security_boundary_v1.py` and `test_trace_privacy.py` | `3d40f13` | ACCEPTED |
+| P6-A3 | ADR-004 two-layer GAP #6 design (adapter-level deny-by-default egress allowlist plus single locked-down container), Status: Proposed | `669fddb` | ACCEPTED as design only; implementation deferred to roadmap days 8-14 |
+| P6-A4 | `trace_retention_days` setting (env `TRACE_RETENTION_DAYS`, default 30, positive-int validated); operator-invoked CLI `infrastructure/trace_retention.py` mirroring `trace_sanitizer.py` (dry-run default, `--apply --confirm PRUNE_TRACES`, `--days` > env > default, range 1..3650, single transaction, cutoff computed once in-transaction, JSON output with totals only); runbook "Trace retention" section documenting the 30-90 day policy | `a18b853` | ACCEPTED |
+| P6-A5 | `context` component in `AdminDashboard.snapshot()` with `samples`, `p50`, `p95` (nearest-rank on observed samples, stdlib only) and `calls_by_model`; `high_context_utilization` health signal when p95 > 0.40 (audit DoD #1 threshold); fail-closed empty state on adapter failure; HTML section; closed `/admin/metrics` contract untouched | `21b6506` | ACCEPTED |
 
-Every diff was produced against `ac1278d` and reviewed as a working tree.
-No branch was created, rebased, squashed, force-pushed, or pushed.
+Every diff was produced against `ac1278d` and reviewed as a working tree
+before staging. The phase branch was created from `ac1278d`; nothing was
+rebased, squashed, force-pushed, or pushed.
 
 ## Delivered decisions
 
@@ -101,17 +102,20 @@ No branch was created, rebased, squashed, force-pushed, or pushed.
 
 ## Diff and staging review
 
-- [x] `git status --porcelain` reviewed: 17 modified paths, 7 new paths, all
+- [x] `git status --porcelain` reviewed: 18 modified paths, 8 new paths, all
       inside the authorized scope.
-- [x] `git diff --stat HEAD` reviewed: 510 insertions, 9 deletions across 17
-      files plus the new files below.
+- [x] `git diff --stat HEAD` reviewed: 2683 insertions, 9 deletions across
+      the 26 files (final integrated totals, including the documentation
+      updates recorded after the initial review).
 - [x] `git diff --check HEAD` passed.
-- [ ] Explicit-path staging executed (prohibited: `git add .`, `git add -A`,
-      `git commit -am`). **PENDING — phase branch not yet created.**
-- [ ] `git diff --cached --stat` / `--check` / full staged diff reviewed.
-      **PENDING.**
+- [x] Explicit-path staging executed per commit group (prohibited forms
+      `git add .`, `git add -A`, `git commit -am` were not used).
+- [x] `git diff --cached --stat` reviewed at each of the four stagings
+      (742 + 556 + 834 + 551 insertions across the four commits; totals
+      match the reviewed working-tree diff plus the documentation updates).
+      `git diff --check HEAD` passed before staging.
 
-**Changed paths (uncommitted on top of `ac1278d`):**
+**Changed paths (integrated on the phase branch over `ac1278d`):**
 
 ```text
 .env.example
@@ -175,7 +179,7 @@ recorded below.
 | Focused tests, A1 | `uv run pytest -q tests/test_llm_context_utilization.py` | `21 passed` | |
 | Focused tests, A2 | `uv run pytest -q tests/test_trace_completeness.py` | `20 passed` | |
 | Focused tests, A5 | `uv run pytest -q tests/test_admin_dashboard.py` | `19 passed (8 pre-existing + 11 new)` | exact-shape `/admin/metrics` contract tests unmodified and green |
-| Rollback rehearsal | `git restore --worktree` per reviewed path (uncommitted tree) | `PENDING` | safe rehearsal deferred to staging; post-commit rollback plan below |
+| Rollback rehearsal | `git restore --worktree -- tests/test_trace_privacy.py` after a filesystem backup, then re-apply | `PASS` | restore produced a zero-line diff for the path; re-apply restored the exact 1-insertion diff; `uv run pytest tests/test_trace_privacy.py -q` passed 6/6 afterwards |
 
 The 3 skips in the PostgreSQL run are the previously allowlisted phase-05
 compatibility probes: the PostgreSQL adapter intentionally does not expose
@@ -212,8 +216,10 @@ passed, and zero failures.
       sandbox for untrusted/model-generated code, no GA authorization.
 - [x] Versioned pre-commit hooks (including private-key and AWS credential
       detection) passed over all files via `pre-commit run --all-files`.
-- [ ] Staged-name secret guard executed over staged paths. **PENDING —
-      staging not yet performed.**
+- [x] Staged-name secret guard: the four explicit-path stagings contained no
+      `.env`, credential, key, or token path (staged path lists reviewed at
+      each `git add`; full-file content detection covered by the versioned
+      pre-commit hooks above).
 
 **Evidence and findings (redacted):** none. Full-history scanning remains
 gated by the versioned CI security job on the pull request; no improvised
@@ -240,8 +246,13 @@ local scan is claimed as evidence.
 | Post gate | Ruff, mypy, focused pytest, and the non-PostgreSQL eval subset from the gate table |
 | Owner | `Yosoyepa` |
 
-**Safe rehearsal result:** `PENDING` — the uncommitted tree can be reverted
-path-by-path; the rehearsal is scheduled with staging.
+**Safe rehearsal result:** `PASS` — rehearsed on the uncommitted tree before
+staging (see the gate table row above): backup, `git restore --worktree` on
+`tests/test_trace_privacy.py`, verified zero diff, re-applied, and its 6
+tests passed. The post-commit rollback path is `git revert -m 1
+<merge-commit>` from a `codex/rollback-phase-6-observability-traces` branch
+per workflow section 6, rehearsed conceptually only; the merge commit does
+not exist yet.
 
 ## Definition of Done
 
@@ -253,10 +264,12 @@ path-by-path; the rehearsal is scheduled with staging.
       trace redaction rules.
 - [x] Working-tree diff reviewed (`git status`, `git diff --stat`,
       `git diff --check`, full diff).
-- [ ] Explicit-path staging and staged-diff review. **PENDING.**
+- [x] Explicit-path staging and staged-diff review.
 - [x] Focused tests pass with evidence in this log.
 - [x] No secrets, real data, or temporary artifacts in the tree.
-- [ ] Conventional Commits created on the phase branch. **PENDING.**
+- [x] Conventional Commits created on the phase branch: `21b6506`
+      `feat(observability)`, `3d40f13` `feat(tracing)`, `a18b853`
+      `feat(infrastructure)`, `669fddb` `docs`.
 - [x] Residual risks recorded.
 
 ### Phase
@@ -264,17 +277,18 @@ path-by-path; the rehearsal is scheduled with staging.
 - [x] All five reserved slots delivered implementation or review evidence;
       no empty commits created.
 - [x] Wave order respected: wave 2 built on wave 1 deliveries.
-- [ ] Accepted work integrated into the phase branch
-      `codex/phase-6-observability-traces`. **PENDING — branch not yet
-      created.**
+- [x] Accepted work integrated into the phase branch
+      `codex/phase-6-observability-traces` (four commits; working tree clean
+      after integration).
 - [x] Complete section-8 gates pass: deterministic and PostgreSQL 16
       evidence green (final consolidated run: 726 passed / 3 allowlisted
       skips / 36 subtests / 0 failures, 295/295 evals, 91% coverage, 95%
       diff-cover, static gates pass).
 - [x] Secret review passed, including the versioned pre-commit hooks over all
-      files; the staged-path guard runs at staging.
+      files and the staged-path review at staging.
 - [x] No open blockages; no repeated failure cycles.
-- [ ] Rollback rehearsed. **PENDING.**
+- [x] Rollback rehearsed (pre-staging restore/re-apply rehearsal passed; see
+      the rollback plan).
 - [ ] Single phase PR opened with green CI. **PENDING.**
 - [ ] Merge commit integration; worktree/branch cleanup. **PENDING.**
 
@@ -282,8 +296,8 @@ path-by-path; the rehearsal is scheduled with staging.
 
 | Decision | Owner | Date | Evidence / comment |
 |---|---|---|---|
-| Authorize staging | `PENDING` | | |
-| Authorize commit | `PENDING` | | |
+| Authorize staging | `Yosoyepa` | 2026-07-28 | Approved in session ("dale continua") after full gate evidence was presented |
+| Authorize commit | `Yosoyepa` | 2026-07-28 | Same approval; four Conventional Commits `21b6506`, `3d40f13`, `a18b853`, `669fddb` |
 | Authorize PR | `PENDING` | | |
 | Authorize merge commit | `PENDING` | | |
 | Close objective | `PENDING` | | Requires a full audit re-run; this phase alone does not close any scorecard row |
