@@ -222,6 +222,38 @@ value at rest still requires an operator-approved purge or rewrite with the
 necessary database privileges; the application does not attempt a destructive
 automatic migration.
 
+### Trace retention
+
+Production traces are retained for 30 days by default; the accepted policy
+window is 30-90 days, configured with `TRACE_RETENTION_DAYS` (also exposed as
+`AppSettings.trace_retention_days`). Pruning is never automatic: runtime
+startup, workers, and migrations never delete trace rows. An operator prunes
+explicitly, exactly like the sanitizer.
+
+Dry-run first; it prints only the schema, the cutoff timestamp, and row
+counts:
+
+```bash
+python -m personal_assistant.infrastructure.trace_retention
+```
+
+Then delete rows older than the cutoff in one all-or-nothing transaction:
+
+```bash
+python -m personal_assistant.infrastructure.trace_retention \
+  --apply --confirm PRUNE_TRACES
+```
+
+The command requires `DATABASE_URL`, respects `DATABASE_SCHEMA`, and accepts
+`--days`, which overrides `TRACE_RETENTION_DAYS`; values outside 1-3650 are
+rejected before any connection is opened. `--apply` without the literal
+confirmation token is refused the same way. Output never includes tenant,
+trace, or user identifiers, only the cutoff and totals. The cutoff is computed
+once inside the transaction so the dry-run count and the delete always agree,
+and repeating the apply is safe: it deletes zero rows once the old rows are
+gone. Back up the database first because pruning is a deletion and cannot
+reconstruct the removed rows.
+
 ## Idempotency Rules
 
 Every durable write must be tenant-scoped. A key from one tenant must never
