@@ -192,6 +192,16 @@ operator must apply the organization's retention policy to purge or separately
 rewrite those rows. Until that cleanup completes, old raw values may remain at
 rest even though current APIs no longer return them.
 
+For compatibility, a raw Telegram run identifier supplied to
+`PostgresTraceRecorder.list_for_run` searches both the current pseudonymized
+identifier and the legacy raw index value. Returned payloads still pass through
+`TraceEvent.model_validate`, so callers receive only the pseudonymized run
+identifier. Because the digest is one-way, a caller that has only the digest
+cannot locate a legacy row indexed only by its raw value. Removing that raw
+value at rest still requires an operator-approved purge or rewrite with the
+necessary database privileges; the application does not attempt a destructive
+automatic migration.
+
 ## Idempotency Rules
 
 Every durable write must be tenant-scoped. A key from one tenant must never

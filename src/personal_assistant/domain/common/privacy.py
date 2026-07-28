@@ -320,6 +320,20 @@ def safe_trace_run_id(value: object) -> str:
     return safe_identifier(text)
 
 
+def trace_run_id_lookup_candidates(value: object) -> tuple[str, ...]:
+    """Return safe and, when supplied, legacy raw Telegram lookup values."""
+
+    text = str(value).strip()
+    safe_value = safe_trace_run_id(text)
+    if (
+        text != safe_value
+        and safe_identifier(text) == text
+        and _TELEGRAM_TRACE_SOURCE_RE.search(text)
+    ):
+        return safe_value, text
+    return (safe_value,)
+
+
 def safe_optional_identifier(value: object | None) -> str | None:
     """Optional form of :func:`safe_identifier`."""
 
