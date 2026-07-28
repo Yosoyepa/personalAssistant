@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "golden-trace-completeness-reminder-workflow",
+      "category": "trace-completeness",
+      "tier": "golden",
+      "failureMode": "complete-reminder-trace-emitted",
+      "contractRefs": [
+        "AUDIT-GAP-12"
+      ],
+      "executor": "trace.completeness.v1",
+      "input": {
+        "scenario": "reminder-workflow",
+        "eventType": null,
+        "omittedField": null
+      },
+      "expected": {
+        "requiredTraceEvents": [
+          "agent.started",
+          "guardrail.checked",
+          "context.selected",
+          "tool.called",
+          "agent.completed"
+        ],
+        "requiredTraceFields": {
+          "agent.started": [
+            "input_summary"
+          ],
+          "guardrail.checked": [
+            "validation"
+          ],
+          "context.selected": [
+            "context_refs"
+          ],
+          "tool.called": [
+            "tool_call"
+          ],
+          "agent.completed": [
+            "output_summary"
+          ]
+        },
+        "incompleteEventRejected": null,
+        "persistedEvents": 5
+      },
+      "tags": [
+        "trace",
+        "completeness"
+      ]
+    },
+    {
+      "id": "failure-trace-completeness-incomplete-event-rejected",
+      "category": "trace-completeness",
+      "tier": "failure-mode",
+      "failureMode": "incomplete-trace-event-rejected-at-write",
+      "contractRefs": [
+        "AUDIT-GAP-12"
+      ],
+      "executor": "trace.completeness.v1",
+      "input": {
+        "scenario": "incomplete-event",
+        "eventType": "agent.completed",
+        "omittedField": "output_summary"
+      },
+      "expected": {
+        "requiredTraceEvents": [],
+        "requiredTraceFields": {},
+        "incompleteEventRejected": true,
+        "persistedEvents": 1
+      },
+      "tags": [
+        "trace",
+        "fail-closed"
+      ]
+    }
+  ]
+}

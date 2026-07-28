@@ -530,11 +530,15 @@ def _trace_redaction(variant: str) -> ExpectedModel:
         fields = {"tool_url": url}
     elif variant == "validation-list":
         fields = {"errors": [nested]}
+    if variant in {"safe-list", "tool-call", "unknown"}:
+        # These probes intentionally strip every payload key; a safe marker
+        # keeps the event complete for the fail-closed write contract.
+        fields = {**fields, "category": "safe"}
     kwargs: dict[str, Any] = {
         "trace_id": "trace-fixture",
         "run_id": url if variant == "run-id" else "run-fixture",
         "agent_id": "personal_assistant",
-        "event_type": TraceEventType.agent_failed,
+        "event_type": TraceEventType.agent_started,
         "tenant_id": _TENANT,
         "input_summary": fields,
     }
