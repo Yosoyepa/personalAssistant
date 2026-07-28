@@ -186,11 +186,31 @@ prompts, credentials, URL credentials/query/fragment data, and binary/audio
 content. Adding a new trace field therefore requires classifying it in the
 central privacy policy; an unknown field is omitted by default.
 
-This read boundary does not rewrite historical JSONB in place. Before deploying
-over a database that may contain traces written by an older version, the
-operator must apply the organization's retention policy to purge or separately
-rewrite those rows. Until that cleanup completes, old raw values may remain at
-rest even though current APIs no longer return them.
+This read boundary does not rewrite historical JSONB automatically. Before
+deploying over a database that may contain traces written by an older version,
+inspect the explicit in-place sanitizer:
+
+```bash
+python -m personal_assistant.infrastructure.trace_sanitizer
+```
+
+Dry-run is the default and prints only the schema and row counts. It does not
+print trace, Telegram, tenant, or user identifiers. After reviewing the count,
+apply the same current privacy policy to every historical trace in one
+transaction:
+
+```bash
+python -m personal_assistant.infrastructure.trace_sanitizer \
+  --apply --confirm SANITIZE_TRACES
+```
+
+The command requires `DATABASE_URL`, respects `DATABASE_SCHEMA`, uses Python's
+versioned application privacy policy, and does not require `pgcrypto`. It
+updates the denormalized trace columns, fingerprint, and JSONB payload together;
+it never deletes a row. A malformed row or a row that would require changing
+its tenant/trace primary key fails the entire transaction without printing the
+identifier. Back up the database first because sanitization intentionally
+removes raw historical content and cannot reconstruct it.
 
 ## Idempotency Rules
 
