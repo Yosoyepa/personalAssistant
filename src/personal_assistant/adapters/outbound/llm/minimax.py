@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from personal_assistant.adapters.outbound.egress import EgressAllowlist
 from personal_assistant.adapters.outbound.llm.anthropic import AnthropicCompatibleLLMProvider, UrlOpen
 from personal_assistant.application.ports.prompts import PromptCatalogPort
 
@@ -20,6 +21,7 @@ class MiniMaxLLMProvider(AnthropicCompatibleLLMProvider):
         model: str,
         timeout_seconds: float = 30.0,
         urlopen: UrlOpen | None = None,
+        egress_allowlist: EgressAllowlist | None = None,
     ) -> None:
         if urlopen is None:
             super().__init__(
@@ -29,6 +31,7 @@ class MiniMaxLLMProvider(AnthropicCompatibleLLMProvider):
                 prompt_catalog=prompt_catalog,
                 auth_header="authorization",
                 timeout_seconds=timeout_seconds,
+                egress_allowlist=egress_allowlist,
             )
         else:
             super().__init__(
@@ -39,4 +42,5 @@ class MiniMaxLLMProvider(AnthropicCompatibleLLMProvider):
                 auth_header="authorization",
                 timeout_seconds=timeout_seconds,
                 urlopen=urlopen,
+                egress_allowlist=egress_allowlist,
             )

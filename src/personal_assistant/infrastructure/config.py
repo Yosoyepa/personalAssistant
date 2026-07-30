@@ -8,6 +8,12 @@ from math import isfinite
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from personal_assistant.adapters.outbound.egress import (
+    DEFAULT_TELEGRAM_API_URL,
+    EgressAllowlist,
+    derive_egress_entries,
+    require_startup_coverage,
+)
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.migrations.validation import validate_identifier
 
@@ -23,6 +29,10 @@ DEFAULT_LLM_CONTEXT_WINDOW_TOKENS = 200_000
 # Default production trace retention window; the audit policy allows 30-90
 # days. Pruning itself is operator-invoked, never automatic at runtime.
 DEFAULT_TRACE_RETENTION_DAYS = 30
+
+# Provider selector values that leave the provider disabled; mirrors the
+# composition-root convention so startup egress validation stays in sync.
+_DISABLED_PROVIDERS = frozenset({"", "disabled", "none"})
 
 
 def _load_env_file() -> dict[str, str]:
@@ -162,6 +172,7 @@ class AppSettings:
     reminder_worker_heartbeat_timeout_seconds: float = 45.0
     reminder_minutes_before: int = 30
     trace_retention_days: int = DEFAULT_TRACE_RETENTION_DAYS
+    egress_allowed_hosts: frozenset[str] = field(default=frozenset())
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -230,6 +241,31 @@ class AppSettings:
             "local_auth_permission_tier",
             local_auth_permission_tier,
         )
+        derived_egress = derive_egress_entries(
+            llm_base_url=self.llm_base_url,
+            transcription_base_url=self.transcription_base_url,
+            tts_base_url=self.tts_base_url,
+            telegram_bot_token_configured=bool(self.telegram_bot_token),
+        )
+        explicit_egress = frozenset(
+            entry.strip() for entry in self.egress_allowed_hosts if entry.strip()
+        )
+        effective_egress = explicit_egress if explicit_egress else derived_egress
+        egress_allowlist = EgressAllowlist.from_entries(effective_egress)
+        object.__setattr__(self, "egress_allowed_hosts", effective_egress)
+        required_egress: dict[str, str] = {}
+        if self.llm_provider not in _DISABLED_PROVIDERS and self.llm_base_url:
+            required_egress["LLM_PROVIDER"] = self.llm_base_url
+        if (
+            self.transcription_provider not in _DISABLED_PROVIDERS
+            and self.transcription_base_url
+        ):
+            required_egress["TRANSCRIPTION_PROVIDER"] = self.transcription_base_url
+        if self.tts_provider not in _DISABLED_PROVIDERS and self.tts_base_url:
+            required_egress["TTS_PROVIDER"] = self.tts_base_url
+        if self.telegram_bot_token:
+            required_egress["TELEGRAM_BOT_TOKEN"] = DEFAULT_TELEGRAM_API_URL
+        require_startup_coverage(egress_allowlist, required_egress)
 
     @classmethod
     def from_env(cls) -> "AppSettings":
@@ -395,6 +431,9 @@ class AppSettings:
             ),
             reminder_minutes_before=max(int(reminder_minutes_before), 1),
             trace_retention_days=int(trace_retention_days),
+            egress_allowed_hosts=_parse_csv(
+                _env("EGRESS_ALLOWED_HOSTS", file_values)
+            ),
         )
 
 

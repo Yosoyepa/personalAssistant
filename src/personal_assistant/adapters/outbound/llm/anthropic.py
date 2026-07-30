@@ -13,6 +13,7 @@ from typing import Any
 from urllib.error import HTTPError
 from urllib import request as urllib_request
 
+from personal_assistant.adapters.outbound.egress import EgressAllowlist
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import LLMRequest, LLMResult
 from personal_assistant.application.ports.prompts import PromptCatalogPort
@@ -67,6 +68,7 @@ class AnthropicCompatibleLLMProvider:
         auth_header: str = "x-api-key",
         timeout_seconds: float = 30.0,
         urlopen: UrlOpen = urllib_request.urlopen,
+        egress_allowlist: EgressAllowlist | None = None,
     ) -> None:
         if not api_key.strip():
             raise ValueError("LLM API key is required")
@@ -74,6 +76,8 @@ class AnthropicCompatibleLLMProvider:
             raise ValueError("LLM base URL is required")
         if not model.strip():
             raise ValueError("LLM model is required")
+        if egress_allowlist is not None:
+            egress_allowlist.require(base_url)
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self._model = model

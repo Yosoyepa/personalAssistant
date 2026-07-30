@@ -7,6 +7,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 from urllib import request as urllib_request
 
+from personal_assistant.adapters.outbound.egress import EgressAllowlist
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import AudioSynthesisRequest, AudioSynthesisResult
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
@@ -37,6 +38,7 @@ class MiniMaxTTSProvider:
         audio_format: str = "mp3",
         timeout_seconds: float = 30.0,
         urlopen: UrlOpen = urllib_request.urlopen,
+        egress_allowlist: EgressAllowlist | None = None,
     ) -> None:
         if not api_key.strip():
             raise ValueError("TTS API key is required")
@@ -46,6 +48,8 @@ class MiniMaxTTSProvider:
             raise ValueError("TTS model is required")
         if audio_format not in _CONTENT_TYPES:
             raise ValueError("TTS audio format must be mp3, wav, or flac")
+        if egress_allowlist is not None:
+            egress_allowlist.require(base_url)
         self._api_key = api_key
         self._base_url = base_url.rstrip("/")
         self._model = model
