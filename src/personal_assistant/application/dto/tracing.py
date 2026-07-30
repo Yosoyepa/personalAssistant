@@ -7,8 +7,11 @@ from enum import Enum
 from typing import Any
 from uuid import uuid4
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
+from personal_assistant.domain.common.guardrails import GuardrailResult
 from personal_assistant.domain.common.privacy import (
     redact_trace_mapping,
     safe_category,
@@ -159,3 +162,52 @@ def require_trace_completeness(event: TraceEvent) -> TraceEvent:
             f"incomplete trace event: {event.event_type.value} requires {required}"
         )
     return event
+
+
+#: Scan outcome of one guardrail check: ``allowed`` (no findings),
+#: ``flagged`` (findings, none blocking), or ``blocked`` (blocking finding).
+GuardrailAction = Literal["allowed", "flagged", "blocked"]
+
+#: Every value accepted as a guardrail scan action.
+GUARDRAIL_ACTIONS: tuple[str, ...] = ("allowed", "flagged", "blocked")
+
+#: Metadata key that carries the scan action inside the ``validation``
+#: payload. The trace privacy boundary silently drops unknown keys such as
+#: ``action``; ``status`` is on its category allowlist, so the action
+#: survives write-time redaction unchanged.
+GUARDRAIL_ACTION_KEY = "status"
+
+
+def build_guardrail_validation(
+    result: GuardrailResult, action: GuardrailAction
+) -> dict[str, Any]:
+    """Build the privacy-safe ``validation`` payload for ``guardrail.checked``.
+
+    The payload is reduced to aggregate, non-content metadata: the scan
+    action, the categories seen, the finding count, and per-finding
+    category / severity / rule-label triples in a deterministic order.
+    Finding excerpts, character offsets, and any scanned user content are
+    never copied. Every key used here is on the trace privacy allowlist so
+    the payload survives ``redact_trace_mapping`` intact.
+    """
+
+    if action not in GUARDRAIL_ACTIONS:
+        raise ValueError("guardrail action must be allowed, flagged, or blocked")
+    findings = sorted(
+        (
+            {
+                "category": finding.category.value,
+                "severity": finding.severity.value,
+                "label": finding.label,
+            }
+            for finding in result.findings
+        ),
+        key=lambda entry: (entry["category"], entry["severity"], entry["label"]),
+    )
+    categories = sorted({entry["category"] for entry in findings})
+    return {
+        GUARDRAIL_ACTION_KEY: action,
+        "categories": categories,
+        "findings_count": len(findings),
+        "findings": findings,
+    }

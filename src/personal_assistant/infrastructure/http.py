@@ -147,6 +147,27 @@ class AdminMetricsResponse(BaseModel):
     health: OperationalHealthResponse
 
 
+class GuardrailCategoryMetricsResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scanned: int = Field(ge=0)
+    flagged: int = Field(ge=0)
+    blocked: int = Field(ge=0)
+
+
+class AdminGuardrailMetricsResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    scanned: int = Field(ge=0)
+    allowed: int = Field(ge=0)
+    flagged: int = Field(ge=0)
+    blocked: int = Field(ge=0)
+    hit_rate: float | None = Field(default=None, ge=0.0, le=1.0)
+    categories: dict[str, GuardrailCategoryMetricsResponse] = Field(
+        default_factory=dict
+    )
+
+
 class ReminderCommandRequest(BaseModel):
     """HTTP transport request for the reminder workflow.
 
@@ -1166,6 +1187,18 @@ def create_app(
                 worker=worker_status,
                 metrics=metrics_status,
             ),
+        )
+
+    @app.get(
+        "/admin/guardrails/metrics",
+        response_model=AdminGuardrailMetricsResponse,
+        tags=["admin"],
+    )
+    def admin_guardrail_metrics(
+        principal: Annotated[Principal, Depends(current_principal)],
+    ) -> AdminGuardrailMetricsResponse:
+        return AdminGuardrailMetricsResponse(
+            **dashboard.guardrail_metrics(principal)
         )
 
     @app.get("/admin/approvals", tags=["admin"])
