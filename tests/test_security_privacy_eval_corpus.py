@@ -107,7 +107,9 @@ def test_security_privacy_authority_and_preapproval_effect_invariants() -> None:
         "events": 0,
         "outbox": 0,
         "states": 1,
-        "traces": 4,
+        # Four run events plus the needs-approval output guardrail scan
+        # emitted by the phase-8 guardrail.checked wiring.
+        "traces": 5,
     }
     assert reminder["authority"] == {
         "tenant": "fixture-tenant",

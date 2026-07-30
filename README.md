@@ -78,6 +78,19 @@ security invariant is that `tenant_id` comes from the authenticated `Principal`,
 never from Telegram text, tool arguments, LLM output, request JSON bodies, or
 retrieved documents.
 
+Guardrails scan both directions at every entry point. Inputs (reminder text,
+runtime tasks, document content) are scanned for prompt injection, PII, and
+content-policy signals; blocking findings fail the request, and document
+content is treated as untrusted data, never as instructions. Outputs
+(assistant replies, notification bodies, document summaries) are scanned
+against the ratified content policy in `docs/policy/content-policy.md` —
+credential material, exfiltration instructions, hidden-instruction leaks, and
+destructive-action text are blocked before they reach the user. Every scan
+emits a sanitized `guardrail.checked` trace event (action, categories, and
+rule labels only — never excerpts or user content), and the admin surface
+aggregates them into hit-rate metrics at `GET /admin/guardrails/metrics`
+(see `docs/runbook/admin-dashboard.md`).
+
 ## Local Setup
 
 Python 3.11 or newer is required.
@@ -285,8 +298,8 @@ http://127.0.0.1:8000/admin
 Useful JSON endpoints include `/admin/snapshot`, `/admin/health`,
 `/admin/approvals`, `/admin/traces`, `/admin/outbox`, `/admin/scheduler`,
 `/admin/agenda`, `/admin/reminders`, `/admin/errors`, `/admin/events`,
-`/admin/states`, and `/admin/memory`. The full guide is in
-`docs/runbook/admin-dashboard.md`.
+`/admin/states`, `/admin/memory`, and `/admin/guardrails/metrics`. The full
+guide is in `docs/runbook/admin-dashboard.md`.
 
 ## Postgres
 

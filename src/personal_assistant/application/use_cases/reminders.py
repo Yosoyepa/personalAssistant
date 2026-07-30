@@ -39,6 +39,11 @@ from personal_assistant.application.services.prompts import (
     DefaultPromptCatalog,
 )
 from personal_assistant.application.services.replies import AssistantReplies
+from personal_assistant.application.use_cases.runtime import (
+    emit_guardrail_scan,
+    enforce_output_scan,
+    enforce_prompt_scan,
+)
 from personal_assistant.application.dto.workflows import (
     WorkflowState,
     WorkflowStateRegistration,
@@ -46,8 +51,8 @@ from personal_assistant.application.dto.workflows import (
 )
 from personal_assistant.application.dto.events import CloudEvent
 from personal_assistant.domain.common.guardrails import (
-    assert_output_safe,
-    assert_prompt_safe,
+    scan_output,
+    scan_prompt,
 )
 from personal_assistant.domain.common.permissions import (
     PermissionTier,
@@ -86,11 +91,8 @@ __all__ = [
 ]
 
 
-def _guarded_reply(text: str) -> str:
-    """Scan outgoing user-facing copy against the content policy."""
-
-    assert_output_safe(text)
-    return text
+#: Stable agent attribution for every guardrail.checked event this workflow emits.
+_REMINDER_GUARDRAIL_AGENT_ID = "reminder_workflow"
 
 
 def reminder_idempotency(
@@ -169,16 +171,47 @@ class ReminderWorkflow:
         if self.llm_context_window_tokens < 1:
             raise ValueError("llm_context_window_tokens must be greater than zero")
 
+    def _guarded_reply(self, text: str, *, principal: Principal, run_id: str) -> str:
+        """Scan outgoing user-facing copy against the content policy.
+
+        Emits one sanitized ``guardrail.checked`` event per scan — including
+        when the scan blocks — and only then enforces the result, so the
+        blocking raise never scans the same text twice.
+        """
+
+        output_scan = scan_output(text)
+        emit_guardrail_scan(
+            self.traces,
+            output_scan,
+            agent_id=_REMINDER_GUARDRAIL_AGENT_ID,
+            tenant_id=principal.tenant_id,
+            run_id=run_id,
+        )
+        enforce_output_scan(output_scan)
+        return text
+
     def run(
         self, principal: Principal, request: ReminderWorkflowInput
     ) -> ReminderWorkflowResult:
-        assert_prompt_safe(request.text)
         idempotency = reminder_idempotency(principal, request)
         effective_key = idempotency.key
         effect_ids = idempotency.effect_ids
         source_event_id = idempotency.identity.source_event_id
         payload_fingerprint = idempotency.payload_fingerprint
         timezone = idempotency.payload.timezone
+        run_id = effective_key
+        # Scan -> emit -> enforce: the input guardrail.checked event is
+        # persisted even when the scan blocks, and enforcement reuses the same
+        # result so the text is never scanned twice.
+        input_scan = scan_prompt(request.text)
+        guardrail_trace = emit_guardrail_scan(
+            self.traces,
+            input_scan,
+            agent_id=_REMINDER_GUARDRAIL_AGENT_ID,
+            tenant_id=principal.tenant_id,
+            run_id=run_id,
+        )
+        enforce_prompt_scan(input_scan)
         if (
             request.idempotency_key is not None
             and request.idempotency_key != effective_key
@@ -197,7 +230,6 @@ class ReminderWorkflow:
                 resource=f"{effective_key}:calendar",
             )
             resume_from_step = ReminderWorkflowStep.approval_required.value
-        run_id = effective_key
         started = TraceEvent(
             run_id=run_id,
             agent_id="personal_assistant",
@@ -210,14 +242,6 @@ class ReminderWorkflow:
             },
         )
         self.traces.write(started)
-        guardrail_trace = TraceEvent(
-            run_id=run_id,
-            agent_id="personal_assistant",
-            event_type=TraceEventType.guardrail_checked,
-            tenant_id=principal.tenant_id,
-            validation={"status": "passed"},
-            parent_event_id=started.trace_id,
-        )
         context_trace = TraceEvent(
             run_id=run_id,
             agent_id="personal_assistant",
@@ -230,7 +254,6 @@ class ReminderWorkflow:
             },
             parent_event_id=guardrail_trace.trace_id,
         )
-        self.traces.write(guardrail_trace)
         self.traces.write(context_trace)
 
         initial_state = WorkflowState(
@@ -310,6 +333,8 @@ class ReminderWorkflow:
             )
             replay = self._registration_result(
                 registration,
+                principal=principal,
+                run_id=run_id,
                 effective_key=effective_key,
                 source_event_id=source_event_id,
                 payload_fingerprint=payload_fingerprint,
@@ -330,7 +355,7 @@ class ReminderWorkflow:
                 reply_id, reply_version, reply = self.replies.reminder_clarification(
                     clarification_reason
                 )
-                reply = _guarded_reply(reply)
+                reply = self._guarded_reply(reply, principal=principal, run_id=run_id)
                 waiting = state.transition(
                     status=WorkflowStatus.waiting_approval,
                     step=ReminderWorkflowStep.needs_clarification.value,
@@ -382,8 +407,10 @@ class ReminderWorkflow:
                 starts_at=extraction.starts_at,
                 channel=request.channel,
                 recipient=request.recipient,
-                body=_guarded_reply(
-                    self.replies.reminder_notification_body(extraction.title)
+                body=self._guarded_reply(
+                    self.replies.reminder_notification_body(extraction.title),
+                    principal=principal,
+                    run_id=run_id,
                 ),
                 timezone=extraction.timezone,
                 source_event_id=source_event_id,
@@ -484,12 +511,14 @@ class ReminderWorkflow:
         return ReminderWorkflowResult(
             status=AgentStatus.completed,
             intent=ReminderIntent.create,
-            reply=_guarded_reply(
+            reply=self._guarded_reply(
                 self.replies.reminder_created(
                     title=extraction.title,
                     minutes_before=notice_minutes_before,
                     direct_notice=extraction.notify_at is not None,
-                )
+                ),
+                principal=principal,
+                run_id=run_id,
             ),
             idempotency_key=effective_key,
             source_event_id=source_event_id,
@@ -528,6 +557,8 @@ class ReminderWorkflow:
         registration = self.states.register_or_replay(principal, initial_state)
         replay = self._registration_result(
             registration,
+            principal=principal,
+            run_id=run_id,
             effective_key=initial_state.idempotency_key,
             source_event_id=source_event_id,
             payload_fingerprint=payload_fingerprint,
@@ -552,7 +583,7 @@ class ReminderWorkflow:
             reply_id, reply_version, reply = self.replies.reminder_clarification(
                 clarification_reason
             )
-            reply = _guarded_reply(reply)
+            reply = self._guarded_reply(reply, principal=principal, run_id=run_id)
             waiting = registration.state.transition(
                 status=WorkflowStatus.waiting_approval,
                 step=ReminderWorkflowStep.needs_clarification.value,
@@ -602,7 +633,11 @@ class ReminderWorkflow:
         return ReminderWorkflowResult(
             status=AgentStatus.escalated,
             intent=ReminderIntent.create,
-            reply=_guarded_reply(self.replies.reminder_needs_approval(extraction.title)),
+            reply=self._guarded_reply(
+                self.replies.reminder_needs_approval(extraction.title),
+                principal=principal,
+                run_id=run_id,
+            ),
             idempotency_key=initial_state.idempotency_key,
             source_event_id=source_event_id,
             payload_fingerprint=payload_fingerprint,
@@ -619,6 +654,8 @@ class ReminderWorkflow:
         self,
         registration: WorkflowStateRegistration,
         *,
+        principal: Principal,
+        run_id: str,
         effective_key: str,
         source_event_id: str,
         payload_fingerprint: str,
@@ -632,7 +669,11 @@ class ReminderWorkflow:
             return ReminderWorkflowResult(
                 status=AgentStatus.completed,
                 intent=ReminderIntent.create,
-                reply=_guarded_reply(self.replies.reminder_duplicate()),
+                reply=self._guarded_reply(
+                    self.replies.reminder_duplicate(),
+                    principal=principal,
+                    run_id=run_id,
+                ),
                 idempotency_key=effective_key,
                 source_event_id=source_event_id,
                 payload_fingerprint=payload_fingerprint,
@@ -646,7 +687,11 @@ class ReminderWorkflow:
             return ReminderWorkflowResult(
                 status=AgentStatus.escalated,
                 intent=ReminderIntent.create,
-                reply=_guarded_reply(self.replies.reminder_duplicate()),
+                reply=self._guarded_reply(
+                    self.replies.reminder_duplicate(),
+                    principal=principal,
+                    run_id=run_id,
+                ),
                 idempotency_key=effective_key,
                 source_event_id=source_event_id,
                 payload_fingerprint=payload_fingerprint,
@@ -658,7 +703,11 @@ class ReminderWorkflow:
             return ReminderWorkflowResult(
                 status=AgentStatus.failed,
                 intent=ReminderIntent.create,
-                reply=_guarded_reply(self.replies.reminder_duplicate()),
+                reply=self._guarded_reply(
+                    self.replies.reminder_duplicate(),
+                    principal=principal,
+                    run_id=run_id,
+                ),
                 idempotency_key=effective_key,
                 source_event_id=source_event_id,
                 payload_fingerprint=payload_fingerprint,
@@ -673,7 +722,11 @@ class ReminderWorkflow:
             return ReminderWorkflowResult(
                 status=AgentStatus.escalated,
                 intent=ReminderIntent.create,
-                reply=_guarded_reply(self.replies.reminder_needs_approval(draft.title)),
+                reply=self._guarded_reply(
+                    self.replies.reminder_needs_approval(draft.title),
+                    principal=principal,
+                    run_id=run_id,
+                ),
                 idempotency_key=effective_key,
                 source_event_id=source_event_id,
                 payload_fingerprint=payload_fingerprint,
@@ -691,7 +744,7 @@ class ReminderWorkflow:
         reply_id, reply_version, reply = self.replies.reminder_clarification(
             clarification_reason
         )
-        reply = _guarded_reply(reply)
+        reply = self._guarded_reply(reply, principal=principal, run_id=run_id)
         return ReminderWorkflowResult(
             status=AgentStatus.needs_clarification,
             intent=ReminderIntent.unsupported,
