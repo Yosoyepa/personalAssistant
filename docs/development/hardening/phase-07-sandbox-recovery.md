@@ -9,10 +9,10 @@ plan y, durante la ejecución, las decisiones y evidencia de la fase.
 | Campo | Valor |
 |---|---|
 | Fase | `07 — sandbox de egreso y recuperación de proceso` |
-| Estado | `DRAFT` |
+| Estado | `IN_PROGRESS` |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `kimi/phase-7-sandbox-recovery` |
-| Commit base | `96a8cca` (confirmar con `git rev-parse HEAD` al abrir la fase) |
+| Commit base | `96a8ccacec39e795564e16c38aacd0c8ffc29a70` (2026-07-28T18:06:28-05:00, confirmado con `git rev-parse HEAD` al abrir la fase; `main` sincronizado con `origin/main` por fast-forward) |
 | Fecha de inicio | `2026-07-30` |
 | PR | `<pendiente>` |
 | Merge commit | `<pendiente>` |
@@ -113,6 +113,28 @@ Notas de solapamiento:
   job postgres-integration existente.
 - Cualquier solapamiento imprevisto se resuelve devolviendo el conflicto al
   agente afectado según la sección 2 del workflow.
+
+### Apertura de la fase (registro)
+
+- 2026-07-30: fase abierta desde checkout principal limpio; `main` en
+  `96a8cca` sincronizado con `origin/main` por fast-forward. Decisión del
+  mantenedor: las ramas de esta fase usan el prefijo `kimi/` (autoría del
+  agente) en lugar del prefijo `codex/` del workflow; el resto de invariantes
+  se conserva.
+- Rama de fase `kimi/phase-7-sandbox-recovery` creada desde `main`; plan
+  integrado en commit `b87719a`
+  `docs(phase-7): define sandbox and process-recovery phase plan` con staging
+  explícito de una sola ruta y revisión de diff staged (`--stat`, `--check`,
+  sin secretos, solo placeholders).
+- Worktrees de ola 1 creados desde el HEAD de la rama de fase (`b87719a`),
+  cada uno verificado con `branch --show-current`, `status --short --branch`
+  y `rev-parse HEAD`:
+  - `personalAssistant-worktrees/phase-7-a1-egress-allowlist` →
+    `kimi/phase-7-a1-egress-allowlist`
+  - `personalAssistant-worktrees/phase-7-a2-kill-restart` →
+    `kimi/phase-7-a2-kill-restart`
+  - `personalAssistant-worktrees/phase-7-a3-container-image` →
+    `kimi/phase-7-a3-container-image`
 
 ### Checkpoint entre olas
 
