@@ -245,6 +245,69 @@ Expected checks:
 
 For the BotFather and Telegram API procedure, see [telegram.md](telegram.md).
 
+## Container Profile (ADR-004 Layer B)
+
+The repository ships a hardened single-unit image (`Dockerfile` at the repo
+root) and a compose profile (`deploy/compose.yaml`). One image packages the
+FastAPI app and, when `REMINDER_WORKER_ENABLED=true` with PostgreSQL, the
+embedded reminder worker — consistent with the single deployable unit in
+ADR-001. The inbound boundary contract above is unchanged: the host publishes
+the container port on loopback only, and the public HTTPS edge still forwards
+exactly `POST /webhooks/telegram`.
+
+Build and run:
+
+```powershell
+docker build -t personal-assistant:0.2.0-alpha.1 .
+Copy-Item .env.example deploy/.env  # then fill real values; never commit it
+docker compose --file deploy/compose.yaml up --detach
+```
+
+Hardening verification (all expected to pass before exposing the webhook):
+
+- `docker compose --file deploy/compose.yaml exec assistant id` reports
+  `uid=10001(assistant)`, never `uid=0`.
+- The root filesystem is read-only:
+  `docker compose --file deploy/compose.yaml exec assistant touch /x` fails;
+  only the `/tmp` tmpfs is writable.
+- `docker inspect` on the container shows `CapDrop: [ALL]` and
+  `no-new-privileges:true`.
+- The image contains no secrets: configuration arrives only through the
+  compose `env_file` (an ignored local `deploy/.env`), and
+  `APP_ENV_FILE=disabled` prevents any in-container `.env` read.
+
+## Egress Verification (ADR-004 Layer A)
+
+Outbound traffic is deny-by-default at the adapter boundary. The effective
+allowlist derives from the configured provider base URLs plus
+`api.telegram.org` when a bot token is set; a non-empty
+`EGRESS_ALLOWED_HOSTS` is an explicit override of exact hostnames or
+`scheme://hostname` entries (no wildcards, subdomains, ports, or paths).
+Startup fails closed when the effective allowlist does not cover an enabled
+provider's target host, so a misconfigured override stops the deployment
+before any socket is opened.
+
+Smoke procedure from inside the container:
+
+```powershell
+# Non-allowlisted host must fail before any connection is useful.
+docker compose --file deploy/compose.yaml exec assistant python -c "import urllib.request; urllib.request.urlopen('https://example.com', timeout=4)"
+# Expected: URLError/connection failure (the host is not in the allowlist path
+# of any adapter; additionally enforce host-level egress rules as defense in
+# depth per ADR-004's optional deployment layer).
+
+# Each enabled provider host must remain reachable through its adapter only;
+# verify with the deterministic suite instead of live calls where possible.
+```
+
+Operational rules:
+
+- Review `EGRESS_ALLOWED_HOSTS` like any other config change; the public
+  artifact secret scanner gates releases.
+- A host-level egress policy (firewall or proxy) that mirrors the allowlist
+  remains optional defense in depth; the application-level allowlist is the
+  primary, test-covered mechanism.
+
 ## Rotation and Rollback
 
 Rotate after suspected exposure and periodically according to the local
