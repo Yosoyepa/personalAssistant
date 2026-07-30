@@ -13,6 +13,10 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from personal_assistant.adapters.outbound.egress import (
+    DEFAULT_TELEGRAM_API_URL,
+    EgressAllowlist,
+)
 from personal_assistant.application.ports.notifications import (
     NotificationOutcome,
     NotificationRequest,
@@ -74,9 +78,17 @@ class TelegramBotClient(Protocol):
 class TelegramBotApiClient:
     """Small stdlib Telegram Bot API client for infrastructure dispatch."""
 
-    def __init__(self, *, token: str, timeout_seconds: float = 10.0) -> None:
+    def __init__(
+        self,
+        *,
+        token: str,
+        timeout_seconds: float = 10.0,
+        egress_allowlist: EgressAllowlist | None = None,
+    ) -> None:
         if not token.strip():
             raise ValueError("telegram bot token is required")
+        if egress_allowlist is not None:
+            egress_allowlist.require(DEFAULT_TELEGRAM_API_URL)
         self._token = token
         self._timeout_seconds = timeout_seconds
 

@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from importlib import import_module
+import logging
 from typing import Any
 
 from personal_assistant.adapters.observability.local import TraceRecorder
 from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
+from personal_assistant.adapters.outbound.egress import EgressAllowlist
 from personal_assistant.adapters.outbound.llm.anthropic import (
     AnthropicCompatibleLLMProvider,
 )
@@ -240,6 +242,37 @@ def _optional_persistence_member(candidate: Any, name: str) -> Any | None:
     return getattr(candidate, name, None)
 
 
+def build_egress_allowlist(settings: AppSettings) -> EgressAllowlist:
+    """Effective egress allowlist already validated by AppSettings."""
+    return EgressAllowlist.from_entries(settings.egress_allowed_hosts)
+
+
+def egress_audit_record(settings: AppSettings) -> str:
+    """Startup audit line: effective allowlist as hostnames only.
+
+    Never includes URLs, so it cannot carry embedded credentials.
+    """
+    hosts = build_egress_allowlist(settings).audit_hosts()
+    return "egress allowlist hosts: " + (", ".join(hosts) if hosts else "(none)")
+
+
+_EGRESS_AUDIT_LOGGER = "personal_assistant.egress"
+
+
+def log_egress_audit(settings: AppSettings) -> None:
+    """Emit the startup allowlist audit record so operators can see it.
+
+    The named logger is pinned to INFO and gains a stderr handler only when
+    neither it nor the root logger has one (uvicorn configures its own
+    loggers but leaves the root logger without handlers at WARNING).
+    """
+    logger = logging.getLogger(_EGRESS_AUDIT_LOGGER)
+    logger.setLevel(logging.INFO)
+    if not logger.handlers and not logging.getLogger().handlers:
+        logger.addHandler(logging.StreamHandler())
+    logger.info("%s", egress_audit_record(settings))
+
+
 def build_llm_provider(
     settings: AppSettings,
     *,
@@ -248,6 +281,7 @@ def build_llm_provider(
     if settings.llm_provider in {"", "disabled", "none"}:
         return None
     prompts = prompt_catalog or build_prompt_catalog()
+    egress_allowlist = build_egress_allowlist(settings)
     if settings.llm_provider in {"minimax", "minimax_anthropic", "minimax-anthropic"}:
         return MiniMaxLLMProvider(
             api_key=settings.llm_api_key or "",
@@ -255,6 +289,7 @@ def build_llm_provider(
             base_url=settings.llm_base_url or "",
             model=settings.llm_model or "",
             timeout_seconds=settings.llm_timeout_seconds,
+            egress_allowlist=egress_allowlist,
         )
     if settings.llm_provider not in {
         "anthropic_compatible",
@@ -270,6 +305,7 @@ def build_llm_provider(
         anthropic_version=settings.llm_anthropic_version,
         auth_header=settings.llm_auth_header,
         timeout_seconds=settings.llm_timeout_seconds,
+        egress_allowlist=egress_allowlist,
     )
 
 
@@ -290,6 +326,7 @@ def build_transcription_provider(
         base_url=settings.transcription_base_url or "",
         model=settings.transcription_model or "",
         timeout_seconds=settings.transcription_timeout_seconds,
+        egress_allowlist=build_egress_allowlist(settings),
     )
 
 
@@ -305,6 +342,7 @@ def build_tts_provider(settings: AppSettings) -> AudioSynthesisProvider | None:
         voice_id=settings.tts_voice_id,
         audio_format=settings.tts_audio_format,
         timeout_seconds=settings.tts_timeout_seconds,
+        egress_allowlist=build_egress_allowlist(settings),
     )
 
 

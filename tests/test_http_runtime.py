@@ -86,18 +86,32 @@ class CapturingTranscriptionProvider:
 
 
 class FailingTelegramClient:
-    def __init__(self, *, token: str, timeout_seconds: float = 10.0) -> None:
+    def __init__(
+        self,
+        *,
+        token: str,
+        timeout_seconds: float = 10.0,
+        egress_allowlist: object = None,
+    ) -> None:
         self.token = token
         self.timeout_seconds = timeout_seconds
+        self.egress_allowlist = egress_allowlist
 
     def get_file(self, *, file_id: str):
         raise RuntimeError("telegram unavailable")
 
 
 class TelegramOgaClient:
-    def __init__(self, *, token: str, timeout_seconds: float = 10.0) -> None:
+    def __init__(
+        self,
+        *,
+        token: str,
+        timeout_seconds: float = 10.0,
+        egress_allowlist: object = None,
+    ) -> None:
         self.token = token
         self.timeout_seconds = timeout_seconds
+        self.egress_allowlist = egress_allowlist
 
     def get_file(self, *, file_id: str):
         return {"file_path": "voice/file_42.oga"}

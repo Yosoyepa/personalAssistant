@@ -159,7 +159,11 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _runtime(*, require_provider: bool) -> tuple[Any, Principal, Any]:
-    from personal_assistant.infrastructure.bootstrap import build_container
+    from personal_assistant.infrastructure.bootstrap import (
+        build_container,
+        build_egress_allowlist,
+        log_egress_audit,
+    )
     from personal_assistant.infrastructure.config import AppSettings
 
     settings = AppSettings.from_env()
@@ -167,6 +171,7 @@ def _runtime(*, require_provider: bool) -> tuple[Any, Principal, Any]:
         raise RuntimeError("postgres_required")
     if require_provider and not settings.telegram_bot_token:
         raise RuntimeError("telegram_not_configured")
+    log_egress_audit(settings)
     notifications = None
     if settings.telegram_bot_token:
         from personal_assistant.adapters.outbound.notifications.telegram import (
@@ -175,7 +180,10 @@ def _runtime(*, require_provider: bool) -> tuple[Any, Principal, Any]:
         )
 
         notifications = TelegramNotificationTool(
-            TelegramBotApiClient(token=settings.telegram_bot_token)
+            TelegramBotApiClient(
+                token=settings.telegram_bot_token,
+                egress_allowlist=build_egress_allowlist(settings),
+            )
         )
     container = build_container(
         settings=settings,

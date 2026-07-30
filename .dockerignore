@@ -1,0 +1,36 @@
+# Build context for the hardened image: source and packaging metadata only.
+# Secrets, local environments, VCS data, tests, and documentation stay out of
+# the image (ADR-004: no credentials in the image or its build context).
+
+.git
+.gitignore
+.github
+.agents
+.codex
+.env
+.env.*
+!.env.example
+.venv
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.coverage
+coverage.xml
+__pycache__
+**/__pycache__
+*.pyc
+
+agents
+docs
+eval
+graphify-out
+media
+replies
+scripts
+tests
+skills-lock.json
+dist
+personalAssistant-worktrees
+Dockerfile
+docker-compose*.yml
+deploy
