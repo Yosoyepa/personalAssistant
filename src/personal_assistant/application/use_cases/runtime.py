@@ -8,7 +8,10 @@ from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import AgentResult, AgentStatus
 from personal_assistant.application.ports.observability import TraceRecorderPort
 from personal_assistant.application.services.replies import AssistantReplies
-from personal_assistant.domain.common.guardrails import assert_prompt_safe
+from personal_assistant.domain.common.guardrails import (
+    assert_output_safe,
+    assert_prompt_safe,
+)
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 
@@ -44,11 +47,13 @@ class LocalAgentRuntime:
             output_summary={"status": AgentStatus.completed.value},
         )
         recorder.write(completed)
+        reply = self.replies.runtime_request_received()
+        assert_output_safe(reply)
         return AgentResult(
             run_id=started.run_id,
             agent_id=self.agent_id,
             status=AgentStatus.completed,
             tenant_id=principal.tenant_id,
-            reply=self.replies.runtime_request_received(),
+            reply=reply,
             trace_ids=[started.trace_id, completed.trace_id],
         )
