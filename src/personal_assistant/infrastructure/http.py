@@ -70,9 +70,11 @@ from personal_assistant.infrastructure.admin import (
 from personal_assistant.infrastructure.bootstrap import (
     AppContainer,
     build_container,
+    build_egress_allowlist,
     build_llm_provider,
     build_transcription_provider,
     build_tts_provider,
+    log_egress_audit,
 )
 from personal_assistant.infrastructure.config import AppSettings
 from personal_assistant.infrastructure.migrations import (
@@ -402,12 +404,16 @@ def build_runtime_container(settings: AppSettings) -> AppContainer:
     if settings.reminder_worker_enabled and not settings.telegram_bot_token:
         raise RuntimeError("REMINDER_WORKER_ENABLED requires TELEGRAM_BOT_TOKEN")
     prompts = build_prompt_catalog()
+    log_egress_audit(settings)
     llm = build_llm_provider(settings, prompt_catalog=prompts)
     transcription = build_transcription_provider(settings)
     tts = build_tts_provider(settings)
     if settings.telegram_bot_token:
         telegram_notifications = TelegramNotificationTool(
-            TelegramBotApiClient(token=settings.telegram_bot_token),
+            TelegramBotApiClient(
+                token=settings.telegram_bot_token,
+                egress_allowlist=build_egress_allowlist(settings),
+            ),
         )
         return build_container(
             settings=settings,
@@ -784,7 +790,10 @@ def _transcribe_telegram_media(
     transcription_filename: str | None = None
     telegram_file_extension: str | None = None
     try:
-        client = TelegramBotApiClient(token=settings.telegram_bot_token)
+        client = TelegramBotApiClient(
+            token=settings.telegram_bot_token,
+            egress_allowlist=build_egress_allowlist(settings),
+        )
         file_info = client.get_file(file_id=message.media_file_id)
         file_path = str(file_info.get("file_path") or "")
         if not file_path:

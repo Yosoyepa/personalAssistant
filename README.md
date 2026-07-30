@@ -33,18 +33,26 @@ The repository currently includes:
   and traces.
 - A local-only read-only admin dashboard for tenant-scoped inspection.
 - MiniMax and generic Anthropic-compatible LLM adapters behind `LLMProvider`.
+- A deny-by-default outbound egress allowlist (ADR-004 layer A): exact
+  `scheme + hostname` entries derived from the configured provider base URLs
+  plus `api.telegram.org`, an explicit `EGRESS_ALLOWED_HOSTS` override,
+  fail-closed startup validation, and hostname-only startup audit records.
+- A hardened container profile (ADR-004 layer B): multi-stage `Dockerfile`
+  with a non-root user, plus `deploy/compose.yaml` with a read-only root
+  filesystem, dropped capabilities, and `no-new-privileges`.
+- An automated process kill/restart recovery exercise against PostgreSQL
+  proving exactly-once delivery and operator-reconciled ambiguous outcomes.
 - Deterministic tests for tenant isolation, idempotency, permissions,
   prompt-injection handling, HTTP boundaries, admin visibility, Telegram
   delivery, audio adapters, Postgres wiring, and architecture boundaries.
 
 Current limits:
 
-- No committed migration history yet; Postgres schema creation is code-owned.
 - Notification delivery records are still adapter-local rather than persisted in
   Postgres.
-- No production deployment hardening, external calendar sync, OAuth token
-  storage, semantic vector memory, active MCP runtime path, or active A2A runtime
-  path.
+- No production deployment hardening beyond the local container profile,
+  external calendar sync, OAuth token storage, semantic vector memory, active
+  MCP runtime path, or active A2A runtime path.
 
 ## Architecture
 
@@ -338,9 +346,8 @@ Present:
 
 Not present yet:
 
-- Versioned migrations
 - Persisted notification delivery ledger
-- Production auth/deploy hardening
+- Production auth/deploy hardening beyond the local container profile
 - OAuth credential storage
 - External calendar sync
 - Active MCP or A2A execution path
