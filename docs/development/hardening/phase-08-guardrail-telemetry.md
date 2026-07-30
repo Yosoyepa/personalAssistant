@@ -122,6 +122,24 @@ existentes.
 Los cinco roles están reservados. Un rol sin mutación termina `REVIEW_ONLY`,
 entrega evidencia y no crea un commit vacío.
 
+### Checkpoint entre olas
+
+- [x] Los tres roles de ola 1 entregaron diff, validaciones y riesgos (A1
+      `2ea1e45`, A2 `3894d59`, A3 `6edb5b6`), ejecutados **en paralelo por
+      subagentes** según la instrucción del mantenedor.
+- [x] El orquestador actuó como discriminador: revisó los diffs completos de
+      las tres ramas y verificó de forma independiente los tests enfocados
+      (74 / 21+10 / 94 passed) antes de integrar.
+- [x] Los commits aceptados se integraron en la rama de fase (merges `58df9fa`,
+      `ded1143`, `659230d`; sin conflictos — rutas disjuntas por diseño).
+- [x] No se crearon commits vacíos para roles `REVIEW_ONLY` (no hubo).
+- [x] Todo conflicto volvió al agente afectado. (No hubo conflictos.)
+- [x] Gates de checkpoint sobre la rama integrada: ruff pass; mypy pass (117
+      archivos); suite completa contra PostgreSQL 16
+      (`personal-assistant-pg16-phase8`, `postgres:16-alpine`):
+      **828 passed / 3 skipped / 58 subtests / 0 failed**.
+- [x] La ola 2 parte del HEAD integrado: `659230d`.
+
 Notas de solapamiento:
 
 - A1 es el único dueño de `domain/common/guardrails.py`, `reminders.py` y
@@ -140,9 +158,9 @@ Notas de solapamiento:
 
 | Tarea | Commit(s) | Resumen | Tests enfocados | Riesgo residual | Decisión |
 |---|---|---|---|---|---|
-| `A1` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `PENDING` |
-| `A2` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `PENDING` |
-| `A3` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `PENDING` |
+| `A1` | `2ea1e45` | Categoría `CONTENT_POLICY` en `guardrails.py` con tablas de reglas input (CP-IN-001/002, flag) y output (CP-OUT-001..004, block: credenciales, exfiltración, fuga de instrucciones ocultas, acciones destructivas); APIs `scan_output`/`assert_output_safe` con contexto de error sanitizado (sin excerpts); cableado de salida vía `_guarded_reply` en todos los replies de `reminders.py` y en `runtime.py`; política ratificada en `docs/policy/content-policy.md` con IDs estables y criterios de promoción flag→block | `pytest -q tests/test_content_policy_guardrails.py` → 26 passed; vecinos (http_runtime, reminder_workflow, catalogs, boundary, egress, trace_completeness) → 176+75 passed; verificación independiente del discriminador → 74 passed; suite hermética del agente → 669 passed | El mapeo de `assert_prompt_safe` etiquetaría una futura regla CP-IN HIGH como `pii_detected` (hoy todas las CP-IN son flag); candidato CP-OUT-005 (PII en salida); reglas CP-IN solo en inglés; un reply bloqueado aborta el workflow con `guardrail_blocked` estructurado (inalcanzable con replies templados) | `ACCEPTED` |
+| `A2` | `3894d59` | `domain/common/citations.py` (nuevo): modelo `Citation` (frozen, extra forbid), parser estricto `filename:línea` (formato inválido → VALIDATION_FAILED), `verify_grounding` fail-closed (línea inexistente o excerpt ausente → GuardrailViolation); `documents.py` genera citas grounded reales (líneas que aportan las primeras 60 palabras, `SUMMARY_WORD_LIMIT`), valida parse+grounding+round-trip antes de emitir, sin emisión parcial; DTO sin cambios (compatibilidad `list[str]`) | `pytest -q tests/test_citation_guardrails.py tests/test_documents_and_channels.py` → 21 passed / 10 subtests; verificación independiente del discriminador → idéntico; suite del agente → 680 passed | Excerpt case-sensitive substring (soporta citas sin excerpt para futuros parafraseos); documentos con boundaries Unicode exóticos podrían sobre-citar (dirección segura) | `ACCEPTED` |
+| `A3` | `6edb5b6` | `build_guardrail_validation` (payload sanitizado que sobrevive `redact_trace_mapping`: action bajo clave allowlisted `status`, categorías, conteos, triples categoría/severidad/label — nunca excerpts); `emit_guardrail_checked` con `require_trace_completeness` fail-closed; `AdminDashboard.guardrail_metrics` (agregación en lectura vía `list_for_tenant`, fail-closed a ceros, hit_rate=blocked/scanned); endpoint `GET /admin/guardrails/metrics` con response models cerrados; `snapshot()` gana clave `metrics` (requerido por test de contrato admin) | `pytest -q tests/test_guardrail_telemetry.py tests/test_http_local_auth.py tests/test_http_runtime.py` → 69 passed; verificación independiente del discriminador (+ trace_completeness/privacy) → 94 passed | Lectura fail-closed a ceros puede enmascarar un adapter roto (alertar sobre `scanned: 0` inesperado); cap de 100 findings por redacción (atribución por categoría se pierde más allá; `findings_count` sigue exacto); A4 debe derivar la acción del resultado del scan para coherencia; endpoint devuelve ceros hasta que A4 cablee la emisión | `ACCEPTED` |
 | `A4` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `PENDING` |
 | `A5` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `PENDING` |
 
