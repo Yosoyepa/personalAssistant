@@ -9,11 +9,11 @@ plan y, durante la ejecución, las decisiones y evidencia de la fase.
 | Campo | Valor |
 |---|---|
 | Fase | `08 — guardrails de contenido/citas y telemetría de hit-rate` |
-| Estado | `PLAN_PENDING_REVIEW` |
+| Estado | `IN_PROGRESS` |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `kimi/phase-8-guardrail-telemetry` |
 | Commit base | `739ccb9d212a8d2b983f88e9b10b0fdcdddcf55d` (merge commit de la PR #15, fase 07; `main` sincronizado con `origin/main`) |
-| Fecha de inicio | `<pendiente — se registra al aprobar el plan>` |
+| Fecha de inicio | `2026-07-30` (plan aprobado por el mantenedor en conversación) |
 | PR | `<pendiente>` |
 | Merge commit | `<pendiente>` |
 
@@ -114,9 +114,9 @@ existentes.
 | Ola | Slot | Objetivo | Rama / worktree | Rutas autorizadas | Dependencias | Estado |
 |---|---|---|---|---|---|---|
 | 1 | A1 | Política de contenido: documento ratificado + categoría nueva + escaneo de salida cableado en replies de recordatorios y runtime | `kimi/phase-8-a1-content-policy` | `src/personal_assistant/domain/common/guardrails.py`, `src/personal_assistant/application/use_cases/reminders.py`, `src/personal_assistant/application/use_cases/runtime.py`, `docs/policy/content-policy.md` (nuevo), `tests/test_content_policy_guardrails.py` (nuevo) | `ninguna` | `PENDING` |
-| 1 | A2 | Citas: modelo formal + verificación de grounding + escaneo de política en resúmenes de documentos | `kimi/phase-8-a2-citation-grounding` | `src/personal_assistant/domain/common/citations.py` (nuevo), `src/personal_assistant/application/dto/documents.py`, `src/personal_assistant/application/use_cases/documents.py`, `tests/test_citation_guardrails.py` (nuevo) | `ninguna` | `PENDING` |
+| 1 | A2 | Citas: modelo formal + verificación de grounding de citas de documentos | `kimi/phase-8-a2-citation-grounding` | `src/personal_assistant/domain/common/citations.py` (nuevo), `src/personal_assistant/application/dto/documents.py`, `src/personal_assistant/application/use_cases/documents.py`, `tests/test_citation_guardrails.py` (nuevo) | `ninguna` | `PENDING` |
 | 1 | A3 | Telemetría de hit-rate: helpers de emisión de `guardrail.checked` (payload sanitizado) + agregación por lectura + contrato admin (sin cablear aún los puntos de escaneo) | `kimi/phase-8-a3-hit-rate-telemetry` | `src/personal_assistant/application/dto/tracing.py` (solo aditivo), `src/personal_assistant/application/ports/observability.py`, `src/personal_assistant/infrastructure/admin.py`, `src/personal_assistant/infrastructure/http.py`, `tests/test_guardrail_telemetry.py` (nuevo) | `ninguna` | `PENDING` |
-| 2 | A4 | Integración: cablear emisión de `guardrail.checked` en todos los puntos de escaneo (runtime, recordatorios, documentos), composition root, actualizar `security_boundary_v1` si aplica, README/runbooks, addendum del GAP #9 | `kimi/phase-8-a4-integration` | `src/personal_assistant/infrastructure/bootstrap.py`, `src/personal_assistant/application/use_cases/*.py` (solo llamadas de emisión), `src/personal_assistant/evals/executors/security_boundary_v1.py`, `README.md`, `docs/runbook/*.md`, `docs/development/production-readiness-v0.2.0-alpha.1.md` (addendum) | `A1, A2, A3 integrados` | `PENDING` |
+| 2 | A4 | Integración: cablear emisión de `guardrail.checked` en todos los puntos de escaneo (runtime, recordatorios, documentos) + escaneo de política de salida en resúmenes de documentos, composition root, actualizar `security_boundary_v1` si aplica, README/runbooks, addendum del GAP #9 | `kimi/phase-8-a4-integration` | `src/personal_assistant/infrastructure/bootstrap.py`, `src/personal_assistant/application/use_cases/*.py` (llamadas de emisión + escaneo de salida en `documents.py`), `src/personal_assistant/evals/executors/security_boundary_v1.py`, `README.md`, `docs/runbook/*.md`, `docs/development/production-readiness-v0.2.0-alpha.1.md` (addendum) | `A1, A2, A3 integrados` | `PENDING` |
 | 2 | A5 | Hardening: regresiones reveladas por ola 1, gates completos sección 8 | `kimi/phase-8-a5-hardening` | rutas reveladas por la ola 1 previa aprobación | `A1, A2, A3 integrados` | `PENDING` |
 
 Los cinco roles están reservados. Un rol sin mutación termina `REVIEW_ONLY`,
@@ -125,12 +125,9 @@ entrega evidencia y no crea un commit vacío.
 Notas de solapamiento:
 
 - A1 es el único dueño de `domain/common/guardrails.py`, `reminders.py` y
-  `runtime.py` en ola 1. El escaneo de política dentro del resumen de
-  documentos lo ejecuta A2 (dueño de `documents.py`) usando la API pública que
-  A1 entregue; si A1 aún no está integrado cuando A2 lo necesite, A2 define la
-  llamada contra la interfaz acordada en este plan y A4 resuelve la integración
-  final. (Alternativa de secuenciación: integrar A1 antes de arrancar A2 si la
-  revisión lo prefiere.)
+  `runtime.py` en ola 1. A2 ya **no** depende de la API de A1: el escaneo de
+  política de salida dentro del resumen de documentos lo cablea A4 en ola 2
+  (ajuste decidido 2026-07-30 para hacer la ola 1 totalmente paralelizable).
 - A3 es el único dueño de `infrastructure/admin.py` y del contrato admin; A4
   cablea las llamadas de emisión en los use cases para evitar que A1/A2/A3
   editen los mismos archivos.
@@ -279,11 +276,25 @@ Los gates omitidos requieren justificación y riesgo residual:
 - [ ] Método de integración: merge commit.
 - [ ] Worktrees y ramas temporales limpiados de forma segura.
 
+### Apertura de la fase (registro)
+
+- 2026-07-30: plan creado en la rama de fase (commit `34f0448`) y **aprobado
+  por el mantenedor en conversación** con una instrucción de ejecución
+  explícita: la ola 1 se ejecuta **en paralelo con subagentes** (un agente por
+  slot, cada uno en su worktree/rama) y el orquestador actúa como
+  **discriminador**: revisa los diffs completos, corre los tests enfocados y
+  decide qué se integra. Las rutas autorizadas de A1/A2/A3 quedaron disjuntas
+  (A2 ya no depende de A1; ver notas de solapamiento). El runtime no permite
+  terminales en background; la paralelización se logra con subagentes
+  concurrentes del orquestador, con el mismo efecto.
+- Ajuste de alcance aprobado en la misma conversación: el escaneo de política
+  de salida en `documents.py` se mueve de A2 a A4.
+
 ## Aprobaciones
 
 | Decisión | Responsable | Fecha | Evidencia / comentario |
 |---|---|---|---|
-| Aprobar plan de fase | `<nombre>` | `<fecha>` | `<referencia>` |
+| Aprobar plan de fase | `Yosoyepa` | `2026-07-30` | Conversación: "Perfecto pero quiero que hagas una paralelización..." — plan aprobado con ejecución paralela por subagentes y orquestador como discriminador |
 | Autorizar staging | `<nombre>` | `<fecha>` | `<referencia>` |
 | Autorizar commit | `<nombre>` | `<fecha>` | `<referencia>` |
 | Autorizar PR | `<nombre>` | `<fecha>` | `<referencia>` |
