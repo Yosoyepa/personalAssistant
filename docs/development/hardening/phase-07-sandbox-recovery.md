@@ -138,23 +138,30 @@ Notas de solapamiento:
 
 ### Checkpoint entre olas
 
-- [ ] Los tres roles de ola 1 entregaron diff o evidencia `REVIEW_ONLY`,
+- [x] Los tres roles de ola 1 entregaron diff o evidencia `REVIEW_ONLY`,
       validaciones y riesgos.
-- [ ] El mantenedor revisó los diffs completos.
-- [ ] Los commits aceptados se integraron en la rama de fase.
-- [ ] No se crearon commits vacíos para roles `REVIEW_ONLY`.
-- [ ] Todo conflicto volvió al agente afectado; este integró la rama de fase,
-      resolvió, revalidó y entregó una nueva revisión.
-- [ ] Los gates de checkpoint pasaron.
-- [ ] La ola 2 parte del HEAD integrado: `<sha>`.
+- [x] El mantenedor revisó los diffs completos.
+- [x] Los commits aceptados se integraron en la rama de fase (merges `3d4a03e`,
+      `8ddf6a4`, `3c58152`; sin conflictos).
+- [x] No se crearon commits vacíos para roles `REVIEW_ONLY`.
+- [x] Todo conflicto volvió al agente afectado; este integró la rama de fase,
+      resolvió, revalidó y entregó una nueva revisión. (No hubo conflictos.)
+- [x] Los gates de checkpoint pasaron: ruff pass; mypy pass (116 archivos);
+      suite completa contra PostgreSQL 16 (`personal-assistant-pg16-phase7`,
+      `postgres:16-alpine`): 758 passed / 3 skipped / 48 subtests / 1 failed.
+      El único fallo es el problema de aislamiento preexistente de
+      `test_public_artifacts` (pasa aislado, falla en corrida completa),
+      registrado como `R-04` y asignado a A5; ningún cambio de la ola 1 toca
+      artefactos públicos.
+- [ ] La ola 2 parte del HEAD integrado: `<sha al commitear este registro>`.
 
 ## Ledger de cambios
 
 | Tarea | Commit(s) | Resumen | Tests enfocados | Riesgo residual | Decisión |
 |---|---|---|---|---|---|
-| `A1` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `PENDING` |
-| `A2` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `PENDING` |
-| `A3` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `PENDING` |
+| `A1` | `6f03ea1` | Módulo `adapters/outbound/egress.py` (allowlist exacta scheme+host, deny-by-default, error de dominio `EgressNotAllowedError`/GUARDRAIL_BLOCKED, derivación por defecto, validación fail-closed de arranque, auditoría de hostnames); cableado opcional en los 4 adaptadores de red; `AppSettings.egress_allowed_hosts` con derivación/override; `.env.example` documentado | `pytest -q tests/test_egress_allowlist.py` → 30 passed / 12 subtests; afectados (`test_llm_adapters`, `test_telegram_notifications`, `test_config_repr`, `test_persistence_config`, `test_architecture_boundaries`, `test_http_runtime`, `test_local_auth`) → 131 passed; suite hermética 687 passed con los 2 fallos preexistentes de `main` | El cableado del composition root (`bootstrap.py`/`http.py`/`worker.py`) que pasa la allowlist efectiva a los adaptadores y la emisión del log de auditoría de arranque quedan para ola 2 (rutas fuera de la autorización de A1); hasta entonces la enforcement de adaptador se activa solo cuando el llamador pasa la allowlist — el fail-closed de arranque en `AppSettings` sí queda activo | `ACCEPTED` |
+| `A2` | `d8214d2` | `tests/test_process_recovery_postgres.py`: ejercicio kill/restart con procesos hijos spawn que se auto-matan (`os._exit(99)`) en 3 puntos instrumentados (antes del commit de claim, después del commit de sending antes del I/O, en medio del I/O de proveedor); reinicio con persistencia fresca y aserciones de exactamente-una-entrega, sweep a `uncertain` sin reenvío automático y reconciliación por operador | `pytest -q tests/test_process_recovery_postgres.py` con `TEST_POSTGRES_DSN` (PostgreSQL 16, `postgres:16-alpine`) → 3 passed; hermético → 3 skipped; suite completa con DSN → 728 passed / 3 skipped (solo falla el flake preexistente de `test_public_artifacts`) | No se requirió cambio en `.github/workflows/**`: el job `postgres-integration` ya ejecuta `uv run pytest -q` con DSN y recoge el archivo automáticamente (autorización de workflows queda sin uso, sin commit vacío) | `ACCEPTED` |
+| `A3` | `8474522` | `Dockerfile` multi-stage (builder + `python:3.12-slim`, usuario non-root 10001, sin secretos, catálogos `prompts/`/`locales/` copiados a las rutas que el runtime resuelve); `.dockerignore`; `deploy/compose.yaml` endurecido (`read_only`, `tmpfs /tmp`, `cap_drop ALL`, `no-new-privileges`, publicación loopback); runbook gana secciones "Container Profile" y "Egress Verification" | Build real: `docker build -t personal-assistant:0.2.0-alpha.1 .` OK; smoke con banderas endurecidas: `id` → `uid=10001(assistant)`; `touch /x` → "Read-only file system"; inspect → `CapDrop=[ALL]`, `no-new-privileges:true`, `ReadonlyRootfs=true`, `Health=healthy`; `/livez` responde `{"status":"ok"}` | Primer arranque falló por catálogos `prompts/`/`locales/` ausentes en la imagen (el runtime los resuelve relativo a la instalación); corregido copiándolos en el Dockerfile y ajustando `.dockerignore`. El smoke de egreso desde dentro del contenedor contra host no permitido queda para A4 | `ACCEPTED` |
 | `A4` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `PENDING` |
 | `A5` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `<pendiente>` | `PENDING` |
 
