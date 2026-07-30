@@ -55,6 +55,7 @@ All routes are `GET`, local-only, and read-only:
 | `/admin/events` | Tenant event-store rows with type, source, subject, correlation, and data. |
 | `/admin/states` | Durable-lite workflow states and status counts. |
 | `/admin/memory` | Tenant memory records with kind, confirmation status, source, and text preview. |
+| `/admin/guardrails/metrics` | Guardrail hit-rate metrics aggregated from `guardrail.checked` trace events. |
 
 Example JSON check:
 
@@ -94,6 +95,38 @@ PowerShell session.
 - Traces: trace counts include `agent.started`, `context.selected`,
   `llm.called`, `tool.called`, `guardrail.checked`, `approval.requested`,
   `agent.completed`, and `agent.failed`.
+
+## Guardrail Hit-Rate Metrics
+
+`GET /admin/guardrails/metrics` aggregates the `guardrail.checked` trace
+events emitted at every wired scan point (runtime input/output, reminder
+workflow input/output, document service input/output) into tenant-scoped
+counts:
+
+- `scanned`, `allowed`, `flagged`, `blocked`: totals by scan outcome.
+  `allowed` means no findings, `flagged` means non-blocking findings (for
+  example medium-severity PII or content-policy input signals), and `blocked`
+  means at least one high-severity finding; blocked input scans also fail the
+  request, and blocked output scans raise before the text reaches the user.
+- `hit_rate`: `blocked / scanned`, rounded to four decimals; `null` when
+  nothing has been scanned yet.
+- `categories`: per-category breakdown (`prompt_injection`, `pii`,
+  `content_policy`) with `scanned` / `flagged` / `blocked` counts. A scan
+  with findings in several categories increments each of them, so category
+  counts can sum above `scanned`.
+
+The payload carries only numeric aggregates and category names — findings are
+emitted as category/severity/rule-label triples without excerpts, offsets, or
+user content. Caveats for operators:
+
+- The source is read fail-closed to zero: a failing or empty trace adapter
+  degrades the endpoint to zeroed metrics (`hit_rate: null`) instead of
+  raising, so zeros mean "no usable data", not necessarily "no attacks".
+- Malformed or foreign `validation` payloads are skipped rather than
+  miscounted; only the payload shape emitted by the wired scan points is
+  counted.
+- Emission happens even when a scan blocks (the event is written before the
+  blocking raise), so blocked attempts are always visible here.
 
 ## Security Limits
 

@@ -171,3 +171,64 @@ Delivered for the days 8–14 and days 15–21 P0 roadmap items:
   `tests/test_public_artifacts.py` (passes in isolation, fails in full
   runs) was observed during phase 07 and is handled inside the phase as a
   hardening task; it is unrelated to the sandbox or recovery changes.
+
+## Phase 08 progress addendum (v0.2.0-alpha.1 + phase 08)
+
+Status of this addendum: phase 08 closes the audit GAP #9 evidence items
+(hardening log: `docs/development/hardening/phase-08-guardrail-telemetry.md`).
+The scorecard above remains a published historical artifact of the alpha.1
+decision and is **unchanged: 4 PASS / 8 GAP / 0 N/A** until a full audit
+re-run. GA remains unauthorized.
+
+Delivered for the days 15–21 P0/P1 roadmap item ("add guardrail hit-rate
+telemetry and close content/citation policy gaps relevant to enabled
+workflows"):
+
+- **GAP #9 (input/output guardrails) — evidence delivered across four
+  fronts.**
+  - *Content-policy rules ratified.* `docs/policy/content-policy.md` defines
+    the deterministic, local content policy: every rule carries a stable ID,
+    a severity (flag/block), and positive plus negative test cases. The
+    `CONTENT_POLICY` guardrail category implements those rules in
+    `domain/common/guardrails.py` — input rules are born as flag
+    (medium-severity abuse signals), and the four output rules (credential
+    material, exfiltration instruction, hidden-instruction leak,
+    destructive action) are explicit high-severity blockers.
+  - *Output scanning wired.* Assistant-facing text is now scanned before it
+    reaches the user: reminder workflow replies and notification bodies
+    (`_guarded_reply`), the local runtime reply, and — new in this phase —
+    the produced document summary in `DocumentService.summarize`
+    (`scan_output` + enforcement). Blocking output findings raise
+    `GuardrailViolation` (`GUARDRAIL_BLOCKED`) with a sanitized context that
+    never echoes the offending content.
+  - *Citation grounding.* Document summaries carry formal citations
+    (`domain/common/citations.py`): each citation is parsed in canonical
+    form and verified for grounding against the source text before it is
+    emitted; ungroundable output raises instead of degrading.
+  - *Hit-rate telemetry live.* Every wired scan point — runtime
+    input/output, reminder workflow input/output, and document service
+    input/output — emits exactly one sanitized `guardrail.checked` trace
+    event per scan through `emit_guardrail_checked`, with the action derived
+    from the scan result (`allowed` / `flagged` / `blocked`), stable agent
+    attribution, tenant scoping from the `Principal`, and run-id correlation.
+    Emission happens before any blocking raise, so blocked attempts are
+    always counted. The composition root injects the real (in-memory or
+    Postgres) trace recorder into the reminder workflow and document
+    service, so production traffic persists these events;
+    `GET /admin/guardrails/metrics` aggregates them into tenant-scoped
+    totals, per-category breakdowns, and a blocked-over-scanned hit rate
+    (read fail-closed to zero; see `docs/runbook/admin-dashboard.md`).
+    Wiring is pinned by `tests/test_guardrail_emission_wiring.py` (15 tests,
+    including end-to-end endpoint coverage) and the golden trace-completeness
+    and security-privacy eval expectations were updated to the new
+    emitted-event reality.
+- Whether this fully closes GAP #9 — in particular the "production" part of
+  hit-rate metrics, which still requires observation under real traffic — is
+  for the audit re-run to decide; this addendum does not claim the row
+  closed.
+
+Verification at writing time: ruff pass; mypy pass (117 source files); the
+full pytest suite against PostgreSQL 16 (`TEST_POSTGRES_DSN`) passed 843
+tests with 3 allowlisted compatibility-probe skips, 58 subtests, and zero
+failures, including the release-gate eval corpus with the updated golden
+expectations.
