@@ -11,10 +11,15 @@ from ipaddress import ip_address, ip_network
 from typing import Any
 
 from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
-from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
+from personal_assistant.application.dto.tracing import (
+    GUARDRAIL_ACTIONS,
+    TraceEvent,
+    TraceEventType,
+)
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
 from personal_assistant.application.ports.calendar import CalendarEventResult
 from personal_assistant.application.ports.scheduler import ScheduledReminder
+from personal_assistant.domain.common.guardrails import GuardrailSeverity
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.domain.common.privacy import (
@@ -105,6 +110,7 @@ class AdminDashboard:
         approvals = self.approvals(principal, limit=safe_limit)
         errors = self.errors(principal, limit=safe_limit)
         context = self.context(principal)
+        metrics = self.guardrail_metrics(principal)
         health = self.health(
             traces=traces,
             outbox=outbox,
@@ -139,6 +145,7 @@ class AdminDashboard:
             "memory": memory,
             "errors": errors,
             "context": context,
+            "metrics": metrics,
         }
 
     def health(
@@ -478,6 +485,56 @@ class AdminDashboard:
             "calls_by_model": dict(
                 Counter(event.model or "unknown" for event in llm_events)
             ),
+        }
+
+    def guardrail_metrics(self, principal: Principal) -> dict[str, Any]:
+        """Aggregate guardrail hit-rate metrics from persisted traces.
+
+        Reads ``guardrail.checked`` events through the same public,
+        tenant-scoped trace port as the other components and reduces their
+        sanitized ``validation`` payloads to counts. Only events carrying
+        the payload shape emitted by ``build_guardrail_validation`` are
+        counted; malformed or foreign payloads are skipped so they never
+        distort the metrics. The source is read fail-closed: a failing or
+        empty trace adapter degrades to zero metrics instead of raising out
+        of ``snapshot()``. Only numeric aggregates and category names leave
+        this method, never event payloads or user content.
+        """
+        try:
+            events = self.container.traces.list_for_tenant(principal)
+        except Exception:
+            return _empty_guardrail_metrics()
+        scanned = 0
+        action_counts: Counter[str] = Counter()
+        category_counts: dict[str, Counter[str]] = {}
+        for event in events:
+            if event.event_type != TraceEventType.guardrail_checked:
+                continue
+            metrics = _guardrail_event_metrics(event.validation)
+            if metrics is None:
+                continue
+            action, category_blocked = metrics
+            scanned += 1
+            action_counts[action] += 1
+            for category, blocked in category_blocked.items():
+                counter = category_counts.setdefault(category, Counter())
+                counter["scanned"] += 1
+                counter["blocked" if blocked else "flagged"] += 1
+        blocked_total = action_counts["blocked"]
+        return {
+            "scanned": scanned,
+            "allowed": action_counts["allowed"],
+            "flagged": action_counts["flagged"],
+            "blocked": blocked_total,
+            "hit_rate": round(blocked_total / scanned, 4) if scanned else None,
+            "categories": {
+                category: {
+                    "scanned": counter["scanned"],
+                    "flagged": counter["flagged"],
+                    "blocked": counter["blocked"],
+                }
+                for category, counter in sorted(category_counts.items())
+            },
         }
 
     def render_html(
@@ -978,8 +1035,48 @@ def _context_utilization_value(event: TraceEvent) -> float | None:
     return float(value)
 
 
+def _guardrail_event_metrics(
+    validation: dict[str, Any],
+) -> tuple[str, dict[str, bool]] | None:
+    """Reduce one sanitized guardrail payload to action and category hits.
+
+    Returns ``None`` for payloads that do not match the emitted shape so
+    malformed or foreign ``guardrail.checked`` events never distort the
+    metrics. The boolean per category marks whether that category
+    contributed a blocking (high-severity) finding; a category seen only
+    through non-blocking findings counts as flagged.
+    """
+    action = validation.get("status")
+    if not isinstance(action, str) or action not in GUARDRAIL_ACTIONS:
+        return None
+    findings = validation.get("findings")
+    if not isinstance(findings, list):
+        return None
+    category_blocked: dict[str, bool] = {}
+    for finding in findings:
+        if not isinstance(finding, dict):
+            return None
+        category = finding.get("category")
+        if not isinstance(category, str) or not category:
+            return None
+        blocking = finding.get("severity") == GuardrailSeverity.HIGH.value
+        category_blocked[category] = category_blocked.get(category, False) or blocking
+    return action, category_blocked
+
+
 def _empty_context_component() -> dict[str, Any]:
     return {"samples": 0, "p50": None, "p95": None, "calls_by_model": {}}
+
+
+def _empty_guardrail_metrics() -> dict[str, Any]:
+    return {
+        "scanned": 0,
+        "allowed": 0,
+        "flagged": 0,
+        "blocked": 0,
+        "hit_rate": None,
+        "categories": {},
+    }
 
 
 def _trace_item(event: TraceEvent) -> dict[str, Any]:
