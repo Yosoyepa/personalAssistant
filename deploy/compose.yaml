@@ -1,0 +1,32 @@
+# Hardened single-operator deployment profile (ADR-004, layer B).
+#
+# Secrets live only in an ignored local `.env` next to this file (copy from
+# the repository-root `.env.example`; never commit the result). The compose
+# `env_file` directive injects them as process environment variables, which
+# is the only secret channel the container accepts (APP_ENV_FILE=disabled).
+#
+# PostgreSQL is external: set PERSISTENCE_BACKEND=postgres and DATABASE_URL
+# in the local `.env`, and apply migrations before enabling the worker.
+
+services:
+  assistant:
+    build:
+      context: ..
+    image: personal-assistant:0.2.0-alpha.1
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - .env
+    environment:
+      APP_ENV_FILE: disabled
+    ports:
+      # Loopback-only publication. The public HTTPS edge forwards exactly
+      # POST /webhooks/telegram and denies every other path and method
+      # (see docs/runbook/hardened-local-deployment.md).
+      - "127.0.0.1:8000:8000"
+    restart: unless-stopped
