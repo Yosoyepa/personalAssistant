@@ -1,9 +1,11 @@
 import json
+import os
 import re
 import subprocess
 import unittest
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -80,6 +82,22 @@ def _is_under_excluded_dir(path: Path) -> bool:
     return any(part in EXCLUDED_DIRS for part in relative_parts)
 
 
+def _git_env() -> dict[str, str]:
+    """Return an environment safe for read-only git plumbing.
+
+    Shells (notably Git Bash on Windows) export command-line config through
+    ``GIT_CONFIG_COUNT``/``GIT_CONFIG_KEY_*``/``GIT_CONFIG_VALUE_*`` pairs, and
+    a ``GIT_CONFIG_VALUE_*`` may legitimately be empty (e.g. resetting
+    ``credential.helper``). After any ``patch.dict(os.environ, ..., clear=True)``
+    cycle, Windows deletes empty-valued variables from the process environment
+    block, so the child git then sees a key without its value and aborts with
+    ``fatal: unable to parse command-line config`` (exit 128). Local plumbing
+    such as ``git ls-files`` needs none of that config, so we strip it to keep
+    the test hermetic regardless of the ambient shell.
+    """
+    return {key: value for key, value in os.environ.items() if not key.startswith("GIT_CONFIG")}
+
+
 def _tracked_paths() -> set[str]:
     result = subprocess.run(
         ["git", "ls-files"],
@@ -87,6 +105,7 @@ def _tracked_paths() -> set[str]:
         check=True,
         capture_output=True,
         text=True,
+        env=_git_env(),
     )
     return set(result.stdout.splitlines())
 
@@ -218,6 +237,36 @@ class PublicArtifactVerificationTest(unittest.TestCase):
                 findings.append(f"{_relative(path)} has a non-placeholder secret assignment")
 
         self.assertEqual([], findings, "Potential secrets found in public/versionable files")
+
+    def test_tracked_paths_strips_ambient_git_config_from_subprocess(self) -> None:
+        """Regression: ambient GIT_CONFIG_* pairs must not reach git plumbing.
+
+        Git Bash exports command-line config via GIT_CONFIG_COUNT/KEY/VALUE
+        variables; after patch.dict(..., clear=True) cycles, Windows drops
+        empty-valued entries from the child environment and git aborts with
+        exit 128. _tracked_paths must pass a sanitized env instead.
+        """
+        completed = subprocess.CompletedProcess(args=["git", "ls-files"], returncode=0, stdout="")
+
+        with (
+            patch.dict(
+                os.environ,
+                {
+                    "GIT_CONFIG_COUNT": "2",
+                    "GIT_CONFIG_KEY_0": "credential.helper",
+                    "GIT_CONFIG_VALUE_0": "",
+                },
+            ),
+            patch("subprocess.run", return_value=completed) as run_mock,
+        ):
+            _tracked_paths()
+
+        env = run_mock.call_args.kwargs["env"]
+        self.assertIsNotNone(env, "_tracked_paths must pass an explicit env")
+        self.assertFalse(
+            any(key.startswith("GIT_CONFIG") for key in env),
+            "ambient GIT_CONFIG_* variables must not reach git plumbing",
+        )
 
 
 if __name__ == "__main__":
