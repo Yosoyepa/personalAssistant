@@ -134,3 +134,40 @@ static gates — `uv lock --check`, compileall, `uv build`, `pip-audit` (no
 vulnerabilities), `pre-commit run --all-files`, and `git diff --check` — all
 pass. What remains pending is procedural, not evidential: the phase branch,
 explicit staging, the single phase PR, and hosted CI.
+
+## Phase 07 progress addendum (v0.2.0-alpha.1 + phase 07)
+
+Status of this addendum: phase 07 implements the ADR-004 sandbox design and
+the automated kill/restart exercise (hardening log:
+`docs/development/hardening/phase-07-sandbox-recovery.md`). The scorecard
+above remains a published historical artifact of the alpha.1 decision and is
+**unchanged: 4 PASS / 8 GAP / 0 N/A** until a full audit re-run. GA remains
+unauthorized.
+
+Delivered for the days 8–14 and days 15–21 P0 roadmap items:
+
+- **GAP #6 (tool execution sandbox) — implemented per ADR-004.** Layer A:
+  every network adapter validates its target against a deny-by-default,
+  exact `scheme + hostname` allowlist before opening a connection; the
+  effective allowlist derives from the configured provider base URLs plus
+  `api.telegram.org`, a non-empty `EGRESS_ALLOWED_HOSTS` is an explicit
+  override, startup fails closed in `AppSettings` when an enabled provider's
+  target is uncovered, and the startup audit record carries hostnames only.
+  Layer B: a hardened single-unit container (multi-stage `Dockerfile`,
+  non-root uid 10001) with a compose profile enforcing a read-only root
+  filesystem, dropped capabilities, and `no-new-privileges`; the build and
+  the hardened smoke passed locally (see the phase log). Whether this fully
+  closes the GAP is for the audit re-run to decide.
+- **GAP #7 (durable pause/resume/retry survives a killed process) —
+  automated exercise added.** `tests/test_process_recovery_postgres.py`
+  kills spawned worker processes at three instrumented points — before the
+  claim commit, after the sending commit before provider I/O, and in the
+  middle of provider I/O — against PostgreSQL 16, then asserts exactly-once
+  delivery, sweep of expired `sending` leases to `uncertain` without
+  automatic resend, and operator-approved reconciliation. Multi-day human
+  waits remain unexercised; the audit re-run decides whether the row
+  closes.
+- **Accepted risk note.** A pre-existing test-isolation issue in
+  `tests/test_public_artifacts.py` (passes in isolation, fails in full
+  runs) was observed during phase 07 and is handled inside the phase as a
+  hardening task; it is unrelated to the sandbox or recovery changes.

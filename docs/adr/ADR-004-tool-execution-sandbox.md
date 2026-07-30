@@ -2,11 +2,16 @@
 
 ## Status
 
-Proposed
+Accepted
 
-This ADR records the design only. Implementation is scheduled for a later
-phase of the v0.2.0-alpha.1 risk-adjusted roadmap (days 8–14). It does not
-change any runtime behavior today.
+Implemented in phase 07 (`kimi/phase-7-sandbox-recovery`; hardening log:
+`docs/development/hardening/phase-07-sandbox-recovery.md`). Layer A shipped as
+`src/personal_assistant/adapters/outbound/egress.py` with wiring in the four
+network adapters and the composition root, fail-closed startup validation in
+`AppSettings`, and hostname-only startup audit records. Layer B shipped as the
+repository-root `Dockerfile` plus `deploy/compose.yaml`, with the hardened
+smoke (non-root, read-only root filesystem, dropped capabilities,
+`no-new-privileges`) recorded in the phase log.
 
 ## Date
 
