@@ -505,7 +505,7 @@
           "events": 0,
           "outbox": 0,
           "states": 1,
-          "traces": 4
+          "traces": 5
         },
         "authority": {
           "tenant": "fixture-tenant",
@@ -550,7 +550,7 @@
           "events": 0,
           "outbox": 0,
           "states": 1,
-          "traces": 4
+          "traces": 5
         },
         "authority": {
           "tenant": "fixture-tenant",
@@ -595,7 +595,7 @@
           "events": 0,
           "outbox": 0,
           "states": 1,
-          "traces": 4
+          "traces": 5
         },
         "authority": {
           "tenant": "fixture-tenant",
@@ -971,7 +971,7 @@
           "events": 0,
           "outbox": 0,
           "states": 1,
-          "traces": 4
+          "traces": 5
         },
         "authority": {
           "tenant": "fixture-tenant",

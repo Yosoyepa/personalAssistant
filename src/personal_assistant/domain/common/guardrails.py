@@ -13,6 +13,7 @@ from personal_assistant.domain.common.exceptions import AssistantError, ErrorCod
 class GuardrailCategory(str, Enum):
     PROMPT_INJECTION = "prompt_injection"
     PII = "pii"
+    CONTENT_POLICY = "content_policy"
 
 
 class GuardrailSeverity(str, Enum):
@@ -100,6 +101,79 @@ PII_PATTERNS: tuple[tuple[str, re.Pattern[str], GuardrailSeverity], ...] = (
     ),
 )
 
+# Content-policy rules ratified in docs/policy/content-policy.md.
+# Input rules are born as flag (MEDIUM); they surface abuse signals in scan
+# results without blocking legitimate reminders.
+CONTENT_POLICY_INPUT_PATTERNS: tuple[tuple[str, re.Pattern[str], GuardrailSeverity], ...] = (
+    (
+        "cp_in_001_violent_threat",
+        re.compile(
+            r"\b(kill|murder|assassinate|bomb|hurt)\b.{0,40}"
+            r"\b(you|him|her|them|someone|my\s+(?:boss|partner|neighbor|neighbour))\b",
+            re.I,
+        ),
+        GuardrailSeverity.MEDIUM,
+    ),
+    (
+        "cp_in_002_secret_sharing",
+        re.compile(
+            r"\b(password|passwd|api[_ -]?key|secret|token)\b\s*(?:is|=|:)\s*\S+",
+            re.I,
+        ),
+        GuardrailSeverity.MEDIUM,
+    ),
+)
+
+# Output rules protect the user and the operator from unsafe assistant replies.
+# All four are explicit high-risk rules (block, HIGH); see the policy document
+# for the per-rule rationale.
+CONTENT_POLICY_OUTPUT_PATTERNS: tuple[tuple[str, re.Pattern[str], GuardrailSeverity], ...] = (
+    (
+        "cp_out_001_credential_material",
+        re.compile(
+            r"(?:\bsk-[A-Za-z0-9]{20,}\b"
+            r"|\bAKIA[0-9A-Z]{16}\b"
+            r"|\bghp_[A-Za-z0-9]{30,}\b"
+            r"|\bxox[baprs]-[A-Za-z0-9-]{10,}\b"
+            r"|\b\d{8,10}:[A-Za-z0-9_-]{35}\b"
+            r"|\bBearer\s+[A-Za-z0-9._~+/=-]{20,}"
+            r"|-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY(?: BLOCK)?-----)"
+        ),
+        GuardrailSeverity.HIGH,
+    ),
+    (
+        "cp_out_002_exfiltration_instruction",
+        re.compile(
+            r"(?:\bexfiltrat\w*\b"
+            r"|\b(?:send|post|upload|email|forward)\b.{0,80}\bhttps?://)",
+            re.I,
+        ),
+        GuardrailSeverity.HIGH,
+    ),
+    (
+        "cp_out_003_hidden_instruction_leak",
+        re.compile(
+            r"(?:\b(?:system prompt|developer message|hidden instructions?)\b\s*[:=]"
+            r"|\bmy\s+(?:system prompt|hidden instructions?)\s+(?:is|are|says?)\b)",
+            re.I,
+        ),
+        GuardrailSeverity.HIGH,
+    ),
+    (
+        "cp_out_004_destructive_action",
+        re.compile(
+            r"(?:\brm\s+-[rf]{1,2}(?:\s|$)"
+            r"|\bdel\s+/[fsq]\b"
+            r"|\bformat\s+[a-z]:"
+            r"|\bdrop\s+table\b"
+            r"|\bdelete\s+all\s+(?:files|data|records)\b"
+            r"|\bwipe\s+(?:the\s+)?(?:disk|drive|database)\b)",
+            re.I,
+        ),
+        GuardrailSeverity.HIGH,
+    ),
+)
+
 
 def _excerpt(text: str, start: int, end: int) -> str:
     prefix_start = max(0, start - 20)
@@ -129,6 +203,39 @@ def scan_prompt(text: str) -> GuardrailResult:
             findings.append(
                 GuardrailFinding(
                     category=GuardrailCategory.PII,
+                    severity=severity,
+                    label=label,
+                    start=match.start(),
+                    end=match.end(),
+                    excerpt=_excerpt(text, match.start(), match.end()),
+                )
+            )
+
+    for label, pattern, severity in CONTENT_POLICY_INPUT_PATTERNS:
+        for match in pattern.finditer(text):
+            findings.append(
+                GuardrailFinding(
+                    category=GuardrailCategory.CONTENT_POLICY,
+                    severity=severity,
+                    label=label,
+                    start=match.start(),
+                    end=match.end(),
+                    excerpt=_excerpt(text, match.start(), match.end()),
+                )
+            )
+
+    return GuardrailResult(findings=tuple(findings))
+
+
+def scan_output(text: str) -> GuardrailResult:
+    """Scan assistant output text for content-policy violations."""
+
+    findings: list[GuardrailFinding] = []
+    for label, pattern, severity in CONTENT_POLICY_OUTPUT_PATTERNS:
+        for match in pattern.finditer(text):
+            findings.append(
+                GuardrailFinding(
+                    category=GuardrailCategory.CONTENT_POLICY,
                     severity=severity,
                     label=label,
                     start=match.start(),
@@ -178,6 +285,34 @@ def assert_prompt_safe(text: str) -> GuardrailResult:
             context={
                 "categories": categories,
                 "findings": [finding.model_dump(mode="json") for finding in result.findings],
+            },
+        )
+    return result
+
+
+def assert_output_safe(text: str) -> GuardrailResult:
+    """Return the output scan result or raise GuardrailViolation when blocked.
+
+    The error context carries only categories, labels, and severities so that
+    blocked-output diagnostics never echo raw user or assistant content.
+    """
+
+    result = scan_output(text)
+    if result.blocked:
+        raise GuardrailViolation(
+            "assistant output failed content policy checks",
+            context={
+                "categories": sorted(
+                    {finding.category.value for finding in result.findings}
+                ),
+                "findings": [
+                    {
+                        "category": finding.category.value,
+                        "label": finding.label,
+                        "severity": finding.severity.value,
+                    }
+                    for finding in result.findings
+                ],
             },
         )
     return result

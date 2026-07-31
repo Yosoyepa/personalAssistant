@@ -17,8 +17,8 @@
       },
       "expected": {
         "requiredTraceEvents": [
-          "agent.started",
           "guardrail.checked",
+          "agent.started",
           "context.selected",
           "tool.called",
           "agent.completed"
@@ -41,7 +41,7 @@
           ]
         },
         "incompleteEventRejected": null,
-        "persistedEvents": 5
+        "persistedEvents": 7
       },
       "tags": [
         "trace",

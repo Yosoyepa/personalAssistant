@@ -420,7 +420,7 @@ def build_container(
         approvals=approvals,
         calendar=calendar,
         commands=commands,
-        documents=DocumentService(),
+        documents=DocumentService(traces=traces),
         event_store=event_store,
         llm=llm,
         memory=persistence.memory,
