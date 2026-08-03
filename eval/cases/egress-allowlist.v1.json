@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "golden-egress-allowlist-llm-allowlisted-host",
+      "category": "egress-allowlist",
+      "tier": "golden",
+      "failureMode": "allowlisted-llm-call-completes",
+      "contractRefs": [
+        "AUDIT-GAP-6",
+        "ADR-004"
+      ],
+      "executor": "egress.allowlist.v1",
+      "input": {
+        "scenario": "llm-allowlisted"
+      },
+      "expected": {
+        "outcome": "allowed",
+        "code": null,
+        "urlopenCalls": 1
+      },
+      "tags": [
+        "egress",
+        "allowlist"
+      ]
+    },
+    {
+      "id": "failure-egress-allowlist-llm-host-not-covered",
+      "category": "egress-allowlist",
+      "tier": "failure-mode",
+      "failureMode": "non-allowlisted-llm-blocked-before-connect",
+      "contractRefs": [
+        "AUDIT-GAP-6",
+        "ADR-004"
+      ],
+      "executor": "egress.allowlist.v1",
+      "input": {
+        "scenario": "llm-not-covered"
+      },
+      "expected": {
+        "outcome": "blocked",
+        "code": "guardrail_blocked",
+        "urlopenCalls": 0
+      },
+      "tags": [
+        "egress",
+        "fail-closed"
+      ]
+    },
+    {
+      "id": "failure-egress-allowlist-telegram-host-not-covered",
+      "category": "egress-allowlist",
+      "tier": "failure-mode",
+      "failureMode": "non-allowlisted-telegram-blocked-before-connect",
+      "contractRefs": [
+        "AUDIT-GAP-6",
+        "ADR-004"
+      ],
+      "executor": "egress.allowlist.v1",
+      "input": {
+        "scenario": "telegram-not-covered"
+      },
+      "expected": {
+        "outcome": "blocked",
+        "code": "guardrail_blocked",
+        "urlopenCalls": 0
+      },
+      "tags": [
+        "egress",
+        "fail-closed"
+      ]
+    },
+    {
+      "id": "failure-egress-allowlist-startup-coverage-rejected",
+      "category": "egress-allowlist",
+      "tier": "failure-mode",
+      "failureMode": "startup-rejects-allowlist-missing-provider-host",
+      "contractRefs": [
+        "AUDIT-GAP-6",
+        "ADR-004"
+      ],
+      "executor": "egress.allowlist.v1",
+      "input": {
+        "scenario": "startup-not-covered"
+      },
+      "expected": {
+        "outcome": "startup_rejected",
+        "code": null,
+        "urlopenCalls": 0
+      },
+      "tags": [
+        "egress",
+        "fail-closed"
+      ]
+    }
+  ]
+}
