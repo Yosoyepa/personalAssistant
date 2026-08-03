@@ -1,0 +1,15 @@
+# Line-ending policy: the repository stores LF. Working trees on any OS
+# normalize to LF on commit; checkouts stay LF (Windows editors and modern
+# PowerShell handle LF).
+* text=auto eol=lf
+
+# Binary artifacts — never normalized.
+*.mp4 binary
+*.whl binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.tar.gz binary

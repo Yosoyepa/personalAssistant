@@ -26,7 +26,6 @@ The repository currently provides:
 
 The repository does not yet provide:
 
-- persistent storage
 - production trace dashboard
 - external calendar sync
 
