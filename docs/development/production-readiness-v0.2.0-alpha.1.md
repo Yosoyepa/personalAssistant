@@ -235,10 +235,10 @@ expectations.
 
 ## Phase 09 progress addendum (v0.2.0-alpha.1 + phase 09)
 
-Status of this addendum: phase 09 closes GAP #3 by design decision and adds
-the deterministic egress eval family (hardening log:
-`docs/development/hardening/phase-09-single-shot-context.md`). The scorecard
-above remains a published historical artifact of the alpha.1 decision and is
+Status of this addendum: phase 09 is `MERGED` (hardening log:
+`docs/development/hardening/phase-09-single-shot-context.md`; PR #22, merge
+commit `73a1141`, hosted CI 5/5 green on the PR). The scorecard above remains
+a published historical artifact of the alpha.1 decision and is
 **unchanged: 4 PASS / 8 GAP / 0 N/A** until a full audit re-run. GA remains
 unauthorized.
 

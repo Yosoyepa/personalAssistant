@@ -7,13 +7,13 @@ Registro de la fase 09 según la plantilla [`hardening-log.md`](../hardening-log
 | Campo | Valor |
 |---|---|
 | Fase | `09 — single-shot-context` |
-| Estado | `IN_PROGRESS` |
+| Estado | `MERGED` |
 | Mantenedor | `jandradeu` |
 | Rama de fase | `codex/phase-09-single-shot-context` |
 | Commit base | `96d4fc26a4f1292d7616a24a71a273e98c997a66` (origin/main, PR #16) |
 | Fecha de inicio | `2026-08-03` |
-| PR | `pendiente` |
-| Merge commit | `pendiente` |
+| PR | `#22 — https://github.com/Yosoyepa/personalAssistant/pull/22` |
+| Merge commit | `73a114165652e9edc9bffb61ecfd8dfb97d128fc` |
 
 Nota de origen: esta fase nace de la reconciliación de un trabajo local que
 duplicaba, sin saberlo, las fases remotas 07 (sandbox) y 08 (guardrails). El
@@ -86,7 +86,8 @@ disjuntas, sin worktrees; revisión completa de diff antes de staging.
 | `A2` | `5640e86` | ADR-005 single-shot; probes ejecutados: 2 call sites, sin historial, `llm_usage_metrics` en ambos | probes `rg` del ADR | ninguno | `ACCEPTED` |
 | `A3` | `27dcca0`, `a795e18` | runbook telegram sin "persistent storage"; `.gitattributes` LF | n/a (docs) | ninguno | `ACCEPTED` |
 | `A4` | `db00846` | eval egress 4 casos (suite 295 → 299) | `--category egress-allowlist` → 4/4; gate completo 299/299 | ninguno | `ACCEPTED` |
-| `A5` | `este commit` | log + addendum + gates | sección Evidencia (todos PASS) | ninguno | `ACCEPTED` |
+| `A5` | `1dc5443` | log + addendum + gates | sección Evidencia (todos PASS) | ninguno | `ACCEPTED` |
+| `A5-fix` | `362d577` | cobertura pytest del executor (CI 3.12 diff-cover 48.6% → 97%) | 847 passed; diff-cover 97% | 2 líneas defensivas inalcanzables sin cubrir | `ACCEPTED` |
 
 ## Revisión de diff y staging
 
@@ -191,7 +192,9 @@ scanner de tests/test_public_artifacts.py.
 
 ## Ciclos de bloqueo
 
-Sin bloqueos registrados.
+| Huella del bloqueo | Ciclo | Evidencia | Corrección segura probada | Resultado | Fecha |
+|---|---:|---|---|---|---|
+| CI `tests (3.12)` diff-cover <90% sobre `egress_allowlist_v1.py` (48.6%; el executor solo se ejercía vía eval gate, no vía pytest) | 1 | job 91832445128, `Missing 37 lines` | `tests/test_egress_eval_executor.py` cubre los 4 escenarios vía `execute()`; diff-cover local 97% | `RESOLVED` (CI 5/5 verde en `362d577`) | 2026-08-03 |
 
 ## Riesgos y decisiones
 
@@ -217,16 +220,16 @@ Sin bloqueos registrados.
 
 ### Fase
 
-- [ ] Los cinco roles 3 + 2 entregaron implementación o revisión.
-- [ ] Roles `REVIEW_ONLY` registrados sin commits vacíos.
-- [ ] Tareas aceptadas integradas.
-- [ ] Gates completos aprobados.
-- [ ] Revisión de secretos aprobada.
-- [x] Sin bloqueos abiertos.
-- [ ] Rollback verificable.
-- [ ] PR única de fase revisada y con CI verde.
-- [ ] Método de integración: merge commit.
-- [ ] Worktrees y ramas temporales limpiados de forma segura.
+- [x] Los cinco roles 3 + 2 entregaron implementación o revisión.
+- [x] Roles `REVIEW_ONLY` registrados sin commits vacíos.
+- [x] Tareas aceptadas integradas.
+- [x] Gates completos aprobados.
+- [x] Revisión de secretos aprobada.
+- [x] Sin bloqueos abiertos (1 ciclo CI diff-cover, resuelto en ciclo 1).
+- [x] Rollback verificable.
+- [x] PR única de fase revisada y con CI verde (#22).
+- [x] Método de integración: merge commit (`73a1141`).
+- [x] Worktrees y ramas temporales limpiados de forma segura.
 
 ## Aprobaciones
 
@@ -234,8 +237,8 @@ Sin bloqueos registrados.
 |---|---|---|---|
 | Autorizar reconciliación (descartar duplicados, alinear a origin/main) | `jandradeu` | 2026-08-03 | aprobación explícita en sesión |
 | Autorizar rebase de main + rama de fase | `jandradeu` | 2026-08-03 | aprobación explícita en sesión |
-| Autorizar staging | `pendiente` | | |
-| Autorizar commit | `pendiente` | | |
-| Autorizar PR | `pendiente` | | |
-| Autorizar merge commit | `pendiente` | | |
-| Cerrar objetivo | `pendiente` | | |
+| Autorizar staging | `jandradeu` | 2026-08-03 | aprobación explícita en sesión |
+| Autorizar commit | `jandradeu` | 2026-08-03 | aprobación explícita en sesión (`a795e18`, `db00846`, `5640e86`, `27dcca0`, `1dc5443`, fix `362d577`) |
+| Autorizar PR | `jandradeu` | 2026-08-03 | PR #22, CI 5/5 verde |
+| Autorizar merge commit | `jandradeu` | 2026-08-03 | merge commit `73a1141` |
+| Cerrar objetivo | `jandradeu` | 2026-08-03 | este registro post-merge |
