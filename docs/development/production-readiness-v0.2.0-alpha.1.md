@@ -232,3 +232,40 @@ full pytest suite against PostgreSQL 16 (`TEST_POSTGRES_DSN`) passed 843
 tests with 3 allowlisted compatibility-probe skips, 58 subtests, and zero
 failures, including the release-gate eval corpus with the updated golden
 expectations.
+
+## Phase 09 progress addendum (v0.2.0-alpha.1 + phase 09)
+
+Status of this addendum: phase 09 closes GAP #3 by design decision and adds
+the deterministic egress eval family (hardening log:
+`docs/development/hardening/phase-09-single-shot-context.md`). The scorecard
+above remains a published historical artifact of the alpha.1 decision and is
+**unchanged: 4 PASS / 8 GAP / 0 N/A** until a full audit re-run. GA remains
+unauthorized.
+
+Delivered:
+
+- **GAP #3 (compaction) — closed by design decision.** ADR-005
+  (`docs/adr/ADR-005-single-shot-llm-context.md`, Status: Accepted)
+  formalizes that LLM calls are single-shot by design: no multi-turn
+  conversation history is stored or injected, cross-turn continuity flows
+  only through explicit memory records and durable workflow state, and
+  therefore no compaction pipeline, metric-driven trigger, or >50-turn loss
+  test is applicable. The decision carries explicit re-entry triggers; any
+  of them reopens GAP #3 and requires a new ADR plus the deferred compaction
+  and loss-eval work before the triggering capability ships. The ADR's
+  acceptance probes were executed against the phase-08 codebase: exactly two
+  LLM call sites (`application/use_cases/reminders.py`,
+  `application/use_cases/commands.py`), no conversation-history concept in
+  code or prompts, `conversation_id` as identity key only, and per-call
+  `llm_usage_metrics` telemetry at both call sites.
+- **Egress eval coverage (ADR-004 follow-through).** A deterministic eval
+  family (`egress.allowlist.v1`, 4 cases, `contractRefs:
+  AUDIT-GAP-6/ADR-004`) joins the blocking release-gate suite: allowlisted
+  host admitted, uncovered host blocked before any connection, empty
+  allowlist denying Telegram delivery, and fail-closed startup rejection
+  when an explicit `EGRESS_ALLOWED_HOSTS` does not cover a configured
+  provider target. Suite 295 -> 299 cases.
+- **Documentation hygiene.** `docs/runbook/telegram.md` no longer lists
+  "persistent storage" as missing (shipped in phase 03). `.gitattributes`
+  now pins LF line endings so cross-OS checkouts stop producing full-tree
+  spurious diffs.
