@@ -269,3 +269,33 @@ Delivered:
   "persistent storage" as missing (shipped in phase 03). `.gitattributes`
   now pins LF line endings so cross-OS checkouts stop producing full-tree
   spurious diffs.
+
+## Phase 10 progress addendum (v0.2.0-alpha.1 + phase 10)
+
+Status of this addendum: phase 10 is `MERGED` (hardening log:
+`docs/development/hardening/phase-10-ruff-style-triage.md`; PR #24, merge
+commit `4cb607a`, hosted CI 5/5 green on the PR). Phase 10 is a maintenance
+phase: it maps to no scorecard row, and the scorecard above remains
+**unchanged: 4 PASS / 8 GAP / 0 N/A** until a full audit re-run. GA remains
+unauthorized.
+
+Delivered:
+
+- **Ruff 0.16 style triage.** The temporary pin of the classic default rule
+  set (installed while resolving Dependabot PR #17) was replaced by an
+  explicit `select` of 18 rule families in `pyproject.toml`, so lint behavior
+  no longer depends on a ruff version's implicit defaults. 187 safe autofixes
+  and 47 manual fixes were applied without semantic changes; 24 rules were
+  rejected project-wide, each with a documented rationale in
+  `[tool.ruff.lint] ignore` (contract stability: TRY004; intentional
+  robustness: BLE001; test idioms: S101; out-of-scope refactors: PLR09xx;
+  among others).
+- **Dependabot backlog cleared.** PRs #17–#21 (ruff ≥0.16.1, psycopg ≥3.3.4,
+  coverage ≥7.15.2, fastapi ≥0.141.1, mypy ≥2.3.0) were rebased, their
+  lockfiles regenerated, and merged with hosted CI 5/5 green each. Zero open
+  PRs remain.
+
+Verification at writing time: ruff pass with the new explicit rule families;
+mypy pass (118 source files); the full pytest suite against PostgreSQL 16
+(`TEST_POSTGRES_DSN`) passed 847 tests with 3 allowlisted
+compatibility-probe skips, 58 subtests, and zero failures.
