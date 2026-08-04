@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from types import TracebackType
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.events import CloudEvent
@@ -131,7 +131,7 @@ class _DirectReminderTransaction:
     outbox: OutboxPort
     states: WorkflowStateStorePort
 
-    def __enter__(self) -> _DirectReminderTransaction:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(
@@ -895,13 +895,13 @@ def _reminder_extraction_from_llm(
     confidence = float(data.get("confidence") or 0.0)
     if not title or not starts_at_raw or confidence < 0.65:
         return None
-    starts_at = datetime.fromisoformat(starts_at_raw.replace("Z", "+00:00"))
+    starts_at = datetime.fromisoformat(starts_at_raw)
     if starts_at.tzinfo is None or starts_at.utcoffset() is None:
         return None
     notify_at_raw = str(data.get("notify_at") or "").strip()
     notify_at = None
     if notify_at_raw:
-        notify_at = datetime.fromisoformat(notify_at_raw.replace("Z", "+00:00"))
+        notify_at = datetime.fromisoformat(notify_at_raw)
         if notify_at.tzinfo is None or notify_at.utcoffset() is None:
             return None
     return ReminderExtraction(

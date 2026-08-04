@@ -29,7 +29,8 @@ import secrets
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from types import TracebackType
+from typing import Any, Self
 
 import pytest
 
@@ -208,11 +209,16 @@ def _child_die_at_claim(dsn: str, schema: str) -> None:
         def __getattr__(self, name: str) -> Any:
             return getattr(self._inner, name)
 
-        def __enter__(self) -> DieAtClaimTransaction:
+        def __enter__(self) -> Self:
             self._inner.__enter__()
             return self
 
-        def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> Any:
+        def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            tb: TracebackType | None,
+        ) -> Any:
             return self._inner.__exit__(exc_type, exc, tb)
 
     class DieAtClaimUnitOfWork:

@@ -21,10 +21,7 @@ from personal_assistant.domain.common.permissions import PermissionGrant, Permis
 def normalize_scopes(value: Any) -> frozenset[str]:
     if value is None:
         return frozenset()
-    if isinstance(value, str):
-        items = value.split()
-    else:
-        items = value
+    items = value.split() if isinstance(value, str) else value
     return frozenset(str(item).strip().lower() for item in items if str(item).strip())
 
 

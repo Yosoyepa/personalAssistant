@@ -6,7 +6,7 @@ import secrets
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Self
 
 import psycopg
 import pytest
@@ -39,7 +39,7 @@ class RecordingCursor:
     def __init__(self, connection: RecordingConnection) -> None:
         self.connection = connection
 
-    def __enter__(self) -> RecordingCursor:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_: object) -> None:
@@ -133,13 +133,15 @@ def test_exception_rolls_back_even_after_commit_was_requested(
     connection = RecordingConnection()
     factory, _ = _factory(connection)
 
-    with pytest.raises(RuntimeError, match="application failure"):
-        with PostgresReminderUnitOfWork(connection_factory=factory).begin(
+    with (
+        pytest.raises(RuntimeError, match="application failure"),
+        PostgresReminderUnitOfWork(connection_factory=factory).begin(
             _principal()
-        ) as transaction:
-            if request_commit:
-                transaction.commit()
-            raise RuntimeError("application failure")
+        ) as transaction,
+    ):
+        if request_commit:
+            transaction.commit()
+        raise RuntimeError("application failure")
 
     assert connection.commits == 0
     assert connection.rollbacks == 1
@@ -171,11 +173,13 @@ def test_known_postgres_conflicts_are_distinguishable_and_sanitized(
     connection = RecordingConnection(commit_error=SqlstateError(sqlstate, secret))
     factory, _ = _factory(connection)
 
-    with pytest.raises(ReminderTransactionConflict) as captured:
-        with PostgresReminderUnitOfWork(connection_factory=factory).begin(
+    with (
+        pytest.raises(ReminderTransactionConflict) as captured,
+        PostgresReminderUnitOfWork(connection_factory=factory).begin(
             _principal()
-        ) as transaction:
-            transaction.commit()
+        ) as transaction,
+    ):
+        transaction.commit()
 
     assert captured.value.kind is kind
     assert secret not in str(captured.value)
@@ -208,11 +212,13 @@ def test_ambiguous_commit_is_typed_sanitized_and_never_retried() -> None:
     connection = RecordingConnection(commit_error=psycopg.OperationalError(secret))
     factory, calls = _factory(connection)
 
-    with pytest.raises(ReminderCommitOutcomeUnknown) as captured:
-        with PostgresReminderUnitOfWork(connection_factory=factory).begin(
+    with (
+        pytest.raises(ReminderCommitOutcomeUnknown) as captured,
+        PostgresReminderUnitOfWork(connection_factory=factory).begin(
             _principal()
-        ) as transaction:
-            transaction.commit()
+        ) as transaction,
+    ):
+        transaction.commit()
 
     assert secret not in str(captured.value)
     assert calls == [1]

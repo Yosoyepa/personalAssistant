@@ -70,6 +70,9 @@ ignore = [
   # TRY004 wants TypeError instead of ValueError on type checks; switching
   # exception types would change public contracts and break tests.
   "TRY004",
+  # DTZ001: the flagged call sites intentionally construct naive datetimes
+  # as invalid inputs to assert validation rejects them.
+  "DTZ001",
   # Blind excepts in audit/fallback paths are intentional robustness;
   # per-site redesign is out of scope for a style phase.
   "BLE001",

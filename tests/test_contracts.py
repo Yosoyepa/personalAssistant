@@ -61,9 +61,11 @@ class ContractTests(unittest.TestCase):
 
     def test_mcp_and_a2a_tool_calls_fail_closed_in_mvp(self) -> None:
         for tool_name in ("mcp.search", "a2a.delegate"):
-            with self.subTest(tool_name=tool_name):
-                with self.assertRaises(ValidationError):
-                    ToolCall(name=tool_name)
+            with (
+                self.subTest(tool_name=tool_name),
+                self.assertRaises(ValidationError),
+            ):
+                ToolCall(name=tool_name)
 
 
 if __name__ == "__main__":

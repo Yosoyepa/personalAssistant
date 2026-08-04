@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 from types import TracebackType
-from typing import Protocol
+from typing import Protocol, Self
 
 from personal_assistant.application.ports.calendar import CalendarPort
 from personal_assistant.application.ports.events import EventStorePort, OutboxPort
@@ -67,7 +67,7 @@ class ReminderTransaction(Protocol):
     outbox: OutboxPort
     states: WorkflowStateStorePort
 
-    def __enter__(self) -> ReminderTransaction:
+    def __enter__(self) -> Self:
         """Open the transaction and return its tenant-bound stores."""
 
     def __exit__(

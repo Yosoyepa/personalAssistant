@@ -6,7 +6,7 @@ import hashlib
 import secrets
 import threading
 from collections.abc import AsyncIterator, Callable
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal, cast
 
@@ -481,7 +481,8 @@ def _run_reminder_worker_loop(
             if heartbeat_store is not None:
                 heartbeat_store.record(active_clock())
         except Exception:
-            try:
+            # A shared persistence outage must not terminate the worker loop.
+            with suppress(Exception):
                 container.traces.write(
                     TraceEvent(
                         run_id="reminder-worker",
@@ -491,9 +492,6 @@ def _run_reminder_worker_loop(
                         error={"code": "worker_tick_failed"},
                     )
                 )
-            except Exception:
-                # A shared persistence outage must not terminate the worker loop.
-                pass
         stop_event.wait(settings.reminder_worker_interval_seconds)
 
 

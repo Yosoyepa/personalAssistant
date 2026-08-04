@@ -172,13 +172,12 @@ class DispatchDueReminders:
             ),
         )
         with self.unit_of_work.begin(principal) as transaction:
-            messages = [
+            return [
                 message
                 for message in transaction.outbox.list_for_tenant(principal)
                 if message.dispatch_status == DeliveryStatus.uncertain
                 and message.event.type == REMINDER_NOTIFICATION_EVENT_TYPE
             ]
-        return messages
 
     def resolve_uncertain(
         self,

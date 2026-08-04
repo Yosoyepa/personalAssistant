@@ -201,7 +201,7 @@ def _runtime_payload() -> dict[str, object]:
 
 
 def _response_safety(
-    response: object,
+    response: Any,
     command: str | None = None,
     *,
     secret_sentinels: tuple[str, ...] = (),
@@ -232,7 +232,7 @@ def _local_reject(variant: str) -> ExpectedModel:
         if variant == "unconfigured-runtime"
         else _settings()
     )
-    remote = variant == "remote-runtime" or variant == "remote-admin"
+    remote = variant in {"remote-runtime", "remote-admin"}
     client = TestClient(
         create_app(container, settings=settings),
         client=(("203.0.113.8" if remote else "127.0.0.1"), 50000),

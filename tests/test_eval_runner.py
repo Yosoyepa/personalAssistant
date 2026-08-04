@@ -221,7 +221,7 @@ def test_corrupt_case_files_are_rejected(tmp_path: Path, payload: str) -> None:
     suite = write_suite(tmp_path, [[temporal_case()]])
     (suite / "cases-0.json").write_text(payload, encoding="utf-8")
 
-    with pytest.raises(SuiteValidationError, match="case file|valid JSON"):
+    with pytest.raises(SuiteValidationError, match=r"case file|valid JSON"):
         load_suite(suite)
 
 

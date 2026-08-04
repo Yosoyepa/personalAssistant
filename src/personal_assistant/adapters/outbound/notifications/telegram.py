@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping
+from contextlib import suppress
 from http.client import HTTPException
 from typing import Any, Protocol
 from urllib import request as urllib_request
@@ -237,10 +238,9 @@ def _read_http_error_body(exc: HTTPError) -> bytes:
             return b""
         return body if isinstance(body, bytes) else b""
     finally:
-        try:
+        # Closing the error response must never mask the original error.
+        with suppress(Exception):
             exc.close()
-        except Exception:
-            pass
 
 
 def _decode_payload(raw: bytes) -> Mapping[str, Any] | None:

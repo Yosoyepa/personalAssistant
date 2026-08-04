@@ -10,7 +10,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from importlib import import_module
-from typing import Any
+from typing import Any, Self
 
 import pytest
 
@@ -26,7 +26,7 @@ class _Cursor:
         self.rowcount = 0
         self._result: tuple[object, ...] | None = None
 
-    def __enter__(self) -> _Cursor:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_args: object) -> None:

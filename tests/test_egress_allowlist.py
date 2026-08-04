@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import unittest
 from pathlib import Path
+from typing import Self
 
 from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
 from personal_assistant.adapters.outbound.egress import (
@@ -58,7 +59,7 @@ class _FakeResponse:
     def __init__(self, payload: dict[str, object]) -> None:
         self.payload = payload
 
-    def __enter__(self) -> _FakeResponse:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *args: object) -> None:

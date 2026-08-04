@@ -370,7 +370,7 @@ def test_expired_claim_is_reclaimed_but_expired_sending_is_only_swept() -> None:
     provider = FakeNotificationTool([success()])
     container, actor, clock = build_worker(provider)
     add_due(container, actor)
-    [claimed] = container.outbox.claim_due(actor, NOW, lease_seconds=10)
+    [_claimed] = container.outbox.claim_due(actor, NOW, lease_seconds=10)
     clock.now = NOW + timedelta(seconds=10)
 
     container.reminder_worker.run_once(actor, now=clock.now)

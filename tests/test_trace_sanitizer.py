@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from contextlib import nullcontext
+from typing import Self
 
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.infrastructure import trace_sanitizer
@@ -15,7 +16,7 @@ class _Cursor:
         self.connection = connection
         self.rowcount = 0
 
-    def __enter__(self) -> _Cursor:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_args: object) -> None:

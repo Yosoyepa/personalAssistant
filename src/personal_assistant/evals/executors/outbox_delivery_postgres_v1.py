@@ -252,7 +252,7 @@ def _claim_partition(case: InputModel, db: PostgresEvalDatabase) -> dict[str, ob
 def _lease_reclaim(case: InputModel, db: PostgresEvalDatabase) -> dict[str, object]:
     principal = _principal()
     store = PostgresOutbox(dsn=db.dsn, schema=db.schema)
-    [first] = _seed_outbox(store, principal, 1)
+    [_first] = _seed_outbox(store, principal, 1)
     [claimed] = store.claim_due(
         principal, NOW, owner="first", lease_seconds=case.leaseSeconds
     )

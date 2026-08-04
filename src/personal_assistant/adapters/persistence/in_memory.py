@@ -801,15 +801,19 @@ class InMemoryWorkflowStateStore:
                         tenant_id=principal.tenant_id,
                     )
                 self._raise_if_payload_conflicts(principal, existing, state)
-                if existing.status in {WorkflowStatus.completed, WorkflowStatus.failed}:
-                    if state.status != existing.status or _fingerprint(
-                        state.model_dump(mode="json")
-                    ) != _fingerprint(existing.model_dump(mode="json")):
-                        raise AssistantError(
-                            ErrorCode.CONFLICT,
-                            "terminal workflow state is immutable",
-                            tenant_id=principal.tenant_id,
-                        )
+                if existing.status in {
+                    WorkflowStatus.completed,
+                    WorkflowStatus.failed,
+                } and (
+                    state.status != existing.status
+                    or _fingerprint(state.model_dump(mode="json"))
+                    != _fingerprint(existing.model_dump(mode="json"))
+                ):
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "terminal workflow state is immutable",
+                        tenant_id=principal.tenant_id,
+                    )
             saved = state.model_copy(deep=True)
             self._states_by_key[key] = saved
             self._key_by_workflow_id[workflow_id_key] = state.idempotency_key

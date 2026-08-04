@@ -4,6 +4,7 @@ import json
 import sys
 import unittest
 from datetime import UTC, datetime, timedelta
+from typing import Self
 
 from personal_assistant.adapters.persistence import postgres
 from personal_assistant.application.dto.commands import (
@@ -65,7 +66,7 @@ class RecordingCursor:
         self.connection = connection
         self.closed = False
 
-    def __enter__(self) -> RecordingCursor:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_: object) -> None:

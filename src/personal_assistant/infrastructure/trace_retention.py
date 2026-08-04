@@ -65,24 +65,26 @@ def prune_postgres_traces(
     )
     with _open_connection(dsn=dsn, connection=connection) as active_connection:
         try:
-            with active_connection.transaction():
-                with active_connection.cursor() as cursor:
+            with (
+                active_connection.transaction(),
+                active_connection.cursor() as cursor,
+            ):
+                cursor.execute(
+                    "SELECT now() - make_interval(days => %s)", (days,)
+                )
+                cutoff = cursor.fetchone()[0]
+                cursor.execute(
+                    f"SELECT count(*) FROM {table} WHERE created_at < %s",
+                    (cutoff,),
+                )
+                matched = int(cursor.fetchone()[0])
+                deleted = 0
+                if apply:
                     cursor.execute(
-                        "SELECT now() - make_interval(days => %s)", (days,)
-                    )
-                    cutoff = cursor.fetchone()[0]
-                    cursor.execute(
-                        f"SELECT count(*) FROM {table} WHERE created_at < %s",
+                        f"DELETE FROM {table} WHERE created_at < %s",
                         (cutoff,),
                     )
-                    matched = int(cursor.fetchone()[0])
-                    deleted = 0
-                    if apply:
-                        cursor.execute(
-                            f"DELETE FROM {table} WHERE created_at < %s",
-                            (cutoff,),
-                        )
-                        deleted = cursor.rowcount
+                    deleted = cursor.rowcount
         except TraceRetentionError:
             raise
         except Exception as exc:

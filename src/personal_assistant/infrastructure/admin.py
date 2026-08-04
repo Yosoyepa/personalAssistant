@@ -899,15 +899,13 @@ def _render_error_filters(errors: dict[str, Any]) -> str:
         f'<option value="{escape(category)}">{escape(_error_category_label(category))}</option>'
         for category in categories
     )
-    return "\n".join(
-        [
-            '<div class="filters" data-error-filters>',
-            '<label>Category <select data-error-filter="category">',
-            category_options,
-            "</select></label>",
-            '<label>Run ID <input type="search" data-error-filter="run_id" placeholder="run id"></label>',
-            "</div>",
-        ]
+    return (
+        '<div class="filters" data-error-filters>\n'
+        '<label>Category <select data-error-filter="category">\n'
+        f"{category_options}\n"
+        "</select></label>\n"
+        '<label>Run ID <input type="search" data-error-filter="run_id" placeholder="run id">\n'
+        "</div>"
     )
 
 

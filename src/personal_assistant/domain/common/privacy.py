@@ -537,7 +537,7 @@ def _store_redacted(output: dict[str, Any], key: str, value: object) -> None:
     if isinstance(value, str):
         output[f"{key}_length"] = len(value)
         output[f"{key}_sha256"] = _sha256(value.encode("utf-8"))
-    elif isinstance(value, Mapping) or isinstance(value, (list, tuple)):
+    elif isinstance(value, (Mapping, list, tuple)):
         output[f"{key}_count"] = len(value)
 
 

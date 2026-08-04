@@ -215,7 +215,7 @@ def test_real_postgres_preflight_preserves_duplicate_alpha_rows(
 def test_real_postgres_effect_writes_replay_once_under_concurrency(
     postgres_schema: tuple[Any, str],
 ) -> None:
-    connection, schema = postgres_schema
+    _connection, schema = postgres_schema
     dsn = _postgres_dsn()
     apply_migrations(dsn=dsn, schema=schema)
 

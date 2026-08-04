@@ -346,12 +346,14 @@ def test_connection_configuration_is_rejected_before_migration_io(
         status = migration_status(connection=connection, schema=isolated_schema)
         assert not status.history_exists
 
-    with psycopg.connect(postgres_dsn) as transactional_connection:
-        with pytest.raises(MigrationConfigurationError, match="autocommit"):
-            migration_status(
-                connection=transactional_connection,
-                schema=isolated_schema,
-            )
+    with (
+        psycopg.connect(postgres_dsn) as transactional_connection,
+        pytest.raises(MigrationConfigurationError, match="autocommit"),
+    ):
+        migration_status(
+            connection=transactional_connection,
+            schema=isolated_schema,
+        )
 
     with pytest.raises(MigrationConfigurationError, match="DATABASE_URL"):
         migration_status(schema=isolated_schema)

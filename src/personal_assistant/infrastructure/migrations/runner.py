@@ -280,25 +280,27 @@ def apply_migrations(
 
     validated_schema = validate_identifier(schema, field="schema")
     migrations = discover_migrations(migrations_directory)
-    with _open_connection(dsn=dsn, connection=connection) as active_connection:
-        with _advisory_lock(active_connection, validated_schema):
-            _ensure_history(active_connection, validated_schema)
-            before = _build_status(
-                schema=validated_schema,
-                history_exists=True,
-                migrations=migrations,
-                applied=_read_applied(active_connection, validated_schema),
-            )
-            applied_now: list[Migration] = []
-            for migration in before.pending:
-                _apply_one(active_connection, validated_schema, migration)
-                applied_now.append(migration)
-            after = _build_status(
-                schema=validated_schema,
-                history_exists=True,
-                migrations=migrations,
-                applied=_read_applied(active_connection, validated_schema),
-            )
+    with (
+        _open_connection(dsn=dsn, connection=connection) as active_connection,
+        _advisory_lock(active_connection, validated_schema),
+    ):
+        _ensure_history(active_connection, validated_schema)
+        before = _build_status(
+            schema=validated_schema,
+            history_exists=True,
+            migrations=migrations,
+            applied=_read_applied(active_connection, validated_schema),
+        )
+        applied_now: list[Migration] = []
+        for migration in before.pending:
+            _apply_one(active_connection, validated_schema, migration)
+            applied_now.append(migration)
+        after = _build_status(
+            schema=validated_schema,
+            history_exists=True,
+            migrations=migrations,
+            applied=_read_applied(active_connection, validated_schema),
+        )
     return MigrationApplyResult(
         schema=validated_schema,
         applied=tuple(applied_now),
