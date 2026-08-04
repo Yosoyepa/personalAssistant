@@ -299,3 +299,41 @@ Verification at writing time: ruff pass with the new explicit rule families;
 mypy pass (118 source files); the full pytest suite against PostgreSQL 16
 (`TEST_POSTGRES_DSN`) passed 847 tests with 3 allowlisted
 compatibility-probe skips, 58 subtests, and zero failures.
+
+## Phase 11 progress addendum (v0.2.0-alpha.1 + phase 11)
+
+Status of this addendum: phase 11 is `MERGED` (hardening log:
+`docs/development/hardening/phase-11-top-failure-modes.md`; PR #26, merge
+commit `24b2cc4`, hosted CI 5/5 green on the PR). The scorecard above remains
+a published historical artifact of the alpha.1 decision and is
+**unchanged: 4 PASS / 8 GAP / 0 N/A** until a full audit re-run. GA remains
+unauthorized.
+
+Delivered for the days 22–30 P1 roadmap item ("define five top failure modes,
+grow each to at least 50 representative cases"):
+
+- **GAP #10 (≥50 evals per top failure mode) — evidence delivered.** Five
+  canonical top failure modes are now defined and registered in
+  `eval/README.md`, each mapped to contract failure modes
+  (`agents/personal_assistant/contract.md` §11) and each carrying ≥50 cases
+  at the literal `failureMode` level: `reminder-atomicity-violation` (50,
+  FM-12/FM-17), `delivery-concurrency-violation` (50, FM-12),
+  `idempotency-replay-duplicate` (57, FM-03/FM-16/FM-17),
+  `temporal-misinterpretation` (60, FM-02), and `security-boundary-breach`
+  (50, FM-01/FM-07/FM-18). The pre-existing fine-grained slugs are preserved
+  in the new optional `failureModeDetail` case field, and the eval runner and
+  CLI gained a symmetric `--failure-mode-detail` filter, so no granularity or
+  filtering capability was lost. The suite stays at 299 cases with identical
+  IDs, `contractRefs`, and expected outputs; no placeholder or duplicate
+  cases were invented. The requirement is locked by
+  `tests/test_top_failure_modes.py`, which fails if any canonical mode drops
+  below 50 cases or loses its detail. No LLM judge was introduced, so the
+  calibration/TPR-TNR clause of the roadmap item is not triggered (row #11
+  stays a separate GAP). Whether this fully closes GAP #10 is for the audit
+  re-run to decide; this addendum does not claim the row closed.
+
+Verification at writing time: ruff pass; mypy pass (118 source files); the
+full pytest suite against PostgreSQL 16 (`TEST_POSTGRES_DSN`) passed 853
+tests with 3 allowlisted compatibility-probe skips, 58 subtests, and zero
+failures; the complete eval gate passed 299/299; coverage 92% total
+(threshold 85%) and diff-cover 100% against `origin/main` (threshold 90%).
