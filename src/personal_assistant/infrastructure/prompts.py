@@ -6,8 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from personal_assistant.application.services.prompts import PromptTemplate, StaticPromptCatalog
-
+from personal_assistant.application.services.prompts import (
+    PromptTemplate,
+    StaticPromptCatalog,
+)
 
 DEFAULT_PROMPT_ROOT = Path(__file__).resolve().parents[3] / "prompts"
 

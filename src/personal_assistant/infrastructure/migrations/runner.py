@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
+import hashlib
+import importlib
+import re
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
-import hashlib
-import importlib
 from pathlib import Path
-import re
 from typing import Any
 
 from personal_assistant.infrastructure.migrations.validation import (
     quote_identifier,
     validate_identifier,
 )
-
 
 HISTORY_TABLE = "assistant_schema_migrations"
 DEFAULT_SCHEMA = "public"

@@ -9,9 +9,11 @@ from urllib import request as urllib_request
 
 from personal_assistant.adapters.outbound.egress import EgressAllowlist
 from personal_assistant.application.dto.context import TokenBudget
-from personal_assistant.application.dto.runtime import AudioSynthesisRequest, AudioSynthesisResult
+from personal_assistant.application.dto.runtime import (
+    AudioSynthesisRequest,
+    AudioSynthesisResult,
+)
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-
 
 UrlOpen = Callable[..., Any]
 

@@ -10,7 +10,11 @@ from html import escape
 from ipaddress import ip_address, ip_network
 from typing import Any
 
-from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
+from personal_assistant.application.dto.events import (
+    CloudEvent,
+    OutboxMessage,
+    OutboxStatus,
+)
 from personal_assistant.application.dto.tracing import (
     GUARDRAIL_ACTIONS,
     TraceEvent,
@@ -31,7 +35,6 @@ from personal_assistant.domain.common.privacy import (
 )
 from personal_assistant.domain.memory.models import MemoryRecord
 from personal_assistant.infrastructure.bootstrap import AppContainer
-
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200

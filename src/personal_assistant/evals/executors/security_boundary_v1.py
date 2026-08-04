@@ -101,7 +101,7 @@ class InputModel(BaseModel):
     variant: str
 
     @model_validator(mode="after")
-    def valid_variant(self) -> "InputModel":
+    def valid_variant(self) -> InputModel:
         if self.variant not in _VARIANTS[self.scenario]:
             raise ValueError("variant is not valid for scenario")
         return self
@@ -207,7 +207,7 @@ def _response_safety(
     secret_sentinels: tuple[str, ...] = (),
     pii_sentinels: tuple[str, ...] = (),
 ) -> ResponseSafety:
-    text = getattr(response, "text")
+    text = response.text
 
     def echoed(sentinel: str) -> bool:
         if sentinel.isdecimal():
@@ -421,7 +421,7 @@ def _webhook_allow(variant: str) -> ExpectedModel:
 
         class FrozenDateTime(datetime):
             @classmethod
-            def now(cls, tz: tzinfo | None = None) -> "FrozenDateTime":
+            def now(cls, tz: tzinfo | None = None) -> FrozenDateTime:
                 return cast(
                     "FrozenDateTime",
                     frozen.astimezone(tz) if tz else frozen.replace(tzinfo=None),

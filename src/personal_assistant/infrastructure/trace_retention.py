@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Iterator, Sequence
-from contextlib import contextmanager
-from dataclasses import dataclass
 import importlib
 import json
 import sys
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Any
 
 from personal_assistant.infrastructure.config import (
@@ -21,7 +21,6 @@ from personal_assistant.infrastructure.migrations.validation import (
     quote_identifier,
     validate_identifier,
 )
-
 
 CONFIRMATION = "PRUNE_TRACES"
 MIN_RETENTION_DAYS = 1

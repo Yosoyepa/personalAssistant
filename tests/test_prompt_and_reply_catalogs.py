@@ -11,19 +11,18 @@ from personal_assistant.application.dto.channels import ChannelName, NormalizedM
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
 from personal_assistant.application.dto.runtime import LLMResult
-from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.services.prompts import (
     LLM_JSON_SYSTEM_PROMPT_ID,
     PromptTemplate,
     StaticPromptCatalog,
 )
+from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.application.use_cases.runtime import LocalAgentRuntime
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
 from personal_assistant.infrastructure.prompts import build_prompt_catalog
 from personal_assistant.infrastructure.replies import build_reply_catalog
-
 
 NOW = datetime(2026, 6, 20, 12, tzinfo=UTC)
 

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import json
-from types import SimpleNamespace
 import unittest
+from datetime import UTC, datetime
+from types import SimpleNamespace
 
 from personal_assistant.application.dto.delivery import (
     DeliveryError,
@@ -49,7 +49,7 @@ class PublicOnlyTenantListAdapter:
         return [
             item
             for item in object.__getattribute__(self, "_items")
-            if getattr(item, "tenant_id") == principal.tenant_id
+            if item.tenant_id == principal.tenant_id
         ]
 
 

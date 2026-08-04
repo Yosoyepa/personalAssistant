@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import unittest
 
+from personal_assistant.adapters.persistence.in_memory import InMemoryWorkflowStateStore
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.domain.common.identity import Principal
-from personal_assistant.adapters.persistence.in_memory import InMemoryWorkflowStateStore
+from personal_assistant.domain.common.permissions import PermissionTier
 
 
 class DurableStateTests(unittest.TestCase):

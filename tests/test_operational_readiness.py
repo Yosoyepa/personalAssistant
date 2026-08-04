@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 import personal_assistant
 from personal_assistant.application.dto.delivery import (
@@ -15,7 +15,11 @@ from personal_assistant.application.dto.delivery import (
     DeliveryErrorCategory,
     DeliveryErrorCode,
 )
-from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
+from personal_assistant.application.dto.events import (
+    CloudEvent,
+    OutboxMessage,
+    OutboxStatus,
+)
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
@@ -27,7 +31,6 @@ from personal_assistant.infrastructure.http import (
 )
 from personal_assistant.infrastructure.migrations import MigrationStatus
 from personal_assistant.infrastructure.operational import assess_heartbeat
-
 
 NOW = datetime(2026, 7, 17, 12, tzinfo=UTC)
 AUTH = {"Authorization": "Bearer alpha-admin-token"}

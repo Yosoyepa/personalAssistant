@@ -1,22 +1,21 @@
 from __future__ import annotations
 
-from contextlib import nullcontext
 import json
+from contextlib import nullcontext
 
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
 from personal_assistant.infrastructure import trace_sanitizer
-
 
 RAW_RUN_ID = "command:telegram:918273645001:564738291002:intent"
 RAW_CHAT_ID = "918273645001"
 
 
 class _Cursor:
-    def __init__(self, connection: "_Connection") -> None:
+    def __init__(self, connection: _Connection) -> None:
         self.connection = connection
         self.rowcount = 0
 
-    def __enter__(self) -> "_Cursor":
+    def __enter__(self) -> _Cursor:
         return self
 
     def __exit__(self, *_args: object) -> None:

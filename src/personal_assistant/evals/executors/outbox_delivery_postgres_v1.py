@@ -37,7 +37,6 @@ from personal_assistant.evals.executors.postgres_reliability_support import (
     schema_exists,
 )
 
-
 NOW = datetime(2026, 7, 17, 15, tzinfo=UTC)
 
 

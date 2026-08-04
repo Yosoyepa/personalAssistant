@@ -30,7 +30,6 @@ from personal_assistant.evals.executors.postgres_reliability_support import (
     schema_exists,
 )
 
-
 NOW = datetime(2026, 7, 17, 12, tzinfo=UTC)
 WRITE_POINTS = (
     "register",
@@ -91,7 +90,7 @@ class InputModel(_StrictModel):
     recoveryProcess: Literal["same-process", "restart"] = "same-process"
 
     @model_validator(mode="after")
-    def consistent(self) -> "InputModel":
+    def consistent(self) -> InputModel:
         if self.scenario == "write-fault" and self.boundary not in WRITE_POINTS:
             raise ValueError("write-fault requires a production write boundary")
         if self.scenario == "resume-fault" and self.boundary not in (

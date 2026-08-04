@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import json
+import os
+import secrets
 from collections.abc import Iterator
 from dataclasses import dataclass
 from importlib import import_module
-import json
-import os
 from pathlib import Path
-import secrets
 
 import pytest
 

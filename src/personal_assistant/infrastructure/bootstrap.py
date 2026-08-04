@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from importlib import import_module
-import logging
 from typing import Any
 
 from personal_assistant.adapters.observability.local import TraceRecorder
@@ -22,9 +22,16 @@ from personal_assistant.adapters.outbound.transcription.openai_compatible import
     OpenAICompatibleTranscriptionProvider,
 )
 from personal_assistant.adapters.outbound.tts.minimax import MiniMaxTTSProvider
+from personal_assistant.adapters.persistence.in_memory import (
+    InMemoryApprovalStore,
+    InMemoryEventStore,
+    InMemoryOutbox,
+    InMemoryWorkflowStateStore,
+)
 from personal_assistant.adapters.persistence.in_memory_uow import (
     InMemoryReminderUnitOfWork,
 )
+from personal_assistant.adapters.persistence.memory import TenantMemoryStore
 from personal_assistant.application.ports.approvals import ApprovalStorePort
 from personal_assistant.application.ports.calendar import CalendarPort
 from personal_assistant.application.ports.events import EventStorePort, OutboxPort
@@ -49,13 +56,6 @@ from personal_assistant.application.use_cases.reminder_notifications import (
     DispatchDueReminders,
 )
 from personal_assistant.application.use_cases.reminders import ReminderWorkflow
-from personal_assistant.adapters.persistence.in_memory import (
-    InMemoryApprovalStore,
-    InMemoryEventStore,
-    InMemoryOutbox,
-    InMemoryWorkflowStateStore,
-)
-from personal_assistant.adapters.persistence.memory import TenantMemoryStore
 from personal_assistant.infrastructure.config import (
     DEFAULT_LLM_CONTEXT_WINDOW_TOKENS,
     AppSettings,

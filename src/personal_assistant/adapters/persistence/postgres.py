@@ -8,14 +8,14 @@ is opened.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from contextlib import contextmanager
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
 import hashlib
 import importlib
 import json
 import re
+from collections.abc import Callable, Mapping
+from contextlib import contextmanager
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from types import TracebackType
 from typing import Any, Literal
 from uuid import uuid4
@@ -81,7 +81,6 @@ from personal_assistant.domain.reminders.idempotency import (
     ReminderIdempotencyConflict,
     ReminderPayload,
 )
-
 
 ConnectionFactory = Callable[[], Any]
 

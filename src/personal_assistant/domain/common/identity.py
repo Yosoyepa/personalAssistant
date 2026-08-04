@@ -108,7 +108,7 @@ class Principal(DomainModel):
         principal_id: str,
         tenant_id: str,
         permission_tier: PermissionTier = PermissionTier.P0,
-    ) -> "Principal":
+    ) -> Principal:
         principal = cls(
             principal_id=principal_id,
             tenant_id=tenant_id,
@@ -122,7 +122,10 @@ class Principal(DomainModel):
 
 def require_trusted_principal(principal: Principal) -> None:
     if not principal.is_trusted:
-        from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
+        from personal_assistant.domain.common.exceptions import (
+            AssistantError,
+            ErrorCode,
+        )
 
         raise AssistantError(
             ErrorCode.AUTHENTICATION_REQUIRED,

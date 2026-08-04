@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
-from collections.abc import Iterator
-from datetime import UTC, datetime
 import os
-from pathlib import Path
 import secrets
+from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -21,7 +21,6 @@ from personal_assistant.domain.reminders.idempotency import (
     reminder_effect_ids,
 )
 from personal_assistant.infrastructure.migrations import apply_migrations
-
 
 MIGRATION_PATH = (
     Path(__file__).resolve().parents[1]

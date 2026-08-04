@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from personal_assistant.adapters.outbound.egress import EgressAllowlist
-from personal_assistant.adapters.outbound.llm.anthropic import AnthropicCompatibleLLMProvider, UrlOpen
+from personal_assistant.adapters.outbound.llm.anthropic import (
+    AnthropicCompatibleLLMProvider,
+    UrlOpen,
+)
 from personal_assistant.application.ports.prompts import PromptCatalogPort
 
 

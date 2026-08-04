@@ -7,7 +7,6 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-
 Slug = Annotated[str, Field(pattern=r"^[a-z0-9]+(?:[._-][a-z0-9]+)*$")]
 ExecutorSlug = Annotated[
     str, Field(pattern=r"^[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)+$")
@@ -25,7 +24,7 @@ class LegacySource(StrictModel):
     ids: list[str] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def unique_ids(self) -> "LegacySource":
+    def unique_ids(self) -> LegacySource:
         if len(self.ids) != len(set(self.ids)):
             raise ValueError("legacySource.ids must be unique")
         return self
@@ -45,7 +44,7 @@ class SuiteManifest(StrictModel):
     retiredLegacyCases: list[RetiredLegacyCase] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def unique_safe_files(self) -> "SuiteManifest":
+    def unique_safe_files(self) -> SuiteManifest:
         if len(self.caseFiles) != len(set(self.caseFiles)):
             raise ValueError("caseFiles must be unique")
         for raw in self.caseFiles:
@@ -70,7 +69,7 @@ class EvalCase(StrictModel):
     tags: list[Slug] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def unique_tags(self) -> "EvalCase":
+    def unique_tags(self) -> EvalCase:
         if len(self.tags) != len(set(self.tags)):
             raise ValueError("tags must be unique")
         if len(self.contractRefs) != len(set(self.contractRefs)):
@@ -85,7 +84,7 @@ class CaseFile(StrictModel):
     cases: list[EvalCase] = Field(min_length=1)
 
     @model_validator(mode="after")
-    def unique_ids(self) -> "CaseFile":
+    def unique_ids(self) -> CaseFile:
         ids = [case.id for case in self.cases]
         if len(ids) != len(set(ids)):
             raise ValueError("case ids must be unique within a file")

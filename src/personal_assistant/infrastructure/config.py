@@ -17,7 +17,6 @@ from personal_assistant.adapters.outbound.egress import (
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.migrations.validation import validate_identifier
 
-
 DEFAULT_MINIMAX_BASE_URL = "https://api.minimax.io/anthropic"
 DEFAULT_MINIMAX_MODEL = "MiniMax-M3"
 DEFAULT_MINIMAX_TTS_BASE_URL = "https://api.minimax.io"
@@ -250,7 +249,7 @@ class AppSettings:
         explicit_egress = frozenset(
             entry.strip() for entry in self.egress_allowed_hosts if entry.strip()
         )
-        effective_egress = explicit_egress if explicit_egress else derived_egress
+        effective_egress = explicit_egress or derived_egress
         egress_allowlist = EgressAllowlist.from_entries(effective_egress)
         object.__setattr__(self, "egress_allowed_hosts", effective_egress)
         required_egress: dict[str, str] = {}
@@ -268,7 +267,7 @@ class AppSettings:
         require_startup_coverage(egress_allowlist, required_egress)
 
     @classmethod
-    def from_env(cls) -> "AppSettings":
+    def from_env(cls) -> AppSettings:
         file_values = _load_env_file()
         llm_provider = (
             _env("LLM_PROVIDER", file_values, "disabled").strip().lower() or "disabled"

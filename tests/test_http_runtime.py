@@ -3,10 +3,10 @@ from __future__ import annotations
 import ast
 import os
 import threading
-from datetime import UTC, datetime
-from pathlib import Path
 import unittest
 import warnings
+from datetime import UTC, datetime
+from pathlib import Path
 from unittest.mock import patch
 
 from personal_assistant.application.dto.channels import ChannelName, NormalizedMessage
@@ -159,9 +159,8 @@ class AppSettingsTests(unittest.TestCase):
             os.environ,
             {"APP_ENV_FILE": "", "ASSISTANT_TIMEZONE": "Bogota/local"},
             clear=True,
-        ):
-            with self.assertRaisesRegex(ValueError, "ASSISTANT_TIMEZONE"):
-                AppSettings.from_env()
+        ), self.assertRaisesRegex(ValueError, "ASSISTANT_TIMEZONE"):
+            AppSettings.from_env()
 
     def test_llm_settings_accept_anthropic_style_aliases(self) -> None:
         with patch.dict(

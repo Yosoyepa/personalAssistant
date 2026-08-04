@@ -11,7 +11,15 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, computed_field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 
@@ -37,7 +45,7 @@ class PermissionTier(str, Enum):
     def rank(self) -> int:
         return int(self.value[1])
 
-    def allows(self, required: "PermissionTier") -> bool:
+    def allows(self, required: PermissionTier) -> bool:
         return self.rank >= required.rank
 
 
@@ -128,7 +136,7 @@ class ApprovalGrant(BaseModel):
         return self._trusted_source is not None
 
     @model_validator(mode="after")
-    def validate_expiry_timezone(self) -> "ApprovalGrant":
+    def validate_expiry_timezone(self) -> ApprovalGrant:
         if self.expires_at is not None and self.expires_at.tzinfo is None:
             raise ValueError("expires_at must be timezone-aware")
         return self
@@ -144,11 +152,11 @@ class ApprovalGrant(BaseModel):
         approval_id: str = "local-approved",
         expires_at: datetime | None = None,
         request_hash: str | None = None,
-    ) -> "ApprovalGrant":
+    ) -> ApprovalGrant:
         grant = cls(
             approval_id=approval_id,
-            tenant_id=getattr(principal, "tenant_id"),
-            principal_id=getattr(principal, "principal_id"),
+            tenant_id=principal.tenant_id,
+            principal_id=principal.principal_id,
             action=action,
             resource=resource,
             tier=coerce_tier(tier),
@@ -326,16 +334,16 @@ def __getattr__(name: str) -> Any:
 
 
 __all__ = [
-    "PermissionTier",
     "TIER_DESCRIPTIONS",
+    "ApprovalGrant",
+    "PermissionDecision",
     "PermissionGrant",
     "PermissionRequest",
-    "PermissionDecision",
-    "ApprovalGrant",
+    "PermissionTier",
     "Principal",
     "coerce_tier",
-    "max_tier",
     "evaluate_permission",
-    "require_permission",
+    "max_tier",
     "require_approval",
+    "require_permission",
 ]

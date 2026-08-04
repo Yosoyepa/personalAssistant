@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+import json
+import os
+import secrets
 from collections.abc import Callable, Iterator
 from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime
-import json
-import os
-import secrets
 from typing import Any
 
 import pytest
@@ -32,7 +32,6 @@ from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.domain.reminders.idempotency import ReminderIdempotencyConflict
 from personal_assistant.infrastructure.migrations import apply_migrations
-
 
 TEST_POSTGRES_DSN_ENV = "TEST_POSTGRES_DSN"
 NOW = datetime(2026, 7, 17, 12, tzinfo=UTC)

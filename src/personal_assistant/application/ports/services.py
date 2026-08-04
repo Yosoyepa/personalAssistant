@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import Protocol
 
+from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import (
     AgentResult,
+    ApprovalRequest,
     AudioSynthesisRequest,
     AudioSynthesisResult,
     AudioTranscriptionRequest,
     AudioTranscriptionResult,
-    ApprovalRequest,
     ChannelMessage,
     LLMRequest,
     LLMResult,
@@ -18,11 +19,10 @@ from personal_assistant.application.dto.runtime import (
     ToolDefinition,
     ToolResult,
 )
-from personal_assistant.application.dto.context import TokenBudget
-from personal_assistant.domain.common.permissions import ApprovalGrant
-from personal_assistant.domain.common.identity import Principal
-from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
 from personal_assistant.application.dto.tracing import TraceEvent
+from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.permissions import ApprovalGrant
+from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
 
 
 class LLMProvider(Protocol):

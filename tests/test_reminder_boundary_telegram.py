@@ -20,7 +20,6 @@ from personal_assistant.infrastructure.bootstrap import AppContainer, build_cont
 from personal_assistant.infrastructure.config import AppSettings
 from personal_assistant.infrastructure.http import create_app
 
-
 WEBHOOK_SECRET = "test_webhook_secret"
 
 

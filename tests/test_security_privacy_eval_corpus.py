@@ -13,7 +13,6 @@ from personal_assistant.evals.executors.security_boundary_v1 import (
 )
 from personal_assistant.evals.schema import CaseFile
 
-
 CORPUS = Path(__file__).parents[1] / "eval" / "cases" / "security-privacy.v1.json"
 REQUIRED_CATEGORIES = {
     "authentication",
@@ -68,7 +67,7 @@ def test_security_privacy_corpus_has_unique_strict_cases_and_minimum_size() -> N
 def test_security_privacy_corpus_covers_required_dimensions() -> None:
     cases = _cases()
     categories = {str(case["category"]) for case in cases}
-    assert REQUIRED_CATEGORIES <= categories
+    assert categories >= REQUIRED_CATEGORIES
     tags = {tag for case in cases for tag in case.get("tags", [])}
     assert {
         "loopback",
@@ -80,7 +79,7 @@ def test_security_privacy_corpus_covers_required_dimensions() -> None:
         "tenant",
         "no-effects",
     } <= tags
-    assert REQUIRED_REDACTION_TAGS <= tags
+    assert tags >= REQUIRED_REDACTION_TAGS
     failure_modes = {str(case["failureMode"]) for case in cases}
     assert len(failure_modes) == len(cases)
 

@@ -22,7 +22,7 @@ class A2AModel(BaseModel):
         return self.model_dump_json()
 
     @classmethod
-    def from_json(cls, payload: str) -> "A2AModel":
+    def from_json(cls, payload: str) -> A2AModel:
         return cls.model_validate_json(payload)
 
 

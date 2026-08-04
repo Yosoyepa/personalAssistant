@@ -10,7 +10,6 @@ from enum import Enum
 from itertools import islice
 from typing import Any
 
-
 REDACTED = "[REDACTED]"
 REDACTED_URL = "[REDACTED_URL]"
 

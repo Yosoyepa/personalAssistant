@@ -32,7 +32,6 @@ from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
 
-
 NOW = datetime(2026, 6, 20, 12, tzinfo=UTC)
 
 

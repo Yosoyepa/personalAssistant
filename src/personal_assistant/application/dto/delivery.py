@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime
 from enum import Enum
-import re
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 

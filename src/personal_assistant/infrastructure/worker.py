@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import argparse
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
 import json
 import sys
 import time
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from personal_assistant.application.dto.events import OutboxMessage

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime, timedelta
 import os
 import secrets
+from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
 from threading import Barrier
-from typing import Any, Iterator
+from typing import Any
 
 import pytest
 
@@ -24,7 +25,6 @@ from personal_assistant.domain.common.exceptions import AssistantError, ErrorCod
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.migrations import apply_migrations
-
 
 NOW = datetime(2026, 7, 17, 15, tzinfo=UTC)
 

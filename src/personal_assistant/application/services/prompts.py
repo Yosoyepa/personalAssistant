@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from string import Template
-from typing import Mapping
 
 from personal_assistant.application.ports.prompts import RenderedPrompt
-
 
 CONVERSATION_INTENT_PROMPT_ID = "conversation_intent"
 LLM_JSON_SYSTEM_PROMPT_ID = "llm_json_system"

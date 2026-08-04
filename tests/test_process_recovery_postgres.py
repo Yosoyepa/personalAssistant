@@ -26,9 +26,10 @@ from __future__ import annotations
 import multiprocessing
 import os
 import secrets
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Any, Iterator
+from typing import Any
 
 import pytest
 
@@ -207,7 +208,7 @@ def _child_die_at_claim(dsn: str, schema: str) -> None:
         def __getattr__(self, name: str) -> Any:
             return getattr(self._inner, name)
 
-        def __enter__(self) -> "DieAtClaimTransaction":
+        def __enter__(self) -> DieAtClaimTransaction:
             self._inner.__enter__()
             return self
 

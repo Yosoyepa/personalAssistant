@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
 import json
 import sys
 import unittest
+from datetime import UTC, datetime, timedelta
 
+from personal_assistant.adapters.persistence import postgres
 from personal_assistant.application.dto.commands import (
     PendingApproval,
     PendingApprovalStatus,
@@ -21,7 +22,6 @@ from personal_assistant.application.ports.calendar import (
     CalendarEventResult,
 )
 from personal_assistant.application.ports.scheduler import ScheduledReminder
-from personal_assistant.adapters.persistence import postgres
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
@@ -47,7 +47,7 @@ class RecordingConnection:
         self.rollbacks = 0
         self.closed = False
 
-    def cursor(self) -> "RecordingCursor":
+    def cursor(self) -> RecordingCursor:
         return RecordingCursor(self)
 
     def commit(self) -> None:
@@ -65,7 +65,7 @@ class RecordingCursor:
         self.connection = connection
         self.closed = False
 
-    def __enter__(self) -> "RecordingCursor":
+    def __enter__(self) -> RecordingCursor:
         return self
 
     def __exit__(self, *_: object) -> None:

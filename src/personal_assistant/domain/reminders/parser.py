@@ -18,7 +18,6 @@ from personal_assistant.domain.reminders.models import (
     UnsupportedReminder,
 )
 
-
 SPANISH_WEEKDAYS = {
     "lunes": 0,
     "martes": 1,

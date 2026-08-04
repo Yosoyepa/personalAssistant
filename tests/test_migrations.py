@@ -1,16 +1,19 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-from datetime import UTC, datetime
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeoutError
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from personal_assistant.adapters.persistence import postgres
+from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
 from personal_assistant.infrastructure.config import AppSettings
 from personal_assistant.infrastructure.http import create_app
@@ -25,11 +28,8 @@ from personal_assistant.infrastructure.migrations import (
     migration_lock_name,
     migration_status,
 )
-from personal_assistant.infrastructure.operational import PostgresWorkerHeartbeatStore
 from personal_assistant.infrastructure.migrations.__main__ import main as migration_main
-from personal_assistant.domain.common.identity import Principal
-from personal_assistant.domain.common.permissions import PermissionTier
-
+from personal_assistant.infrastructure.operational import PostgresWorkerHeartbeatStore
 
 TEST_POSTGRES_DSN_ENV = "TEST_POSTGRES_DSN"
 NOW = datetime(2026, 7, 17, 12, tzinfo=UTC)

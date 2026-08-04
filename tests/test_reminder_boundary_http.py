@@ -15,7 +15,6 @@ from personal_assistant.infrastructure.bootstrap import AppContainer, build_cont
 from personal_assistant.infrastructure.config import AppSettings
 from personal_assistant.infrastructure.http import create_app
 
-
 ADMIN_TOKEN = "test_admin_token"
 BASE_HEADERS = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
 

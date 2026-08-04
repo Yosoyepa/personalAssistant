@@ -1,22 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
 import os
 import pickle
 import secrets
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from typing import Any
 
 import psycopg
 import pytest
 
+from personal_assistant.adapters.observability.local import TraceRecorder
 from personal_assistant.adapters.persistence.postgres import (
     PostgresPersistence,
     PostgresReminderTransaction,
     PostgresReminderUnitOfWork,
 )
-from personal_assistant.adapters.observability.local import TraceRecorder
 from personal_assistant.application.dto.reminders import ReminderWorkflowInput
 from personal_assistant.application.dto.runtime import AgentStatus
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
@@ -25,14 +25,13 @@ from personal_assistant.application.ports.reminder_unit_of_work import (
     ReminderTransactionConflict,
     ReminderTransactionConflictKind,
 )
-from personal_assistant.domain.common.identity import Principal
-from personal_assistant.domain.common.permissions import PermissionTier
-from personal_assistant.domain.common.permissions import ApprovalGrant
-from personal_assistant.infrastructure.bootstrap import build_container
 from personal_assistant.application.use_cases.reminders import (
     ReminderWorkflow,
     reminder_idempotency_key,
 )
+from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
+from personal_assistant.infrastructure.bootstrap import build_container
 from personal_assistant.infrastructure.migrations import apply_migrations
 
 

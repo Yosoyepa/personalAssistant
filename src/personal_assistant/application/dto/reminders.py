@@ -84,7 +84,7 @@ class ReminderWorkflowResult(BaseModel):
     trace_ids: list[str] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def require_versioned_clarification_identity(self) -> "ReminderWorkflowResult":
+    def require_versioned_clarification_identity(self) -> ReminderWorkflowResult:
         if self.clarification_reason != ReminderClarificationReason.invalid_timezone:
             try:
                 self.timezone = ZoneInfo(self.timezone).key

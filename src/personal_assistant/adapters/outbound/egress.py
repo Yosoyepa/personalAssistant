@@ -19,7 +19,6 @@ from urllib.parse import urlsplit
 
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 
-
 DEFAULT_TELEGRAM_API_HOST = "api.telegram.org"
 DEFAULT_TELEGRAM_API_URL = f"https://{DEFAULT_TELEGRAM_API_HOST}"
 
@@ -79,7 +78,7 @@ class EgressAllowlist:
     entries: frozenset[tuple[str, str]] = field(default_factory=frozenset)
 
     @classmethod
-    def from_entries(cls, raw_entries: Iterable[str]) -> "EgressAllowlist":
+    def from_entries(cls, raw_entries: Iterable[str]) -> EgressAllowlist:
         """Build an allowlist from raw host or ``scheme://host`` entries."""
         return cls(entries=frozenset(_parse_entry(value) for value in raw_entries))
 

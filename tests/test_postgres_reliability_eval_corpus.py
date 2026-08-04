@@ -8,7 +8,6 @@ from pathlib import Path
 from personal_assistant.evals.executors import reminder_atomicity_postgres_v1
 from personal_assistant.evals.runner import load_suite, run_suite
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SUITE = ROOT / "eval" / "cases"
 ATOMIC_FILE = "atomicity-recovery-postgres.v1.json"
@@ -19,8 +18,8 @@ RELIABILITY_CATEGORIES = {"atomicity-recovery", "delivery-concurrency"}
 def _semantic_signature(case: object) -> str:
     """Ignore labels and random-data seeds; retain every executed dimension."""
 
-    executor = getattr(case, "executor")
-    inputs = dict(getattr(case, "input"))
+    executor = case.executor
+    inputs = dict(case.input)
     inputs.pop("variant", None)
     if executor == "reminder.atomicity.postgres.v1":
         inputs.setdefault("recoveryProcess", "same-process")
@@ -31,7 +30,7 @@ def _semantic_signature(case: object) -> str:
         {
             "executor": executor,
             "input": inputs,
-            "expected": getattr(case, "expected"),
+            "expected": case.expected,
         },
         sort_keys=True,
         separators=(",", ":"),

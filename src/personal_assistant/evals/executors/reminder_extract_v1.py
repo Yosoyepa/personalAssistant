@@ -18,7 +18,7 @@ class InputModel(StrictModel):
     timezone: str = Field(min_length=1)
 
     @model_validator(mode="after")
-    def aware_reference(self) -> "InputModel":
+    def aware_reference(self) -> InputModel:
         if self.now.tzinfo is None or self.now.utcoffset() is None:
             raise ValueError("now must include a UTC offset")
         return self
@@ -32,7 +32,7 @@ class ExpectedModel(StrictModel):
     notifyAt: datetime | None
 
     @model_validator(mode="after")
-    def valid_shape(self) -> "ExpectedModel":
+    def valid_shape(self) -> ExpectedModel:
         if self.status == "parsed":
             if self.startsAt is None or self.timezone is None:
                 raise ValueError("parsed results require startsAt and timezone")

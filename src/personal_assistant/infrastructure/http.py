@@ -18,11 +18,11 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from personal_assistant import __version__
+from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
 from personal_assistant.adapters.inbound.auth import (
     LocalPrincipalProvider,
     principal_from_auth_claims,
 )
-from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
 from personal_assistant.adapters.inbound.channels.telegram import (
     TelegramActorNotVerifiableError,
 )
@@ -91,7 +91,6 @@ from personal_assistant.infrastructure.operational import (
     empty_delivery_counts,
 )
 from personal_assistant.infrastructure.prompts import build_prompt_catalog
-
 
 MAX_TELEGRAM_AUDIO_BYTES = 20 * 1024 * 1024
 TELEGRAM_WEBHOOK_SECRET_HEADER = APIKeyHeader(
@@ -296,7 +295,7 @@ def _approval_id(
     tenant_id: str, principal_id: str, idempotency_key: str, action: str
 ) -> str:
     digest = hashlib.sha256(
-        f"{tenant_id}:{principal_id}:{idempotency_key}:{action}".encode("utf-8")
+        f"{tenant_id}:{principal_id}:{idempotency_key}:{action}".encode()
     ).hexdigest()[:24]
     return f"apr_{digest}"
 

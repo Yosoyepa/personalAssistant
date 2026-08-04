@@ -20,10 +20,10 @@ from personal_assistant.application.dto.reminders import (
 )
 from personal_assistant.application.dto.runtime import AgentStatus, LLMRequest
 from personal_assistant.application.dto.tracing import TraceEvent, TraceEventType
-from personal_assistant.application.ports.observability import TraceRecorderPort
 from personal_assistant.application.ports.approvals import ApprovalStorePort
 from personal_assistant.application.ports.calendar import CalendarReadPort
 from personal_assistant.application.ports.events import EventStorePort, OutboxPort
+from personal_assistant.application.ports.observability import TraceRecorderPort
 from personal_assistant.application.ports.prompts import (
     PromptCatalogPort,
     RenderedPrompt,
@@ -44,13 +44,12 @@ from personal_assistant.domain.common.exceptions import AssistantError
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 
-
 LLM_INTENT_CONFIDENCE_THRESHOLD = 0.65
 
 
 def _approval_id(*, tenant_id: str, principal_id: str, idempotency_key: str) -> str:
     digest = hashlib.sha256(
-        f"{tenant_id}:{principal_id}:{idempotency_key}".encode("utf-8")
+        f"{tenant_id}:{principal_id}:{idempotency_key}".encode()
     ).hexdigest()[:10]
     return f"ap_{digest}"
 

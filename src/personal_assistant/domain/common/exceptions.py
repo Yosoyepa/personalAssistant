@@ -18,10 +18,10 @@ from pydantic import (
 )
 
 from personal_assistant.domain.common.privacy import (
+    public_error_message,
     redact_error_context,
     redact_error_message,
     redacted_text_metadata,
-    public_error_message,
     safe_optional_identifier,
 )
 

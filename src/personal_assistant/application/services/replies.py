@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable
 from datetime import datetime
-import json
 from pathlib import Path
 from typing import Any
 
 from personal_assistant.domain.reminders.models import ReminderClarificationReason
-
 
 CatalogValue = str | list[str]
 
@@ -29,7 +28,7 @@ class AssistantReplies:
         self._catalog = dict(catalog) if catalog is not None else _load_catalog(locale)
 
     @classmethod
-    def from_catalog(cls, catalog: dict[str, CatalogValue]) -> "AssistantReplies":
+    def from_catalog(cls, catalog: dict[str, CatalogValue]) -> AssistantReplies:
         return cls(catalog=catalog)
 
     def start(self) -> str:

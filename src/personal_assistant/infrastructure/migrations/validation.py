@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 
-
 _POSTGRES_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _POSTGRES_IDENTIFIER_MAX_BYTES = 63
 

@@ -11,7 +11,6 @@ from typing import Any, Protocol
 
 from personal_assistant.infrastructure.migrations.validation import quote_identifier
 
-
 WORKER_NAME = "reminder-delivery"
 DELIVERY_STATUSES = (
     "pending",

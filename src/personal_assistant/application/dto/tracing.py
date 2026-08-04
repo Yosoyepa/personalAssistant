@@ -4,10 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 from uuid import uuid4
-
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
@@ -135,7 +133,7 @@ class TraceEvent(BaseModel):
     def _serialize_metadata(self, value: dict[str, Any]) -> dict[str, Any]:
         return redact_trace_mapping(value)
 
-    def for_persistence(self) -> "TraceEvent":
+    def for_persistence(self) -> TraceEvent:
         """Materialize a privacy-safe copy even after mutable-field changes."""
 
         return type(self).model_validate(self.model_dump(mode="python"))

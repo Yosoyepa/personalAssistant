@@ -58,22 +58,22 @@ class GuardrailResult(BaseModel):
 PROMPT_INJECTION_PATTERNS: tuple[tuple[str, re.Pattern[str], GuardrailSeverity], ...] = (
     (
         "ignore_instructions",
-        re.compile(r"\b(ignore|override|forget|disregard)\b.{0,60}\b(instructions?|rules?|policy|system)\b", re.I),
+        re.compile(r"\b(ignore|override|forget|disregard)\b.{0,60}\b(instructions?|rules?|policy|system)\b", re.IGNORECASE),
         GuardrailSeverity.HIGH,
     ),
     (
         "reveal_system_prompt",
-        re.compile(r"\b(show|reveal|print|dump|exfiltrate)\b.{0,80}\b(system prompt|developer message|hidden instructions?)\b", re.I),
+        re.compile(r"\b(show|reveal|print|dump|exfiltrate)\b.{0,80}\b(system prompt|developer message|hidden instructions?)\b", re.IGNORECASE),
         GuardrailSeverity.HIGH,
     ),
     (
         "jailbreak",
-        re.compile(r"\b(jailbreak|dan mode|developer mode|bypass safety|unrestricted mode)\b", re.I),
+        re.compile(r"\b(jailbreak|dan mode|developer mode|bypass safety|unrestricted mode)\b", re.IGNORECASE),
         GuardrailSeverity.HIGH,
     ),
     (
         "tool_exfiltration",
-        re.compile(r"\b(send|post|upload|email)\b.{0,80}\b(secrets?|tokens?|credentials?|api keys?)\b", re.I),
+        re.compile(r"\b(send|post|upload|email)\b.{0,80}\b(secrets?|tokens?|credentials?|api keys?)\b", re.IGNORECASE),
         GuardrailSeverity.HIGH,
     ),
 )
@@ -81,7 +81,7 @@ PROMPT_INJECTION_PATTERNS: tuple[tuple[str, re.Pattern[str], GuardrailSeverity],
 PII_PATTERNS: tuple[tuple[str, re.Pattern[str], GuardrailSeverity], ...] = (
     (
         "email",
-        re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.I),
+        re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE),
         GuardrailSeverity.MEDIUM,
     ),
     (
@@ -110,7 +110,7 @@ CONTENT_POLICY_INPUT_PATTERNS: tuple[tuple[str, re.Pattern[str], GuardrailSeveri
         re.compile(
             r"\b(kill|murder|assassinate|bomb|hurt)\b.{0,40}"
             r"\b(you|him|her|them|someone|my\s+(?:boss|partner|neighbor|neighbour))\b",
-            re.I,
+            re.IGNORECASE,
         ),
         GuardrailSeverity.MEDIUM,
     ),
@@ -118,7 +118,7 @@ CONTENT_POLICY_INPUT_PATTERNS: tuple[tuple[str, re.Pattern[str], GuardrailSeveri
         "cp_in_002_secret_sharing",
         re.compile(
             r"\b(password|passwd|api[_ -]?key|secret|token)\b\s*(?:is|=|:)\s*\S+",
-            re.I,
+            re.IGNORECASE,
         ),
         GuardrailSeverity.MEDIUM,
     ),
@@ -146,7 +146,7 @@ CONTENT_POLICY_OUTPUT_PATTERNS: tuple[tuple[str, re.Pattern[str], GuardrailSever
         re.compile(
             r"(?:\bexfiltrat\w*\b"
             r"|\b(?:send|post|upload|email|forward)\b.{0,80}\bhttps?://)",
-            re.I,
+            re.IGNORECASE,
         ),
         GuardrailSeverity.HIGH,
     ),
@@ -155,7 +155,7 @@ CONTENT_POLICY_OUTPUT_PATTERNS: tuple[tuple[str, re.Pattern[str], GuardrailSever
         re.compile(
             r"(?:\b(?:system prompt|developer message|hidden instructions?)\b\s*[:=]"
             r"|\bmy\s+(?:system prompt|hidden instructions?)\s+(?:is|are|says?)\b)",
-            re.I,
+            re.IGNORECASE,
         ),
         GuardrailSeverity.HIGH,
     ),
@@ -168,7 +168,7 @@ CONTENT_POLICY_OUTPUT_PATTERNS: tuple[tuple[str, re.Pattern[str], GuardrailSever
             r"|\bdrop\s+table\b"
             r"|\bdelete\s+all\s+(?:files|data|records)\b"
             r"|\bwipe\s+(?:the\s+)?(?:disk|drive|database)\b)",
-            re.I,
+            re.IGNORECASE,
         ),
         GuardrailSeverity.HIGH,
     ),

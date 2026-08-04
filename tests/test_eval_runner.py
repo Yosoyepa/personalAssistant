@@ -14,7 +14,6 @@ from personal_assistant.evals.__main__ import main
 from personal_assistant.evals.executors import legacy_pytest_v1
 from personal_assistant.evals.runner import SuiteValidationError, load_suite, run_suite
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SUITE = REPOSITORY_ROOT / "eval" / "cases"
 
