@@ -5,7 +5,8 @@
       "id": "temporal-utc-tomorrow-13",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "absolute-wall-clock",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "absolute-wall-clock",
       "contractRefs": [
         "AC-05"
       ],
@@ -31,7 +32,8 @@
       "id": "temporal-utc-tomorrow-14",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "absolute-wall-clock",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "absolute-wall-clock",
       "contractRefs": [
         "AC-05"
       ],
@@ -57,7 +59,8 @@
       "id": "temporal-utc-tomorrow-15",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "absolute-wall-clock",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "absolute-wall-clock",
       "contractRefs": [
         "AC-05"
       ],
@@ -83,7 +86,8 @@
       "id": "temporal-utc-tomorrow-16",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "absolute-wall-clock",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "absolute-wall-clock",
       "contractRefs": [
         "AC-05"
       ],
@@ -109,7 +113,8 @@
       "id": "temporal-utc-tomorrow-17",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "absolute-wall-clock",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "absolute-wall-clock",
       "contractRefs": [
         "AC-05"
       ],
@@ -135,7 +140,8 @@
       "id": "temporal-utc-tomorrow-18",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "absolute-wall-clock",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "absolute-wall-clock",
       "contractRefs": [
         "AC-05"
       ],
@@ -161,7 +167,8 @@
       "id": "temporal-utc-tomorrow-19",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "absolute-wall-clock",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "absolute-wall-clock",
       "contractRefs": [
         "AC-05"
       ],
@@ -187,7 +194,8 @@
       "id": "temporal-utc-tomorrow-20",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "absolute-wall-clock",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "absolute-wall-clock",
       "contractRefs": [
         "AC-05"
       ],
@@ -213,7 +221,8 @@
       "id": "temporal-utc-tomorrow-21",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "absolute-wall-clock",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "absolute-wall-clock",
       "contractRefs": [
         "AC-05"
       ],
@@ -239,7 +248,8 @@
       "id": "temporal-utc-tomorrow-22",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "absolute-wall-clock",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "absolute-wall-clock",
       "contractRefs": [
         "AC-05"
       ],
@@ -265,7 +275,8 @@
       "id": "temporal-utc-tomorrow-23",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "absolute-wall-clock",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "absolute-wall-clock",
       "contractRefs": [
         "AC-05"
       ],
@@ -291,7 +302,8 @@
       "id": "temporal-bogota-tomorrow-13",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "iana-timezone",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "iana-timezone",
       "contractRefs": [
         "AC-05"
       ],
@@ -317,7 +329,8 @@
       "id": "temporal-bogota-tomorrow-14",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "iana-timezone",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "iana-timezone",
       "contractRefs": [
         "AC-05"
       ],
@@ -343,7 +356,8 @@
       "id": "temporal-bogota-tomorrow-15",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "iana-timezone",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "iana-timezone",
       "contractRefs": [
         "AC-05"
       ],
@@ -369,7 +383,8 @@
       "id": "temporal-bogota-tomorrow-16",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "iana-timezone",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "iana-timezone",
       "contractRefs": [
         "AC-05"
       ],
@@ -395,7 +410,8 @@
       "id": "temporal-bogota-tomorrow-17",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "iana-timezone",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "iana-timezone",
       "contractRefs": [
         "AC-05"
       ],
@@ -421,7 +437,8 @@
       "id": "temporal-bogota-tomorrow-18",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "iana-timezone",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "iana-timezone",
       "contractRefs": [
         "AC-05"
       ],
@@ -447,7 +464,8 @@
       "id": "temporal-tokyo-tomorrow-13",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "iana-timezone",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "iana-timezone",
       "contractRefs": [
         "AC-05"
       ],
@@ -472,7 +490,8 @@
       "id": "temporal-tokyo-tomorrow-18",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "iana-timezone",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "iana-timezone",
       "contractRefs": [
         "AC-05"
       ],
@@ -497,7 +516,8 @@
       "id": "temporal-madrid-summer-tomorrow-17",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "iana-timezone",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "iana-timezone",
       "contractRefs": [
         "AC-05"
       ],
@@ -523,7 +543,8 @@
       "id": "temporal-relative-1-minutes",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "relative-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "relative-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -548,7 +569,8 @@
       "id": "temporal-relative-2-minutes",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "relative-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "relative-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -573,7 +595,8 @@
       "id": "temporal-relative-15-minutes",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "relative-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "relative-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -598,7 +621,8 @@
       "id": "temporal-relative-30-minutes",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "relative-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "relative-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -623,7 +647,8 @@
       "id": "temporal-relative-60-minutes",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "relative-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "relative-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -648,7 +673,8 @@
       "id": "temporal-relative-90-minutes",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "relative-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "relative-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -673,7 +699,8 @@
       "id": "temporal-relative-120-minutes",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "relative-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "relative-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -698,7 +725,8 @@
       "id": "temporal-relative-1440-minutes",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "relative-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "relative-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -723,7 +751,8 @@
       "id": "temporal-relative-dos-hours",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "relative-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "relative-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -748,7 +777,8 @@
       "id": "temporal-relative-tres-hours",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "relative-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "relative-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -773,7 +803,8 @@
       "id": "temporal-ambiguous-hour-1",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "ambiguous-hour",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "ambiguous-hour",
       "contractRefs": [
         "AC-05"
       ],
@@ -798,7 +829,8 @@
       "id": "temporal-ambiguous-hour-2",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "ambiguous-hour",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "ambiguous-hour",
       "contractRefs": [
         "AC-05"
       ],
@@ -823,7 +855,8 @@
       "id": "temporal-ambiguous-hour-3",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "ambiguous-hour",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "ambiguous-hour",
       "contractRefs": [
         "AC-05"
       ],
@@ -848,7 +881,8 @@
       "id": "temporal-ambiguous-hour-5",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "ambiguous-hour",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "ambiguous-hour",
       "contractRefs": [
         "AC-05"
       ],
@@ -873,7 +907,8 @@
       "id": "temporal-ambiguous-hour-7",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "ambiguous-hour",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "ambiguous-hour",
       "contractRefs": [
         "AC-05"
       ],
@@ -898,7 +933,8 @@
       "id": "temporal-ambiguous-hour-9",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "ambiguous-hour",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "ambiguous-hour",
       "contractRefs": [
         "AC-05"
       ],
@@ -923,7 +959,8 @@
       "id": "temporal-ambiguous-hour-10",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "ambiguous-hour",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "ambiguous-hour",
       "contractRefs": [
         "AC-05"
       ],
@@ -948,7 +985,8 @@
       "id": "temporal-ambiguous-hour-12",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "ambiguous-hour",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "ambiguous-hour",
       "contractRefs": [
         "AC-05"
       ],
@@ -973,7 +1011,8 @@
       "id": "temporal-invalid-24",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "invalid-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "invalid-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -998,7 +1037,8 @@
       "id": "temporal-invalid-25",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "invalid-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "invalid-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -1023,7 +1063,8 @@
       "id": "temporal-invalid-minute-short",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "invalid-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "invalid-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -1048,7 +1089,8 @@
       "id": "temporal-invalid-minute-60",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "invalid-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "invalid-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -1073,7 +1115,8 @@
       "id": "temporal-invalid-minute-999",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "invalid-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "invalid-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -1098,7 +1141,8 @@
       "id": "temporal-invalid-suffix",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "invalid-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "invalid-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -1123,7 +1167,8 @@
       "id": "temporal-invalid-range",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "invalid-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "invalid-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -1148,7 +1193,8 @@
       "id": "temporal-invalid-slash",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "invalid-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "invalid-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -1173,7 +1219,8 @@
       "id": "temporal-invalid-double-clock",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "invalid-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "invalid-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -1198,7 +1245,8 @@
       "id": "temporal-invalid-double-weekday",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "invalid-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "invalid-expression",
       "contractRefs": [
         "AC-05"
       ],
@@ -1223,7 +1271,8 @@
       "id": "temporal-dst-gap-new-york",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "dst-gap",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "dst-gap",
       "contractRefs": [
         "AC-05"
       ],
@@ -1249,7 +1298,8 @@
       "id": "temporal-dst-fold-new-york",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "dst-fold",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "dst-fold",
       "contractRefs": [
         "AC-05"
       ],
@@ -1275,7 +1325,8 @@
       "id": "temporal-dst-gap-madrid",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "dst-gap",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "dst-gap",
       "contractRefs": [
         "AC-05"
       ],
@@ -1301,7 +1352,8 @@
       "id": "temporal-dst-fold-madrid",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "dst-fold",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "dst-fold",
       "contractRefs": [
         "AC-05"
       ],
@@ -1327,7 +1379,8 @@
       "id": "temporal-midnight-utc",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "midnight-day-boundary",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "midnight-day-boundary",
       "contractRefs": [
         "AC-05"
       ],
@@ -1352,7 +1405,8 @@
       "id": "temporal-midnight-bogota",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "midnight-day-boundary",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "midnight-day-boundary",
       "contractRefs": [
         "AC-05"
       ],
@@ -1378,7 +1432,8 @@
       "id": "temporal-weekday-rollover",
       "category": "temporal",
       "tier": "golden",
-      "failureMode": "day-rollover",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "day-rollover",
       "contractRefs": [
         "AC-05"
       ],
@@ -1403,7 +1458,8 @@
       "id": "temporal-missing-date",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "missing-date",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "missing-date",
       "contractRefs": [
         "AC-05"
       ],
@@ -1428,7 +1484,8 @@
       "id": "temporal-missing-time",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "missing-time",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "missing-time",
       "contractRefs": [
         "AC-05"
       ],
@@ -1453,7 +1510,8 @@
       "id": "temporal-missing-datetime",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "missing-datetime",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "missing-datetime",
       "contractRefs": [
         "AC-05"
       ],
@@ -1478,7 +1536,8 @@
       "id": "temporal-invalid-timezone",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "invalid-timezone",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "invalid-timezone",
       "contractRefs": [
         "AC-05"
       ],
@@ -1504,7 +1563,8 @@
       "id": "temporal-relative-conflict",
       "category": "temporal",
       "tier": "failure-mode",
-      "failureMode": "conflicting-expression",
+      "failureMode": "temporal-misinterpretation",
+      "failureModeDetail": "conflicting-expression",
       "contractRefs": [
         "AC-05"
       ],

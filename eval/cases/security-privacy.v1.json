@@ -5,7 +5,8 @@
       "id": "security-local-reject-basic-admin",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "local-reject-basic-admin",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-basic-admin",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -45,7 +46,8 @@
       "id": "security-local-reject-basic-runtime",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "local-reject-basic-runtime",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-basic-runtime",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -85,7 +87,8 @@
       "id": "security-local-reject-legacy-admin",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "local-reject-legacy-admin",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-legacy-admin",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -125,7 +128,8 @@
       "id": "security-local-reject-legacy-runtime",
       "category": "rejection-effects",
       "tier": "failure-mode",
-      "failureMode": "local-reject-legacy-runtime",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-legacy-runtime",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -165,7 +169,8 @@
       "id": "security-local-reject-malformed-runtime",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "local-reject-malformed-runtime",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-malformed-runtime",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -205,7 +210,8 @@
       "id": "security-local-reject-missing-admin",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "local-reject-missing-admin",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-missing-admin",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -245,7 +251,8 @@
       "id": "security-local-reject-missing-runtime",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "local-reject-missing-runtime",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-missing-runtime",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -285,7 +292,8 @@
       "id": "security-local-reject-remote-admin",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "local-reject-remote-admin",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-remote-admin",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -325,7 +333,8 @@
       "id": "security-local-reject-remote-runtime",
       "category": "rejection-effects",
       "tier": "failure-mode",
-      "failureMode": "local-reject-remote-runtime",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-remote-runtime",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -365,7 +374,8 @@
       "id": "security-local-reject-unconfigured-runtime",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "local-reject-unconfigured-runtime",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-unconfigured-runtime",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -405,7 +415,8 @@
       "id": "security-local-reject-wrong-admin",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "local-reject-wrong-admin",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-wrong-admin",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -445,7 +456,8 @@
       "id": "security-local-reject-wrong-runtime",
       "category": "rejection-effects",
       "tier": "failure-mode",
-      "failureMode": "local-reject-wrong-runtime",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-reject-wrong-runtime",
       "contractRefs": [
         "AC-01",
         "AC-48"
@@ -485,7 +497,8 @@
       "id": "security-local-authority-fixed-principal",
       "category": "authorization",
       "tier": "failure-mode",
-      "failureMode": "local-authority-fixed-principal",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-authority-fixed-principal",
       "contractRefs": [
         "AC-02",
         "AC-03"
@@ -530,7 +543,8 @@
       "id": "security-local-authority-forged-headers",
       "category": "tenant-isolation",
       "tier": "failure-mode",
-      "failureMode": "local-authority-forged-headers",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-authority-forged-headers",
       "contractRefs": [
         "AC-02",
         "AC-03"
@@ -575,7 +589,8 @@
       "id": "security-local-authority-forged-query",
       "category": "tenant-isolation",
       "tier": "failure-mode",
-      "failureMode": "local-authority-forged-query",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-authority-forged-query",
       "contractRefs": [
         "AC-02",
         "AC-03"
@@ -620,7 +635,8 @@
       "id": "security-local-authority-forwarded-remote",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "local-authority-forwarded-remote",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "local-authority-forwarded-remote",
       "contractRefs": [
         "AC-02",
         "AC-03"
@@ -660,7 +676,8 @@
       "id": "security-webhook-reject-denied-actor",
       "category": "rejection-effects",
       "tier": "failure-mode",
-      "failureMode": "webhook-reject-denied-actor",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "webhook-reject-denied-actor",
       "contractRefs": [
         "AC-45",
         "AC-46",
@@ -701,7 +718,8 @@
       "id": "security-webhook-reject-empty-allowlist",
       "category": "allowlist",
       "tier": "failure-mode",
-      "failureMode": "webhook-reject-empty-allowlist",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "webhook-reject-empty-allowlist",
       "contractRefs": [
         "AC-45",
         "AC-46",
@@ -742,7 +760,8 @@
       "id": "security-webhook-reject-missing-actor",
       "category": "rejection-effects",
       "tier": "failure-mode",
-      "failureMode": "webhook-reject-missing-actor",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "webhook-reject-missing-actor",
       "contractRefs": [
         "AC-45",
         "AC-46",
@@ -783,7 +802,8 @@
       "id": "security-webhook-reject-missing-secret",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "webhook-reject-missing-secret",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "webhook-reject-missing-secret",
       "contractRefs": [
         "AC-45",
         "AC-46",
@@ -824,7 +844,8 @@
       "id": "security-webhook-reject-unconfigured-secret",
       "category": "authentication",
       "tier": "failure-mode",
-      "failureMode": "webhook-reject-unconfigured-secret",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "webhook-reject-unconfigured-secret",
       "contractRefs": [
         "AC-45",
         "AC-46",
@@ -865,7 +886,8 @@
       "id": "security-webhook-reject-wrong-secret",
       "category": "rejection-effects",
       "tier": "failure-mode",
-      "failureMode": "webhook-reject-wrong-secret",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "webhook-reject-wrong-secret",
       "contractRefs": [
         "AC-45",
         "AC-46",
@@ -906,7 +928,8 @@
       "id": "security-webhook-allow-help",
       "category": "authorization",
       "tier": "golden",
-      "failureMode": "webhook-allow-help",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "webhook-allow-help",
       "contractRefs": [
         "AC-32",
         "AC-46"
@@ -951,7 +974,8 @@
       "id": "security-webhook-allow-p3-reminder",
       "category": "authorization",
       "tier": "golden",
-      "failureMode": "webhook-allow-p3-reminder",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "webhook-allow-p3-reminder",
       "contractRefs": [
         "AC-32",
         "AC-46"
@@ -996,7 +1020,8 @@
       "id": "security-trace-redaction-audio",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-audio",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-audio",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1041,7 +1066,8 @@
       "id": "security-trace-redaction-authorization",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-authorization",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-authorization",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1087,7 +1113,8 @@
       "id": "security-trace-redaction-binary",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-binary",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-binary",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1133,7 +1160,8 @@
       "id": "security-trace-redaction-context-ref",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-context-ref",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-context-ref",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1178,7 +1206,8 @@
       "id": "security-trace-redaction-error",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-error",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-error",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1223,7 +1252,8 @@
       "id": "security-trace-redaction-error-context",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-error-context",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-error-context",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1269,7 +1299,8 @@
       "id": "security-trace-redaction-idempotent",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-idempotent",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-idempotent",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1314,7 +1345,8 @@
       "id": "security-trace-redaction-input-list",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-input-list",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-input-list",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1360,7 +1392,8 @@
       "id": "security-trace-redaction-message",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-message",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-message",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1405,7 +1438,8 @@
       "id": "security-trace-redaction-metadata",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-metadata",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-metadata",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1450,7 +1484,8 @@
       "id": "security-trace-redaction-nested",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-nested",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-nested",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1495,7 +1530,8 @@
       "id": "security-trace-redaction-output",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-output",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-output",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1541,7 +1577,8 @@
       "id": "security-trace-redaction-output-url",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-output-url",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-output-url",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1587,7 +1624,8 @@
       "id": "security-trace-redaction-query",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-query",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-query",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1633,7 +1671,8 @@
       "id": "security-trace-redaction-run-id",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-run-id",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-run-id",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1678,7 +1717,8 @@
       "id": "security-trace-redaction-safe-category",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-safe-category",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-safe-category",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1723,7 +1763,8 @@
       "id": "security-trace-redaction-safe-list",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-safe-list",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-safe-list",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1768,7 +1809,8 @@
       "id": "security-trace-redaction-safe-metric",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-safe-metric",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-safe-metric",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1813,7 +1855,8 @@
       "id": "security-trace-redaction-token",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-token",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-token",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1858,7 +1901,8 @@
       "id": "security-trace-redaction-tool-call",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-tool-call",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-tool-call",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1903,7 +1947,8 @@
       "id": "security-trace-redaction-tool-url",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-tool-url",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-tool-url",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1949,7 +1994,8 @@
       "id": "security-trace-redaction-transcript",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-transcript",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-transcript",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -1994,7 +2040,8 @@
       "id": "security-trace-redaction-unknown",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-unknown",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-unknown",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -2039,7 +2086,8 @@
       "id": "security-trace-redaction-url",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-url",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-url",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -2084,7 +2132,8 @@
       "id": "security-trace-redaction-validation",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-validation",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-validation",
       "contractRefs": [
         "AC-31",
         "AC-34"
@@ -2129,7 +2178,8 @@
       "id": "security-trace-redaction-validation-list",
       "category": "redaction",
       "tier": "golden",
-      "failureMode": "trace-redaction-validation-list",
+      "failureMode": "security-boundary-breach",
+      "failureModeDetail": "trace-redaction-validation-list",
       "contractRefs": [
         "AC-31",
         "AC-34"

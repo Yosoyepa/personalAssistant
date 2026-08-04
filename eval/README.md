@@ -15,8 +15,25 @@ Use `--json` for machine-readable stdout. Filters may be repeated and are
 combined across dimensions:
 
 ```bash
-uv run python -m personal_assistant.evals --suite eval/cases --category temporal --tier failure-mode --failure-mode dst-gap --json
+uv run python -m personal_assistant.evals --suite eval/cases --category temporal --tier failure-mode --failure-mode temporal-misinterpretation --failure-mode-detail dst-gap --json
 ```
+
+## Top failure modes
+
+Every case in the five largest failure families carries a canonical top-mode
+slug in `failureMode`. The previous fine-grained slug is preserved in the
+optional `failureModeDetail` field, recorded immediately after `failureMode`;
+cases outside these families keep their fine-grained `failureMode` and omit
+the detail. `--failure-mode` filters on the canonical slug and
+`--failure-mode-detail` filters on the fine-grained one.
+
+| Top failure mode | Definition | Contract refs | Executor | Case file | Cases |
+|---|---|---|---|---:|---:|
+| `reminder-atomicity-violation` | Multi-write reminder commits and crash recovery leave partial state | FM-12, FM-17 | `reminder.atomicity.postgres.v1` | `atomicity-recovery-postgres.v1.json` | 50 |
+| `delivery-concurrency-violation` | Concurrent workers or stale leases double-deliver or lose outbox rows | FM-12 | `outbox.delivery.postgres.v1` | `delivery-concurrency-postgres.v1.json` | 50 |
+| `idempotency-replay-duplicate` | Replayed events reuse identity yet must never duplicate or collide effects | FM-03, FM-16, FM-17 | `reminder.idempotency.v2` | `idempotency.v2.json` | 57 |
+| `temporal-misinterpretation` | Reminder time expressions parse to the wrong instant or timezone | FM-02 | `reminder.extract.v1` | `temporal.v1.json` | 60 |
+| `security-boundary-breach` | Untrusted input crosses an authority, allowlist, or redaction boundary | FM-01, FM-07, FM-18 | `security.boundary.v1` | `security-privacy.v1.json` | 50 |
 
 ## Version 1 layout
 
