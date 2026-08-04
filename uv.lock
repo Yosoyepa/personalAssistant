@@ -950,7 +950,7 @@ dev = [
     { name = "diff-cover", specifier = ">=9.2" },
     { name = "fastapi", specifier = ">=0.141.1" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "mypy", specifier = ">=1.13" },
+    { name = "mypy", specifier = ">=2.3.0" },
     { name = "pip-audit", specifier = ">=2.10.1" },
     { name = "pre-commit", specifier = ">=4.0" },
     { name = "pytest", specifier = ">=9.1.1" },
