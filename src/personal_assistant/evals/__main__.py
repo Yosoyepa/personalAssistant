@@ -16,6 +16,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--category", action="append", default=[])
     parser.add_argument("--tier", action="append", default=[])
     parser.add_argument("--failure-mode", action="append", default=[])
+    parser.add_argument("--failure-mode-detail", action="append", default=[])
     parser.add_argument("--json", action="store_true", dest="json_output")
     return parser
 
@@ -28,6 +29,7 @@ def main(argv: list[str] | None = None) -> int:
             categories=args.category,
             tiers=args.tier,
             failure_modes=args.failure_mode,
+            failure_mode_details=args.failure_mode_detail,
         )
     except SuiteValidationError as exc:
         if args.json_output:

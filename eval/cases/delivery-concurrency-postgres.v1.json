@@ -5,7 +5,8 @@
       "id": "delivery-skip-locked-2x1-2",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "skip-locked-2-workers-1-limit",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "skip-locked-2-workers-1-limit",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -47,7 +48,8 @@
       "id": "delivery-skip-locked-2x2-4",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "skip-locked-2-workers-2-limit",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "skip-locked-2-workers-2-limit",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -89,7 +91,8 @@
       "id": "delivery-skip-locked-3x2-6",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "skip-locked-3-workers-2-limit",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "skip-locked-3-workers-2-limit",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -131,7 +134,8 @@
       "id": "delivery-skip-locked-4x2-8",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "skip-locked-4-workers-2-limit",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "skip-locked-4-workers-2-limit",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -173,7 +177,8 @@
       "id": "delivery-skip-locked-3x1-3",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "skip-locked-3-workers-1-limit",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "skip-locked-3-workers-1-limit",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -215,7 +220,8 @@
       "id": "delivery-skip-locked-3x4-12",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "skip-locked-3-workers-4-limit",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "skip-locked-3-workers-4-limit",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -257,7 +263,8 @@
       "id": "delivery-skip-locked-4x4-16",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "skip-locked-4-workers-4-limit",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "skip-locked-4-workers-4-limit",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -299,7 +306,8 @@
       "id": "delivery-skip-locked-5x3-15",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "skip-locked-5-workers-3-limit",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "skip-locked-5-workers-3-limit",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -341,7 +349,8 @@
       "id": "delivery-lease-reclaim-offset-0",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "lease-boundary-0",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "lease-boundary-0",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -383,7 +392,8 @@
       "id": "delivery-lease-reclaim-offset-9",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "lease-boundary-9",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "lease-boundary-9",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -425,7 +435,8 @@
       "id": "delivery-lease-reclaim-offset-10",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "lease-boundary-10",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "lease-boundary-10",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -467,7 +478,8 @@
       "id": "delivery-lease-reclaim-offset-11",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "lease-boundary-11",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "lease-boundary-11",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -509,7 +521,8 @@
       "id": "delivery-lease-reclaim-offset-20",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "lease-boundary-20",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "lease-boundary-20",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -551,7 +564,8 @@
       "id": "delivery-lease-reclaim-offset-30",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "lease-boundary-30",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "lease-boundary-30",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -593,7 +607,8 @@
       "id": "delivery-transition-publish",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "transition-publish",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "transition-publish",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -635,7 +650,8 @@
       "id": "delivery-transition-fail",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "transition-fail",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "transition-fail",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -677,7 +693,8 @@
       "id": "delivery-transition-uncertain",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "transition-uncertain",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "transition-uncertain",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -719,7 +736,8 @@
       "id": "delivery-transition-reschedule",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "transition-reschedule",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "transition-reschedule",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -761,7 +779,8 @@
       "id": "delivery-transition-release",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "transition-release",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "transition-release",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -803,7 +822,8 @@
       "id": "delivery-transition-claim-failed",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "transition-claim-failed",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "transition-claim-failed",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -845,7 +865,8 @@
       "id": "delivery-stale-token-publish",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "stale-token-publish",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "stale-token-publish",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -887,7 +908,8 @@
       "id": "delivery-stale-token-fail",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "stale-token-fail",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "stale-token-fail",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -929,7 +951,8 @@
       "id": "delivery-stale-token-uncertain",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "stale-token-uncertain",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "stale-token-uncertain",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -971,7 +994,8 @@
       "id": "delivery-stale-token-reschedule",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "stale-token-reschedule",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "stale-token-reschedule",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1013,7 +1037,8 @@
       "id": "delivery-stale-token-release",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "stale-token-release",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "stale-token-release",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1055,7 +1080,8 @@
       "id": "delivery-stale-token-claim-failed",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "stale-token-claim-failed",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "stale-token-claim-failed",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1097,7 +1123,8 @@
       "id": "delivery-sweep-1-lease-10-offset-0",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "sending-sweep-10-0",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "sending-sweep-10-0",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1139,7 +1166,8 @@
       "id": "delivery-sweep-1-lease-10-offset-9",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "sending-sweep-10-9",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "sending-sweep-10-9",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1181,7 +1209,8 @@
       "id": "delivery-sweep-1-lease-10-offset-10",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "sending-sweep-10-10",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "sending-sweep-10-10",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1223,7 +1252,8 @@
       "id": "delivery-sweep-2-lease-10-offset-11",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "sending-sweep-10-11",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "sending-sweep-10-11",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1265,7 +1295,8 @@
       "id": "delivery-sweep-2-lease-60-offset-59",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "sending-sweep-60-59",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "sending-sweep-60-59",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1307,7 +1338,8 @@
       "id": "delivery-sweep-2-lease-60-offset-60",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "sending-sweep-60-60",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "sending-sweep-60-60",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1349,7 +1381,8 @@
       "id": "delivery-dispatch-success-1",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-success-1",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-success-1",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1391,7 +1424,8 @@
       "id": "delivery-dispatch-success-2",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-success-2",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-success-2",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1434,7 +1468,8 @@
       "id": "delivery-dispatch-permanent-3",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-permanent-3",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-permanent-3",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1476,7 +1511,8 @@
       "id": "delivery-dispatch-unknown-4",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-unknown-4",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-unknown-4",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1518,7 +1554,8 @@
       "id": "delivery-dispatch-transient-5",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-transient-5",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-transient-5",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1560,7 +1597,8 @@
       "id": "delivery-dispatch-transient-6",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-transient-6",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-transient-6",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1602,7 +1640,8 @@
       "id": "delivery-dispatch-transient-7",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-transient-7",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-transient-7",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1644,7 +1683,8 @@
       "id": "delivery-dispatch-transient-8",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-transient-8",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-transient-8",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1686,7 +1726,8 @@
       "id": "delivery-provider-crash-lease-10",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-crash-10",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-crash-10",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1728,7 +1769,8 @@
       "id": "delivery-provider-crash-lease-30",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-crash-30",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-crash-30",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1770,7 +1812,8 @@
       "id": "delivery-provider-crash-lease-60",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-crash-60",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-crash-60",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1812,7 +1855,8 @@
       "id": "delivery-provider-crash-lease-120",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "provider-crash-120",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "provider-crash-120",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1854,7 +1898,8 @@
       "id": "delivery-resolution-delivered",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "uncertain-resolution-delivered",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "uncertain-resolution-delivered",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1896,7 +1941,8 @@
       "id": "delivery-resolution-retry",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "uncertain-resolution-retry",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "uncertain-resolution-retry",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1938,7 +1984,8 @@
       "id": "delivery-event-filter-1",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "event-type-filter-1",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "event-type-filter-1",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -1980,7 +2027,8 @@
       "id": "delivery-event-filter-4",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "event-type-filter-4",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "event-type-filter-4",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -2022,7 +2070,8 @@
       "id": "delivery-tenant-fence-1",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "tenant-fence-1",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "tenant-fence-1",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"
@@ -2064,7 +2113,8 @@
       "id": "delivery-tenant-fence-2",
       "category": "delivery-concurrency",
       "tier": "failure-mode",
-      "failureMode": "tenant-fence-2",
+      "failureMode": "delivery-concurrency-violation",
+      "failureModeDetail": "tenant-fence-2",
       "contractRefs": [
         "OUTBOX-DELIVERY",
         "PG16-REAL"

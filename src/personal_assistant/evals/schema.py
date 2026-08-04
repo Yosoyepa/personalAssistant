@@ -62,6 +62,7 @@ class EvalCase(StrictModel):
     category: Slug
     tier: CaseTier
     failureMode: Slug
+    failureModeDetail: Slug | None = None
     contractRefs: list[str] = Field(min_length=1)
     executor: ExecutorSlug
     input: dict[str, object]

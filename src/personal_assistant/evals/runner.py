@@ -208,6 +208,7 @@ def run_suite(
     categories: Iterable[str] = (),
     tiers: Iterable[str] = (),
     failure_modes: Iterable[str] = (),
+    failure_mode_details: Iterable[str] = (),
 ) -> EvalRun:
     manifest, cases = load_suite(suite_dir)
     for case in cases:
@@ -215,12 +216,14 @@ def run_suite(
     category_filter = set(categories)
     tier_filter = set(tiers)
     failure_mode_filter = set(failure_modes)
+    failure_mode_detail_filter = set(failure_mode_details)
     selected = tuple(
         case
         for case in cases
         if _matches(case.category, category_filter)
         and _matches(case.tier, tier_filter)
         and _matches(case.failureMode, failure_mode_filter)
+        and _matches(case.failureModeDetail or "", failure_mode_detail_filter)
     )
     if not selected:
         raise SuiteValidationError("filters selected zero cases")
