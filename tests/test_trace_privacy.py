@@ -8,7 +8,6 @@ from personal_assistant.application.dto.tracing import TraceEvent, TraceEventTyp
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.privacy import REDACTED, REDACTED_URL
 
-
 TEXT_FIXTURE = "temporary fixture utterance"
 TRANSCRIPT_FIXTURE = "fixture transcription content"
 CREDENTIAL_FIXTURE = "test_placeholder_credential"

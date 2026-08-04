@@ -8,16 +8,16 @@ is opened.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from contextlib import contextmanager
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
 import hashlib
 import importlib
 import json
 import re
+from collections.abc import Callable, Mapping
+from contextlib import contextmanager, suppress
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from types import TracebackType
-from typing import Any, Literal
+from typing import Any, Literal, Self
 from uuid import uuid4
 
 from personal_assistant.application.dto.commands import (
@@ -81,7 +81,6 @@ from personal_assistant.domain.reminders.idempotency import (
     ReminderIdempotencyConflict,
     ReminderPayload,
 )
-
 
 ConnectionFactory = Callable[[], Any]
 
@@ -2513,7 +2512,7 @@ class PostgresReminderTransaction:
         self._committed = False
         self._rolled_back = False
 
-    def __enter__(self) -> PostgresReminderTransaction:
+    def __enter__(self) -> Self:
         if self._entered:
             raise RuntimeError("reminder transaction cannot be entered twice")
         self._entered = True
@@ -2561,9 +2560,12 @@ class PostgresReminderTransaction:
             conflict = _transaction_conflict(error)
             if conflict is not None:
                 raise conflict from None
-            if exc_value is None and self._commit_requested:
-                if _is_ambiguous_commit_error(error):
-                    raise ReminderCommitOutcomeUnknown() from None
+            if (
+                exc_value is None
+                and self._commit_requested
+                and _is_ambiguous_commit_error(error)
+            ):
+                raise ReminderCommitOutcomeUnknown() from None
             raise
         finally:
             self._active = False
@@ -2636,10 +2638,9 @@ class PostgresReminderTransaction:
         connection = self._connection
         self._connection = None
         if connection is not None and self._managed_connection:
-            try:
+            # Close failures must not mask the transaction outcome.
+            with suppress(Exception):
                 _close(connection)
-            except Exception:
-                pass
 
 
 @dataclass(frozen=True, slots=True)

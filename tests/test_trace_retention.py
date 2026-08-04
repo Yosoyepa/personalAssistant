@@ -2,31 +2,31 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
-from importlib import import_module
 import importlib
 import json
 import os
 import secrets
-from typing import Any, Iterator
+from collections.abc import Iterator
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from importlib import import_module
+from typing import Any, Self
 
 import pytest
 
 from personal_assistant.infrastructure import trace_retention
 from personal_assistant.infrastructure.migrations import apply_migrations
 
-
 CUTOFF = datetime(2026, 7, 1, 12, tzinfo=UTC)
 
 
 class _Cursor:
-    def __init__(self, connection: "_Connection") -> None:
+    def __init__(self, connection: _Connection) -> None:
         self.connection = connection
         self.rowcount = 0
         self._result: tuple[object, ...] | None = None
 
-    def __enter__(self) -> "_Cursor":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *_args: object) -> None:
@@ -54,7 +54,7 @@ class _Cursor:
 
 
 class _Transaction:
-    def __init__(self, connection: "_Connection") -> None:
+    def __init__(self, connection: _Connection) -> None:
         self.connection = connection
 
     def __enter__(self) -> None:
@@ -62,7 +62,6 @@ class _Transaction:
 
     def __exit__(self, *args: object) -> None:
         self.connection.transaction_error = args[0]
-        return None
 
 
 class _Connection:

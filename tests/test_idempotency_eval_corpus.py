@@ -14,7 +14,6 @@ from personal_assistant.evals.executors.reminder_idempotency_v2 import (
     execute,
 )
 
-
 CORPUS_PATH = (
     Path(__file__).resolve().parents[1] / "eval" / "cases" / "idempotency.v2.json"
 )

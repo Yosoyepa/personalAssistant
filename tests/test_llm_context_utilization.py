@@ -34,7 +34,6 @@ from personal_assistant.infrastructure.config import (
     AppSettings,
 )
 
-
 PII_MARKERS = (
     "private-recipient@example.test",
     "body-private-marker",

@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
+import os
+import secrets
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from importlib import import_module
-import os
-import secrets
-from typing import Iterator
 
 from personal_assistant.infrastructure.migrations import apply_migrations
-
 
 SCHEMA_PREFIX = "eval_reliability_"
 

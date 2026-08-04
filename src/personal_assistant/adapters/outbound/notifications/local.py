@@ -11,14 +11,14 @@ from personal_assistant.application.ports.notifications import (
     NotificationResult,
 )
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
+from personal_assistant.domain.common.identity import (
+    Principal,
+    require_trusted_principal,
+)
 from personal_assistant.domain.common.permissions import (
     ApprovalGrant,
     PermissionTier,
     require_approval,
-)
-from personal_assistant.domain.common.identity import (
-    Principal,
-    require_trusted_principal,
 )
 
 

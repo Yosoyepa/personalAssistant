@@ -7,7 +7,6 @@ from typing import Any
 
 from personal_assistant.application.dto.channels import ChannelName, NormalizedMessage
 
-
 _COMMAND_RE = re.compile(r"^[A-Za-z0-9_]+$")
 
 

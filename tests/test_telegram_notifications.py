@@ -4,6 +4,7 @@ import io
 import unittest
 from email.message import Message
 from http.client import IncompleteRead
+from typing import Self
 from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 
@@ -79,7 +80,7 @@ class FakeHttpResponse:
         self.status = status
         self.headers = Message()
 
-    def __enter__(self) -> FakeHttpResponse:
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *args: object) -> None:
@@ -401,10 +402,8 @@ class TelegramBotApiClientTests(unittest.TestCase):
             for code, expected in cases:
                 with self.subTest(send=send.__name__, code=code):
                     response = FakeHttpResponse(
-                        (
-                            '{"ok":false,"error_code":%d,"description":"private"}'
-                            % code
-                        ).encode()
+                        f'{{"ok":false,"error_code":{code},'
+                        f'"description":"private"}}'.encode()
                     )
                     with patch(
                         "personal_assistant.adapters.outbound.notifications.telegram.urllib_request.urlopen",

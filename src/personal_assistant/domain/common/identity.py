@@ -21,10 +21,7 @@ from personal_assistant.domain.common.permissions import PermissionGrant, Permis
 def normalize_scopes(value: Any) -> frozenset[str]:
     if value is None:
         return frozenset()
-    if isinstance(value, str):
-        items = value.split()
-    else:
-        items = value
+    items = value.split() if isinstance(value, str) else value
     return frozenset(str(item).strip().lower() for item in items if str(item).strip())
 
 
@@ -108,7 +105,7 @@ class Principal(DomainModel):
         principal_id: str,
         tenant_id: str,
         permission_tier: PermissionTier = PermissionTier.P0,
-    ) -> "Principal":
+    ) -> Principal:
         principal = cls(
             principal_id=principal_id,
             tenant_id=tenant_id,
@@ -122,7 +119,10 @@ class Principal(DomainModel):
 
 def require_trusted_principal(principal: Principal) -> None:
     if not principal.is_trusted:
-        from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
+        from personal_assistant.domain.common.exceptions import (
+            AssistantError,
+            ErrorCode,
+        )
 
         raise AssistantError(
             ErrorCode.AUTHENTICATION_REQUIRED,

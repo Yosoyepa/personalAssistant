@@ -17,7 +17,6 @@ from personal_assistant.domain.common.exceptions import AssistantError, ErrorCod
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionGrant, PermissionTier
 
-
 _BEARER_AUTHORIZATION = re.compile(
     r"Bearer ([A-Za-z0-9._~+/\-]+=*)",
     flags=re.ASCII | re.IGNORECASE,
@@ -102,7 +101,7 @@ class LocalPrincipalProvider:
     @classmethod
     def from_settings(
         cls, settings: LocalPrincipalSettings
-    ) -> "LocalPrincipalProvider":
+    ) -> LocalPrincipalProvider:
         """Build from server settings without retaining their bearer token."""
 
         return cls(
@@ -231,16 +230,13 @@ class AuthClaims(ApplicationDTO):
     def normalize_scopes(cls, value: Any) -> frozenset[str]:
         if value is None:
             return frozenset()
-        if isinstance(value, str):
-            items = value.split()
-        else:
-            items = value
+        items = value.split() if isinstance(value, str) else value
         return frozenset(
             str(item).strip().lower() for item in items if str(item).strip()
         )
 
     @classmethod
-    def from_mapping(cls, claims: Mapping[str, Any]) -> "AuthClaims":
+    def from_mapping(cls, claims: Mapping[str, Any]) -> AuthClaims:
         """Build claims from common identity-provider field names."""
 
         tenant_id = (

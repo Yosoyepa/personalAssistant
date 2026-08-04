@@ -78,7 +78,7 @@ class InputModel(StrictModel):
     omittedField: str | None = None
 
     @model_validator(mode="after")
-    def consistent(self) -> "InputModel":
+    def consistent(self) -> InputModel:
         if self.scenario == "reminder-workflow":
             if self.eventType is not None or self.omittedField is not None:
                 raise ValueError("reminder-workflow forbids eventType and omittedField")

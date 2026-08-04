@@ -32,7 +32,6 @@ from personal_assistant.domain.reminders.models import (
     ReminderIntent,
 )
 
-
 NOW = datetime(2026, 7, 17, 15, tzinfo=UTC)
 
 

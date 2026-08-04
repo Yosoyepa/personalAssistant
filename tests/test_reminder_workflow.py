@@ -1,40 +1,16 @@
 from __future__ import annotations
 
+import unittest
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
-import unittest
 from zoneinfo import ZoneInfo
 
-from personal_assistant.application.dto.reminders import ReminderWorkflowInput
-from personal_assistant.application.dto.runtime import AgentStatus, LLMResult
-from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
-from personal_assistant.application.use_cases.reminders import (
-    ReminderWorkflow,
-    reminder_idempotency_key,
-)
+from personal_assistant.adapters.observability.local import TraceRecorder
 from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
-from personal_assistant.domain.reminders.parser import extract_reminder
-from personal_assistant.domain.reminders.models import (
-    ParsedReminder,
-    ReminderClarificationReason,
-    ReminderUnsupportedReason,
-    UnsupportedReminder,
-)
-from personal_assistant.domain.reminders.workflow_state import ReminderDraft
 from personal_assistant.adapters.outbound.notifications.local import (
     LocalNotificationTool,
 )
 from personal_assistant.adapters.outbound.scheduler.local import ReminderScheduler
-from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
-from personal_assistant.domain.common.identity import Principal
-from personal_assistant.domain.common.exceptions import AssistantError
-from personal_assistant.domain.reminders.idempotency import (
-    ReminderIdempotencyConflict,
-    ReminderPayload,
-)
-from personal_assistant.application.dto.tracing import TraceEventType
-from personal_assistant.application.dto.context import TokenBudget
-from personal_assistant.application.services.replies import AssistantReplies
 from personal_assistant.adapters.persistence.in_memory import (
     InMemoryEventStore,
     InMemoryOutbox,
@@ -43,7 +19,31 @@ from personal_assistant.adapters.persistence.in_memory import (
 from personal_assistant.adapters.persistence.in_memory_uow import (
     InMemoryReminderUnitOfWork,
 )
-from personal_assistant.adapters.observability.local import TraceRecorder
+from personal_assistant.application.dto.context import TokenBudget
+from personal_assistant.application.dto.reminders import ReminderWorkflowInput
+from personal_assistant.application.dto.runtime import AgentStatus, LLMResult
+from personal_assistant.application.dto.tracing import TraceEventType
+from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
+from personal_assistant.application.services.replies import AssistantReplies
+from personal_assistant.application.use_cases.reminders import (
+    ReminderWorkflow,
+    reminder_idempotency_key,
+)
+from personal_assistant.domain.common.exceptions import AssistantError
+from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
+from personal_assistant.domain.reminders.idempotency import (
+    ReminderIdempotencyConflict,
+    ReminderPayload,
+)
+from personal_assistant.domain.reminders.models import (
+    ParsedReminder,
+    ReminderClarificationReason,
+    ReminderUnsupportedReason,
+    UnsupportedReminder,
+)
+from personal_assistant.domain.reminders.parser import extract_reminder
+from personal_assistant.domain.reminders.workflow_state import ReminderDraft
 
 
 class FakeLLMProvider:

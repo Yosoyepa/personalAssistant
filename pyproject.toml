@@ -63,10 +63,58 @@ skip_covered = false
 target-version = "py311"
 
 [tool.ruff.lint]
-# Pin the classic default rule set explicitly: ruff 0.16 widened its
-# default select and flags 252 pre-existing diagnostics. Keep the
-# previous rule set until a dedicated style phase triages them.
-select = ["E4", "E7", "E9", "F"]
+# Explicit rule families adopted in the phase-10 style triage
+# (supersedes the pre-0.16 implicit defaults).
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "SIM", "RET", "RUF", "FLY", "FURB", "DTZ", "S", "BLE", "TRY", "PYI", "PLR"]
+ignore = [
+  # TRY004 wants TypeError instead of ValueError on type checks; switching
+  # exception types would change public contracts and break tests.
+  "TRY004",
+  # DTZ001: the flagged call sites intentionally construct naive datetimes
+  # as invalid inputs to assert validation rejects them.
+  "DTZ001",
+  # Blind excepts in audit/fallback paths are intentional robustness;
+  # per-site redesign is out of scope for a style phase.
+  "BLE001",
+  # --- Rules rejected at triage (pattern-level, out of scope for this phase) ---
+  # S101: asserts are the project's test idiom.
+  "S101",
+  # S105/S106: hardcoded "password" strings are test fixtures and documented
+  # local-dev defaults, not real credentials.
+  "S105",
+  "S106",
+  # S301: pickle is confined to controlled internal caches, not untrusted input.
+  "S301",
+  # S310: urlopen targets are allow-listed/configured endpoints.
+  "S310",
+  # S314: XML parsing is applied to trusted, locally generated payloads.
+  "S314",
+  # S603/S607: subprocess invocations use fixed, project-controlled commands.
+  "S603",
+  "S607",
+  # S608: SQL text is built internally with parameters; no user-controlled
+  # interpolation reaches these call sites.
+  "S608",
+  # TRY003: long message arguments on raise are the project's error style.
+  "TRY003",
+  # TRY300/TRY301: moving code to `else:` blocks is a control-flow
+  # restructure, out of scope for a style phase.
+  "TRY300",
+  "TRY301",
+  # UP042: switching (str, Enum) classes to StrEnum would change public
+  # enum behavior (repr/str), not a style-only change.
+  "UP042",
+  # PLR complexity limits: refactoring large functions is out of scope for
+  # a style phase.
+  "PLR0911",
+  "PLR0912",
+  "PLR0913",
+  "PLR0915",
+  "PLR0917",
+  # PLR2004: named-constant extraction for comparisons is readability churn
+  # across tests and business logic; rejected project-wide.
+  "PLR2004",
+]
 
 [tool.mypy]
 python_version = "3.11"

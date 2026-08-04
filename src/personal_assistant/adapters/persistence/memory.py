@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from personal_assistant.domain.common.identity import Principal, require_trusted_principal
+from personal_assistant.domain.common.identity import (
+    Principal,
+    require_trusted_principal,
+)
 from personal_assistant.domain.memory.models import MemoryKind, MemoryRecord
 
 

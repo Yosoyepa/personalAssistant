@@ -5,10 +5,19 @@ import unittest
 
 from pydantic import ValidationError
 
-from personal_assistant.contracts.a2a import AgentTask, Message, MessageRole, personal_assistant_card
 from personal_assistant.application.dto.runtime import ToolCall
+from personal_assistant.contracts.a2a import (
+    AgentTask,
+    Message,
+    MessageRole,
+    personal_assistant_card,
+)
+from personal_assistant.contracts.tools import (
+    CALENDAR_CREATE_CONTRACT,
+    NOTIFICATION_SEND_CONTRACT,
+    SideEffect,
+)
 from personal_assistant.domain.common.permissions import PermissionTier
-from personal_assistant.contracts.tools import CALENDAR_CREATE_CONTRACT, NOTIFICATION_SEND_CONTRACT, SideEffect
 
 
 class ContractTests(unittest.TestCase):
@@ -52,9 +61,11 @@ class ContractTests(unittest.TestCase):
 
     def test_mcp_and_a2a_tool_calls_fail_closed_in_mvp(self) -> None:
         for tool_name in ("mcp.search", "a2a.delegate"):
-            with self.subTest(tool_name=tool_name):
-                with self.assertRaises(ValidationError):
-                    ToolCall(name=tool_name)
+            with (
+                self.subTest(tool_name=tool_name),
+                self.assertRaises(ValidationError),
+            ):
+                ToolCall(name=tool_name)
 
 
 if __name__ == "__main__":

@@ -3,10 +3,11 @@ from __future__ import annotations
 import ast
 import os
 import threading
-from datetime import UTC, datetime
-from pathlib import Path
 import unittest
 import warnings
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import ClassVar
 from unittest.mock import patch
 
 from personal_assistant.application.dto.channels import ChannelName, NormalizedMessage
@@ -159,9 +160,8 @@ class AppSettingsTests(unittest.TestCase):
             os.environ,
             {"APP_ENV_FILE": "", "ASSISTANT_TIMEZONE": "Bogota/local"},
             clear=True,
-        ):
-            with self.assertRaisesRegex(ValueError, "ASSISTANT_TIMEZONE"):
-                AppSettings.from_env()
+        ), self.assertRaisesRegex(ValueError, "ASSISTANT_TIMEZONE"):
+            AppSettings.from_env()
 
     def test_llm_settings_accept_anthropic_style_aliases(self) -> None:
         with patch.dict(
@@ -281,14 +281,10 @@ class AppSettingsTests(unittest.TestCase):
     def test_settings_load_local_env_file_when_not_sourced(self) -> None:
         env_file = PROJECT_ROOT / ".test.local.env"
         env_file.write_text(
-            "\n".join(
-                [
-                    'TRANSCRIPTION_PROVIDER="openai_compatible"',
-                    'GROQ_API_KEY="gsk-from-file"',
-                    'TRANSCRIPTION_BASE_URL="https://api.groq.com/openai"',
-                    'TRANSCRIPTION_MODEL="whisper-large-v3-turbo"',
-                ]
-            ),
+            'TRANSCRIPTION_PROVIDER="openai_compatible"\n'
+            'GROQ_API_KEY="gsk-from-file"\n'
+            'TRANSCRIPTION_BASE_URL="https://api.groq.com/openai"\n'
+            'TRANSCRIPTION_MODEL="whisper-large-v3-turbo"',
             encoding="utf-8",
         )
         try:
@@ -309,7 +305,7 @@ class AppSettingsTests(unittest.TestCase):
 )
 class HttpRuntimeTests(unittest.TestCase):
     admin_token = "admin-secret"
-    headers = {"Authorization": f"Bearer {admin_token}"}
+    headers: ClassVar[dict[str, str]] = {"Authorization": f"Bearer {admin_token}"}
 
     def setUp(self) -> None:
         self.container = build_container()

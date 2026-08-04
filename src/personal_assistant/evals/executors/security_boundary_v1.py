@@ -101,7 +101,7 @@ class InputModel(BaseModel):
     variant: str
 
     @model_validator(mode="after")
-    def valid_variant(self) -> "InputModel":
+    def valid_variant(self) -> InputModel:
         if self.variant not in _VARIANTS[self.scenario]:
             raise ValueError("variant is not valid for scenario")
         return self
@@ -201,13 +201,13 @@ def _runtime_payload() -> dict[str, object]:
 
 
 def _response_safety(
-    response: object,
+    response: Any,
     command: str | None = None,
     *,
     secret_sentinels: tuple[str, ...] = (),
     pii_sentinels: tuple[str, ...] = (),
 ) -> ResponseSafety:
-    text = getattr(response, "text")
+    text = response.text
 
     def echoed(sentinel: str) -> bool:
         if sentinel.isdecimal():
@@ -232,7 +232,7 @@ def _local_reject(variant: str) -> ExpectedModel:
         if variant == "unconfigured-runtime"
         else _settings()
     )
-    remote = variant == "remote-runtime" or variant == "remote-admin"
+    remote = variant in {"remote-runtime", "remote-admin"}
     client = TestClient(
         create_app(container, settings=settings),
         client=(("203.0.113.8" if remote else "127.0.0.1"), 50000),
@@ -421,7 +421,7 @@ def _webhook_allow(variant: str) -> ExpectedModel:
 
         class FrozenDateTime(datetime):
             @classmethod
-            def now(cls, tz: tzinfo | None = None) -> "FrozenDateTime":
+            def now(cls, tz: tzinfo | None = None) -> FrozenDateTime:
                 return cast(
                     "FrozenDateTime",
                     frozen.astimezone(tz) if tz else frozen.replace(tzinfo=None),

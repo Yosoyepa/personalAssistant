@@ -2,21 +2,20 @@
 
 from __future__ import annotations
 
+import hashlib
+import importlib
+import re
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
-import hashlib
-import importlib
 from pathlib import Path
-import re
 from typing import Any
 
 from personal_assistant.infrastructure.migrations.validation import (
     quote_identifier,
     validate_identifier,
 )
-
 
 HISTORY_TABLE = "assistant_schema_migrations"
 DEFAULT_SCHEMA = "public"
@@ -281,25 +280,27 @@ def apply_migrations(
 
     validated_schema = validate_identifier(schema, field="schema")
     migrations = discover_migrations(migrations_directory)
-    with _open_connection(dsn=dsn, connection=connection) as active_connection:
-        with _advisory_lock(active_connection, validated_schema):
-            _ensure_history(active_connection, validated_schema)
-            before = _build_status(
-                schema=validated_schema,
-                history_exists=True,
-                migrations=migrations,
-                applied=_read_applied(active_connection, validated_schema),
-            )
-            applied_now: list[Migration] = []
-            for migration in before.pending:
-                _apply_one(active_connection, validated_schema, migration)
-                applied_now.append(migration)
-            after = _build_status(
-                schema=validated_schema,
-                history_exists=True,
-                migrations=migrations,
-                applied=_read_applied(active_connection, validated_schema),
-            )
+    with (
+        _open_connection(dsn=dsn, connection=connection) as active_connection,
+        _advisory_lock(active_connection, validated_schema),
+    ):
+        _ensure_history(active_connection, validated_schema)
+        before = _build_status(
+            schema=validated_schema,
+            history_exists=True,
+            migrations=migrations,
+            applied=_read_applied(active_connection, validated_schema),
+        )
+        applied_now: list[Migration] = []
+        for migration in before.pending:
+            _apply_one(active_connection, validated_schema, migration)
+            applied_now.append(migration)
+        after = _build_status(
+            schema=validated_schema,
+            history_exists=True,
+            migrations=migrations,
+            applied=_read_applied(active_connection, validated_schema),
+        )
     return MigrationApplyResult(
         schema=validated_schema,
         applied=tuple(applied_now),

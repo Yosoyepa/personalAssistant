@@ -15,7 +15,6 @@ from personal_assistant.domain.common.identity import require_trusted_principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.config import AppSettings
 
-
 FAKE_TOKEN = "test_local_token_0123456789"
 
 

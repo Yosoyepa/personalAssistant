@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
-from dataclasses import dataclass
 import hashlib
 import json
+from copy import deepcopy
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -18,22 +18,22 @@ from personal_assistant.application.dto.commands import (
     PendingApprovalStatus,
 )
 from personal_assistant.application.dto.delivery import (
-    DeliveryError,
     MAX_CLAIM_LEASE_SECONDS,
     MAX_CLAIM_LIMIT,
     MAX_CLAIM_OWNER_LENGTH,
+    DeliveryError,
     canonical_utc,
     is_valid_claim_owner,
-)
-from personal_assistant.application.dto.workflows import (
-    WorkflowState,
-    WorkflowStateRegistration,
-    WorkflowStatus,
 )
 from personal_assistant.application.dto.events import (
     CloudEvent,
     OutboxMessage,
     OutboxStatus,
+)
+from personal_assistant.application.dto.workflows import (
+    WorkflowState,
+    WorkflowStateRegistration,
+    WorkflowStatus,
 )
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import (
@@ -801,15 +801,19 @@ class InMemoryWorkflowStateStore:
                         tenant_id=principal.tenant_id,
                     )
                 self._raise_if_payload_conflicts(principal, existing, state)
-                if existing.status in {WorkflowStatus.completed, WorkflowStatus.failed}:
-                    if state.status != existing.status or _fingerprint(
-                        state.model_dump(mode="json")
-                    ) != _fingerprint(existing.model_dump(mode="json")):
-                        raise AssistantError(
-                            ErrorCode.CONFLICT,
-                            "terminal workflow state is immutable",
-                            tenant_id=principal.tenant_id,
-                        )
+                if existing.status in {
+                    WorkflowStatus.completed,
+                    WorkflowStatus.failed,
+                } and (
+                    state.status != existing.status
+                    or _fingerprint(state.model_dump(mode="json"))
+                    != _fingerprint(existing.model_dump(mode="json"))
+                ):
+                    raise AssistantError(
+                        ErrorCode.CONFLICT,
+                        "terminal workflow state is immutable",
+                        tenant_id=principal.tenant_id,
+                    )
             saved = state.model_copy(deep=True)
             self._states_by_key[key] = saved
             self._key_by_workflow_id[workflow_id_key] = state.idempotency_key

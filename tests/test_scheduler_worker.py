@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
 import json
 import re
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -17,11 +17,11 @@ from personal_assistant.application.ports.notifications import (
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
+from personal_assistant.infrastructure import bootstrap as bootstrap_module
+from personal_assistant.infrastructure import worker as worker_module
 from personal_assistant.infrastructure.bootstrap import build_container
 from personal_assistant.infrastructure.config import AppSettings
 from personal_assistant.infrastructure.http import build_runtime_container
-from personal_assistant.infrastructure import bootstrap as bootstrap_module
-from personal_assistant.infrastructure import worker as worker_module
 from personal_assistant.infrastructure.worker import main as worker_main
 
 NOW = datetime(2026, 7, 17, 12, tzinfo=UTC)
@@ -370,7 +370,7 @@ def test_expired_claim_is_reclaimed_but_expired_sending_is_only_swept() -> None:
     provider = FakeNotificationTool([success()])
     container, actor, clock = build_worker(provider)
     add_due(container, actor)
-    [claimed] = container.outbox.claim_due(actor, NOW, lease_seconds=10)
+    [_claimed] = container.outbox.claim_due(actor, NOW, lease_seconds=10)
     clock.now = NOW + timedelta(seconds=10)
 
     container.reminder_worker.run_once(actor, now=clock.now)

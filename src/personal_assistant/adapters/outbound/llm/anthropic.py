@@ -10,8 +10,8 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from typing import Any
-from urllib.error import HTTPError
 from urllib import request as urllib_request
+from urllib.error import HTTPError
 
 from personal_assistant.adapters.outbound.egress import EgressAllowlist
 from personal_assistant.application.dto.context import TokenBudget
@@ -19,7 +19,6 @@ from personal_assistant.application.dto.runtime import LLMRequest, LLMResult
 from personal_assistant.application.ports.prompts import PromptCatalogPort
 from personal_assistant.application.services.prompts import LLM_JSON_SYSTEM_PROMPT_ID
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-
 
 UrlOpen = Callable[..., Any]
 

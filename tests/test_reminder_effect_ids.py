@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
@@ -33,7 +33,6 @@ from personal_assistant.domain.reminders.idempotency import (
     ReminderPayload,
     reminder_effect_ids,
 )
-
 
 NOW = datetime(2026, 7, 17, 18, tzinfo=UTC)
 STARTS_AT = datetime(2026, 7, 18, 18, tzinfo=UTC)

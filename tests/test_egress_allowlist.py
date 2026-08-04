@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import unittest
 from pathlib import Path
+from typing import Self
 
 from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
 from personal_assistant.adapters.outbound.egress import (
@@ -37,7 +38,6 @@ from personal_assistant.application.services.prompts import (
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 from personal_assistant.infrastructure.config import AppSettings
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = PROJECT_ROOT / "src" / "personal_assistant"
 
@@ -59,7 +59,7 @@ class _FakeResponse:
     def __init__(self, payload: dict[str, object]) -> None:
         self.payload = payload
 
-    def __enter__(self) -> "_FakeResponse":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *args: object) -> None:
@@ -99,9 +99,8 @@ class EgressEntryParsingTests(unittest.TestCase):
             "user@example.com",
             "https://user:password@example.com",
         ):
-            with self.subTest(entry=entry):
-                with self.assertRaises(ValueError):
-                    EgressAllowlist.from_entries({entry})
+            with self.subTest(entry=entry), self.assertRaises(ValueError):
+                EgressAllowlist.from_entries({entry})
 
     def test_empty_allowlist_denies_everything(self) -> None:
         allowlist = EgressAllowlist.from_entries(set())
@@ -141,7 +140,6 @@ class EgressAuditTests(unittest.TestCase):
             {
                 "https://api.minimax.io",
                 "api.telegram.org",
-                "https://api.minimax.io",
                 "https://api.groq.com",
             }
         )

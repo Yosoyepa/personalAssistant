@@ -50,7 +50,6 @@ from personal_assistant.infrastructure.worker import (
     RuntimeNotificationApprovalPolicy,
 )
 
-
 NOW = datetime(2026, 6, 20, 12, tzinfo=UTC)
 
 

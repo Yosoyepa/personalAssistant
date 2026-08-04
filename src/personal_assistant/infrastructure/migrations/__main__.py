@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import Sequence
+from collections.abc import Sequence
 
 from personal_assistant.infrastructure.config import load_database_settings_from_env
 from personal_assistant.infrastructure.migrations.runner import (

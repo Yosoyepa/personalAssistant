@@ -32,7 +32,6 @@ from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
 
-
 NOW = datetime(2026, 6, 20, 12, tzinfo=UTC)
 
 
@@ -338,11 +337,13 @@ def test_commit_followed_by_exception_rolls_back_registered_state() -> None:
         payload_fingerprint="b" * 64,
     )
 
-    with pytest.raises(RuntimeError, match="after commit"):
-        with bundle.unit_of_work.begin(bundle.principal) as transaction:
-            transaction.states.register_or_replay(bundle.principal, candidate)
-            transaction.commit()
-            raise RuntimeError("after commit")
+    with (
+        pytest.raises(RuntimeError, match="after commit"),
+        bundle.unit_of_work.begin(bundle.principal) as transaction,
+    ):
+        transaction.states.register_or_replay(bundle.principal, candidate)
+        transaction.commit()
+        raise RuntimeError("after commit")
 
     assert bundle.states.list_for_tenant(bundle.principal) == []
 

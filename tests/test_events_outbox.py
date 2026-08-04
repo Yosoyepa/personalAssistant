@@ -3,14 +3,14 @@ from __future__ import annotations
 import unittest
 from datetime import UTC, datetime
 
-from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-from personal_assistant.application.dto.events import CloudEvent, OutboxStatus
-from personal_assistant.domain.common.permissions import PermissionTier
-from personal_assistant.domain.common.identity import Principal
 from personal_assistant.adapters.persistence.in_memory import (
     InMemoryEventStore,
     InMemoryOutbox,
 )
+from personal_assistant.application.dto.events import CloudEvent, OutboxStatus
+from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
+from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.permissions import PermissionTier
 
 
 class EventOutboxTests(unittest.TestCase):

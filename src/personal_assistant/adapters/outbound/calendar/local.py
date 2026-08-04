@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from copy import deepcopy
-from dataclasses import dataclass
 import hashlib
 import json
+from copy import deepcopy
+from dataclasses import dataclass
 from uuid import uuid4
 
 from personal_assistant.adapters._in_memory_transaction import (
@@ -17,14 +17,14 @@ from personal_assistant.application.ports.calendar import (
     CalendarEventResult,
 )
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
+from personal_assistant.domain.common.identity import (
+    Principal,
+    require_trusted_principal,
+)
 from personal_assistant.domain.common.permissions import (
     ApprovalGrant,
     PermissionTier,
     require_approval,
-)
-from personal_assistant.domain.common.identity import (
-    Principal,
-    require_trusted_principal,
 )
 
 

@@ -11,7 +11,6 @@ from pydantic import Field, field_validator
 
 from personal_assistant.evals.schema import StrictModel
 
-
 MIGRATED_TEST_NODES = frozenset(
     {
         "tests/test_admin_dashboard.py::AdminDashboardTests::test_snapshot_is_tenant_and_actor_scoped",

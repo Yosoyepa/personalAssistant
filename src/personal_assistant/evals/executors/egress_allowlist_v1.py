@@ -12,7 +12,7 @@ provider.
 from __future__ import annotations
 
 import json
-from typing import Literal
+from typing import Literal, Self
 
 from pydantic import Field
 
@@ -61,7 +61,7 @@ class _RecordingUrlopen:
     def __init__(self) -> None:
         self.calls = 0
 
-    def __call__(self, req: object, timeout: float) -> "_FakeResponse":
+    def __call__(self, req: object, timeout: float) -> _FakeResponse:
         self.calls += 1
         return _FakeResponse(
             {
@@ -76,7 +76,7 @@ class _FakeResponse:
     def __init__(self, payload: dict[str, object]) -> None:
         self.payload = payload
 
-    def __enter__(self) -> "_FakeResponse":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *args: object) -> None:

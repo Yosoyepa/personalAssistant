@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import unittest
+from datetime import UTC, datetime
 
+from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
 from personal_assistant.application.dto.channels import ChannelName, NormalizedMessage
-from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.commands import CommandKind
+from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import AgentStatus, LLMResult
 from personal_assistant.application.dto.tracing import TraceEventType
-from personal_assistant.adapters.inbound.api import normalize_telegram_webhook
 from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container

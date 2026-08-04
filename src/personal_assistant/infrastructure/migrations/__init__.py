@@ -18,7 +18,6 @@ from personal_assistant.infrastructure.migrations.runner import (
 )
 from personal_assistant.infrastructure.migrations.validation import validate_identifier
 
-
 __all__ = [
     "AppliedMigration",
     "Migration",

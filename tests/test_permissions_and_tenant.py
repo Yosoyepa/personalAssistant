@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 import unittest
+from datetime import UTC, datetime
 
 from pydantic import ValidationError
 
+from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
+from personal_assistant.adapters.outbound.notifications.local import (
+    LocalNotificationTool,
+)
+from personal_assistant.adapters.persistence.memory import TenantMemoryStore
 from personal_assistant.application.ports.calendar import CalendarEventRequest
 from personal_assistant.application.ports.notifications import NotificationRequest
-from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
-from personal_assistant.adapters.persistence.memory import TenantMemoryStore
-from personal_assistant.adapters.outbound.notifications.local import LocalNotificationTool
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.domain.common.identity import Principal
+from personal_assistant.domain.common.permissions import ApprovalGrant, PermissionTier
 from personal_assistant.domain.memory.models import MemoryKind
 
 

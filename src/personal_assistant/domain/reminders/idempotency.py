@@ -12,7 +12,6 @@ from pydantic import ConfigDict, field_validator
 from personal_assistant.domain.common.base import DomainModel
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
 
-
 REMINDER_IDEMPOTENCY_VERSION = 2
 REMINDER_IDEMPOTENCY_KEY_PREFIX = "reminder:v2:"
 _IDENTITY_SCHEMA = "personal-assistant.reminder-idempotency-identity"
@@ -28,10 +27,10 @@ _OUTBOX_MESSAGE_ID_PREFIX = "out_v2_"
 __all__ = [
     "REMINDER_IDEMPOTENCY_KEY_PREFIX",
     "REMINDER_IDEMPOTENCY_VERSION",
+    "ReminderEffectIds",
     "ReminderIdempotency",
     "ReminderIdempotencyConflict",
     "ReminderIdempotencyIdentity",
-    "ReminderEffectIds",
     "ReminderPayload",
     "ReminderReplayConflict",
     "reminder_effect_ids",

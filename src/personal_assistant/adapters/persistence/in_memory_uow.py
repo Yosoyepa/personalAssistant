@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from types import TracebackType
-from typing import Literal
+from typing import Literal, Self
 
 from personal_assistant.adapters._in_memory_transaction import (
     InMemoryTransactionParticipant,
@@ -54,7 +54,7 @@ class InMemoryReminderTransaction:
     _committed: bool = field(default=False, init=False)
     _rolled_back: bool = field(default=False, init=False)
 
-    def __enter__(self) -> InMemoryReminderTransaction:
+    def __enter__(self) -> Self:
         if self._entered:
             raise RuntimeError("reminder transaction cannot be entered twice")
         self._entered = True

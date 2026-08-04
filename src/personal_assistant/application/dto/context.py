@@ -20,7 +20,7 @@ class TokenBudget(ApplicationDTO):
     reserved: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
-    def validate_budget(self) -> "TokenBudget":
+    def validate_budget(self) -> TokenBudget:
         if self.used + self.reserved > self.limit:
             raise ValueError("used plus reserved tokens cannot exceed limit")
         return self
@@ -35,12 +35,12 @@ class TokenBudget(ApplicationDTO):
             raise ValueError("tokens must be non-negative")
         return tokens <= self.remaining
 
-    def spend(self, tokens: int) -> "TokenBudget":
+    def spend(self, tokens: int) -> TokenBudget:
         if not self.can_spend(tokens):
             raise ValueError("token budget exceeded")
         return self.model_copy(update={"used": self.used + tokens})
 
-    def reserve(self, tokens: int) -> "TokenBudget":
+    def reserve(self, tokens: int) -> TokenBudget:
         if tokens < 0:
             raise ValueError("tokens must be non-negative")
         if tokens > self.remaining:

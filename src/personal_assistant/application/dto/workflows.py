@@ -39,7 +39,7 @@ class WorkflowState(BaseModel):
         status: WorkflowStatus | None = None,
         step: str | None = None,
         data: dict[str, Any] | None = None,
-    ) -> "WorkflowState":
+    ) -> WorkflowState:
         merged = dict(self.data)
         if data:
             merged.update(data)

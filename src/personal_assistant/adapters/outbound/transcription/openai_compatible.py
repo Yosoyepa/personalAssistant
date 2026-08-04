@@ -5,15 +5,17 @@ from __future__ import annotations
 import json
 from collections.abc import Callable, Mapping
 from typing import Any
-from urllib.error import HTTPError
 from urllib import request as urllib_request
+from urllib.error import HTTPError
 from uuid import uuid4
 
 from personal_assistant.adapters.outbound.egress import EgressAllowlist
 from personal_assistant.application.dto.context import TokenBudget
-from personal_assistant.application.dto.runtime import AudioTranscriptionRequest, AudioTranscriptionResult
+from personal_assistant.application.dto.runtime import (
+    AudioTranscriptionRequest,
+    AudioTranscriptionResult,
+)
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-
 
 UrlOpen = Callable[..., Any]
 
@@ -23,7 +25,7 @@ def _multipart_field(boundary: str, name: str, value: str) -> bytes:
         f"--{boundary}\r\n"
         f'Content-Disposition: form-data; name="{name}"\r\n\r\n'
         f"{value}\r\n"
-    ).encode("utf-8")
+    ).encode()
 
 
 def _multipart_file(boundary: str, request: AudioTranscriptionRequest) -> bytes:
@@ -31,7 +33,7 @@ def _multipart_file(boundary: str, request: AudioTranscriptionRequest) -> bytes:
         f"--{boundary}\r\n"
         f'Content-Disposition: form-data; name="file"; filename="{request.filename}"\r\n'
         f"Content-Type: {request.content_type}\r\n\r\n"
-    ).encode("utf-8")
+    ).encode()
     return header + request.data + b"\r\n"
 
 
@@ -80,7 +82,7 @@ class OpenAICompatibleTranscriptionProvider:
         if request.prompt:
             body.extend(_multipart_field(boundary, "prompt", request.prompt))
         body.extend(_multipart_file(boundary, request))
-        body.extend(f"--{boundary}--\r\n".encode("utf-8"))
+        body.extend(f"--{boundary}--\r\n".encode())
 
         req = urllib_request.Request(
             f"{self._base_url}/v1/audio/transcriptions",

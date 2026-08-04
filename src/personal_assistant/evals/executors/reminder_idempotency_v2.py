@@ -44,7 +44,7 @@ class InputModel(BaseModel):
     second: EventModel
 
     @model_validator(mode="after")
-    def validate_transport_shape(self) -> "InputModel":
+    def validate_transport_shape(self) -> InputModel:
         if self.transport == "http":
             for event in (self.first, self.second):
                 if event.channel.casefold().strip() not in {"telegram", "whatsapp"}:

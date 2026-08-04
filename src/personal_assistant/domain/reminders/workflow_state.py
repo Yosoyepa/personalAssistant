@@ -47,7 +47,7 @@ class ReminderDraft(DomainModel):
         return value.astimezone(UTC)
 
     @classmethod
-    def from_extraction(cls, extraction: ReminderExtraction) -> "ReminderDraft":
+    def from_extraction(cls, extraction: ReminderExtraction) -> ReminderDraft:
         return cls(
             title=extraction.title,
             timezone=extraction.timezone,
@@ -57,7 +57,7 @@ class ReminderDraft(DomainModel):
         )
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any]) -> "ReminderDraft":
+    def from_mapping(cls, data: Mapping[str, Any]) -> ReminderDraft:
         return cls.model_validate(
             {
                 "title": data["title"],

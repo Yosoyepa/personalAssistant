@@ -15,20 +15,19 @@ from typing import Any
 
 import pytest
 
-import personal_assistant.infrastructure.bootstrap as bootstrap
+from personal_assistant.adapters.observability.local import TraceRecorder
+from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
+from personal_assistant.adapters.outbound.scheduler.local import ReminderScheduler
 from personal_assistant.adapters.persistence.in_memory import (
     InMemoryEventStore,
     InMemoryOutbox,
     InMemoryWorkflowStateStore,
 )
-from personal_assistant.adapters.observability.local import TraceRecorder
-from personal_assistant.adapters.outbound.calendar.local import LocalCalendarTool
-from personal_assistant.adapters.outbound.scheduler.local import ReminderScheduler
 from personal_assistant.application.dto.events import CloudEvent, OutboxMessage
 from personal_assistant.application.dto.workflows import WorkflowState, WorkflowStatus
+from personal_assistant.infrastructure import bootstrap
 from personal_assistant.infrastructure.bootstrap import build_container
 from personal_assistant.infrastructure.config import AppSettings
-
 
 POSTGRES_DSN = "postgresql://assistant:secret@localhost:5432/assistant_test"
 POSTGRES_MODULE = "personal_assistant.adapters.persistence.postgres"

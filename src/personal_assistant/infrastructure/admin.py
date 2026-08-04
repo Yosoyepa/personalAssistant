@@ -10,7 +10,11 @@ from html import escape
 from ipaddress import ip_address, ip_network
 from typing import Any
 
-from personal_assistant.application.dto.events import CloudEvent, OutboxMessage, OutboxStatus
+from personal_assistant.application.dto.events import (
+    CloudEvent,
+    OutboxMessage,
+    OutboxStatus,
+)
 from personal_assistant.application.dto.tracing import (
     GUARDRAIL_ACTIONS,
     TraceEvent,
@@ -31,7 +35,6 @@ from personal_assistant.domain.common.privacy import (
 )
 from personal_assistant.domain.memory.models import MemoryRecord
 from personal_assistant.infrastructure.bootstrap import AppContainer
-
 
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
@@ -896,15 +899,13 @@ def _render_error_filters(errors: dict[str, Any]) -> str:
         f'<option value="{escape(category)}">{escape(_error_category_label(category))}</option>'
         for category in categories
     )
-    return "\n".join(
-        [
-            '<div class="filters" data-error-filters>',
-            '<label>Category <select data-error-filter="category">',
-            category_options,
-            "</select></label>",
-            '<label>Run ID <input type="search" data-error-filter="run_id" placeholder="run id"></label>',
-            "</div>",
-        ]
+    return (
+        '<div class="filters" data-error-filters>\n'
+        '<label>Category <select data-error-filter="category">\n'
+        f"{category_options}\n"
+        "</select></label>\n"
+        '<label>Run ID <input type="search" data-error-filter="run_id" placeholder="run id">\n'
+        "</div>"
     )
 
 

@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import os
+import secrets
+from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from importlib import import_module
-import os
-import secrets
 from threading import Barrier, Lock
-from typing import Any, Iterator
+from typing import Any
 
 import pytest
-
 from delivery_adversarial_harness import (
     BlockingNotificationProvider,
     FakeClock,
@@ -21,6 +20,7 @@ from delivery_adversarial_harness import (
     InjectedDeliveryCrash,
     ScriptedNotificationProvider,
 )
+
 from personal_assistant.adapters.persistence.postgres import (
     PostgresOutbox,
     PostgresPersistence,

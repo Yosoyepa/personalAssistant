@@ -5,10 +5,11 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping
+from contextlib import suppress
 from http.client import HTTPException
 from typing import Any, Protocol
-from urllib.error import HTTPError, URLError
 from urllib import request as urllib_request
+from urllib.error import HTTPError, URLError
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -116,7 +117,7 @@ class TelegramBotApiClient:
         body.extend(_multipart_field(boundary, "chat_id", chat_id))
         body.extend(_multipart_field(boundary, "caption", caption))
         body.extend(_multipart_file(boundary, "audio", filename, content_type, data))
-        body.extend(f"--{boundary}--\r\n".encode("utf-8"))
+        body.extend(f"--{boundary}--\r\n".encode())
         req = urllib_request.Request(
             f"https://api.telegram.org/bot{self._token}/sendAudio",
             data=bytes(body),
@@ -187,7 +188,7 @@ def _multipart_field(boundary: str, name: str, value: str) -> bytes:
         f"--{boundary}\r\n"
         f'Content-Disposition: form-data; name="{name}"\r\n\r\n'
         f"{value}\r\n"
-    ).encode("utf-8")
+    ).encode()
 
 
 def _multipart_file(
@@ -197,7 +198,7 @@ def _multipart_file(
         f"--{boundary}\r\n"
         f'Content-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'
         f"Content-Type: {content_type}\r\n\r\n"
-    ).encode("utf-8")
+    ).encode()
     return header + data + b"\r\n"
 
 
@@ -237,10 +238,9 @@ def _read_http_error_body(exc: HTTPError) -> bytes:
             return b""
         return body if isinstance(body, bytes) else b""
     finally:
-        try:
+        # Closing the error response must never mask the original error.
+        with suppress(Exception):
             exc.close()
-        except Exception:
-            pass
 
 
 def _decode_payload(raw: bytes) -> Mapping[str, Any] | None:

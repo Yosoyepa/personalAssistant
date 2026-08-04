@@ -14,7 +14,6 @@ from personal_assistant.evals.__main__ import main
 from personal_assistant.evals.executors import legacy_pytest_v1
 from personal_assistant.evals.runner import SuiteValidationError, load_suite, run_suite
 
-
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 SUITE = REPOSITORY_ROOT / "eval" / "cases"
 
@@ -222,7 +221,7 @@ def test_corrupt_case_files_are_rejected(tmp_path: Path, payload: str) -> None:
     suite = write_suite(tmp_path, [[temporal_case()]])
     (suite / "cases-0.json").write_text(payload, encoding="utf-8")
 
-    with pytest.raises(SuiteValidationError, match="case file|valid JSON"):
+    with pytest.raises(SuiteValidationError, match=r"case file|valid JSON"):
         load_suite(suite)
 
 
