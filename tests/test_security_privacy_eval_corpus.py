@@ -48,6 +48,7 @@ def test_security_privacy_corpus_has_unique_strict_cases_and_minimum_size() -> N
             "category",
             "tier",
             "failureMode",
+            "failureModeDetail",
             "contractRefs",
             "executor",
             "input",
@@ -80,8 +81,8 @@ def test_security_privacy_corpus_covers_required_dimensions() -> None:
         "no-effects",
     } <= tags
     assert tags >= REQUIRED_REDACTION_TAGS
-    failure_modes = {str(case["failureMode"]) for case in cases}
-    assert len(failure_modes) == len(cases)
+    failure_mode_details = {str(case["failureModeDetail"]) for case in cases}
+    assert len(failure_mode_details) == len(cases)
 
 
 def test_security_privacy_cases_execute_real_boundaries() -> None:

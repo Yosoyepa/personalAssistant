@@ -172,12 +172,12 @@ def test_temporal_corpus_is_utf8_without_mojibake() -> None:
 def test_filters_select_category_tier_and_failure_mode() -> None:
     category = run_suite(SUITE, categories=["temporal"])
     tier = run_suite(SUITE, categories=["temporal"], tiers=["golden"])
-    failure_mode = run_suite(SUITE, failure_modes=["dst-gap"])
+    failure_mode_detail = run_suite(SUITE, failure_mode_details=["dst-gap"])
 
     assert category.selected == 61
     assert tier.selected == 33
-    assert failure_mode.selected == 2
-    assert failure_mode.failed == 0
+    assert failure_mode_detail.selected == 2
+    assert failure_mode_detail.failed == 0
 
 
 def test_zero_case_filter_is_not_a_vacuous_pass() -> None:
