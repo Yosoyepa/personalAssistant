@@ -8,9 +8,10 @@ corpus root.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from types import MappingProxyType
 
 from pydantic import ValidationError
 
@@ -29,9 +30,28 @@ class CorpusValidationError(ValueError):
 class LabeledCorpus:
     corpus_id: str
     labels: tuple[IntentLabel, ...]
+    surfaces: Mapping[str, str]
+    """Label id to the surface whose label file declared it.
+
+    Carried here rather than re-derived from the id because the runner has to
+    dispatch each label to the right runtime call site. Guessing the surface
+    from an id prefix would silently send a label to the wrong LLM seam and
+    still produce a plausible-looking report.
+    """
 
     def split(self, name: str) -> tuple[IntentLabel, ...]:
         return tuple(label for label in self.labels if label.split == name)
+
+    def surface_of(self, label_id: str) -> str:
+        try:
+            return self.surfaces[label_id]
+        except KeyError as exc:
+            raise CorpusValidationError(f"unknown label id: {label_id}") from exc
+
+    def by_surface(self, name: str) -> tuple[IntentLabel, ...]:
+        return tuple(
+            label for label in self.labels if self.surfaces[label.id] == name
+        )
 
 
 def _read_json(path: Path) -> object:
@@ -52,6 +72,7 @@ def load_corpus(corpus_dir: Path) -> LabeledCorpus:
 
     corpus_root = corpus_dir.resolve()
     labels: list[IntentLabel] = []
+    surfaces: dict[str, str] = {}
     for relative in manifest.labelFiles:
         label_path = (corpus_dir / relative).resolve()
         if corpus_root not in label_path.parents:
@@ -63,6 +84,8 @@ def load_corpus(corpus_dir: Path) -> LabeledCorpus:
                 f"invalid label file {label_path} ({exc.error_count()} schema errors)"
             ) from exc
         labels.extend(label_file.labels)
+        for label in label_file.labels:
+            surfaces.setdefault(label.id, label_file.surface)
 
     ids = [label.id for label in labels]
     duplicates = sorted({label_id for label_id in ids if ids.count(label_id) > 1})
@@ -74,7 +97,11 @@ def load_corpus(corpus_dir: Path) -> LabeledCorpus:
         raise CorpusValidationError("corpus has no calibration split")
     if not any(label.split == "holdout" for label in labels):
         raise CorpusValidationError("corpus has no holdout split")
-    return LabeledCorpus(corpus_id=manifest.corpusId, labels=tuple(labels))
+    return LabeledCorpus(
+        corpus_id=manifest.corpusId,
+        labels=tuple(labels),
+        surfaces=MappingProxyType(surfaces),
+    )
 
 
 def select(
@@ -82,15 +109,18 @@ def select(
     *,
     splits: Iterable[str] = (),
     tags: Iterable[str] = (),
+    surfaces: Iterable[str] = (),
 ) -> tuple[IntentLabel, ...]:
     """Filter labels, refusing an empty selection the way the L1 runner does."""
     split_filter = set(splits)
     tag_filter = set(tags)
+    surface_filter = set(surfaces)
     selected = tuple(
         label
         for label in corpus.labels
         if (not split_filter or label.split in split_filter)
         and (not tag_filter or tag_filter.intersection(label.tags))
+        and (not surface_filter or corpus.surfaces[label.id] in surface_filter)
     )
     if not selected:
         raise CorpusValidationError("filters selected zero labels")

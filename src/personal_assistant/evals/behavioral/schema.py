@@ -73,6 +73,17 @@ class CorpusManifest(StrictModel):
         return self
 
 
+Provenance = Literal["recorded", "synthetic"]
+"""Where a cassette's responses came from.
+
+``recorded`` means a real provider answered these prompts. ``synthetic`` means
+the payloads were hand-authored to exercise the harness. The field is required
+and has no default on purpose: a cassette that forgets to say what it is would
+otherwise inherit the flattering answer, and calibration numbers computed from
+hand-authored payloads measure the author, not the model.
+"""
+
+
 class CassetteEntry(StrictModel):
     """One recorded provider response, keyed by the request that produced it."""
 
@@ -87,6 +98,7 @@ class CassetteEntry(StrictModel):
 
 class Cassette(StrictModel):
     schemaVersion: Literal[1]
+    provenance: Provenance
     recordedAt: str = Field(min_length=1)
     entries: list[CassetteEntry] = Field(min_length=1)
 

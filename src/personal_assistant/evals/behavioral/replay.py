@@ -20,7 +20,11 @@ from pydantic import ValidationError
 from personal_assistant.application.dto.context import TokenBudget
 from personal_assistant.application.dto.runtime import LLMRequest, LLMResult
 from personal_assistant.application.ports.services import LLMProvider
-from personal_assistant.evals.behavioral.schema import Cassette, CassetteEntry
+from personal_assistant.evals.behavioral.schema import (
+    Cassette,
+    CassetteEntry,
+    Provenance,
+)
 
 
 class CassetteError(RuntimeError):
@@ -49,18 +53,22 @@ def request_key(request: LLMRequest) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
-def load_cassette(path: Path) -> dict[str, CassetteEntry]:
+def read_cassette(path: Path) -> Cassette:
+    """Load and validate a cassette, including its provenance claim."""
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         raise CassetteError(f"cannot read valid JSON cassette from {path}") from exc
     try:
-        cassette = Cassette.model_validate(raw)
+        return Cassette.model_validate(raw)
     except ValidationError as exc:
         raise CassetteError(
             f"invalid cassette {path} ({exc.error_count()} schema errors)"
         ) from exc
-    return {entry.key: entry for entry in cassette.entries}
+
+
+def load_cassette(path: Path) -> dict[str, CassetteEntry]:
+    return {entry.key: entry for entry in read_cassette(path).entries}
 
 
 class ReplayLLMProvider:
@@ -117,11 +125,14 @@ class RecordingLLMProvider:
         )
         return result
 
-    def as_cassette(self, *, recorded_at: str) -> Cassette:
+    def as_cassette(
+        self, *, recorded_at: str, provenance: Provenance = "recorded"
+    ) -> Cassette:
         if not self._entries:
             raise CassetteError("refusing to write an empty cassette")
         return Cassette(
             schemaVersion=1,
+            provenance=provenance,
             recordedAt=recorded_at,
             entries=list(self.entries),
         )
