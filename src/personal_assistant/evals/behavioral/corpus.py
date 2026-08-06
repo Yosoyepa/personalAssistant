@@ -49,16 +49,16 @@ class LabeledCorpus:
             raise CorpusValidationError(f"unknown label id: {label_id}") from exc
 
     def by_surface(self, name: str) -> tuple[IntentLabel, ...]:
-        return tuple(
-            label for label in self.labels if self.surfaces[label.id] == name
-        )
+        return tuple(label for label in self.labels if self.surfaces[label.id] == name)
 
 
 def _read_json(path: Path) -> object:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise CorpusValidationError(f"cannot read valid JSON from {path}: {exc}") from exc
+        raise CorpusValidationError(
+            f"cannot read valid JSON from {path}: {exc}"
+        ) from exc
 
 
 def load_corpus(corpus_dir: Path) -> LabeledCorpus:

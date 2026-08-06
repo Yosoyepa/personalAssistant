@@ -79,6 +79,10 @@ def _print_human(run: BehavioralRun) -> None:
             f"{name}/{split}: TPR={tpr.value} (n={tpr.total}) "
             f"TNR={tnr.value} (n={tnr.total})"
         )
+    decision = run.judge_authority()
+    print(f"judge authority: {decision.authority}")
+    for reason in decision.reasons:
+        print(f"  - {reason}")
     print(
         f"Corpus {run.corpus_id} ({run.mode}): {run.completed}/{run.selected} "
         f"completed, {run.errored} errored"
@@ -106,7 +110,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     except Exception:
         if args.json_output:
-            print(json.dumps({"schemaVersion": 1, "error": "unexpected runner failure"}))
+            print(
+                json.dumps({"schemaVersion": 1, "error": "unexpected runner failure"})
+            )
         else:
             print("INVALID CORPUS: unexpected runner failure", file=sys.stderr)
         return 2

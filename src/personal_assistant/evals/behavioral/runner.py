@@ -53,6 +53,10 @@ from personal_assistant.application.use_cases.reminders import (
     _render_reminder_extraction_prompt,
 )
 from personal_assistant.domain.reminders.models import ReminderExtraction
+from personal_assistant.evals.behavioral.calibration import (
+    AuthorityDecision,
+    judge_authority,
+)
 from personal_assistant.evals.behavioral.corpus import (
     LabeledCorpus,
     load_corpus,
@@ -410,13 +414,13 @@ class BehavioralRun:
         return self.selected - self.errored
 
     def surface(self, name: str) -> tuple[LabelOutcome, ...]:
-        return tuple(
-            outcome for outcome in self.outcomes if outcome.surface == name
-        )
+        return tuple(outcome for outcome in self.outcomes if outcome.surface == name)
 
     def headline_matrices(self) -> tuple[tuple[str, str, ConfusionMatrix], ...]:
         """`(label, split, matrix)` triples for human-readable output."""
-        blocks: list[tuple[str, Sequence[LabelOutcome], Callable[..., ConfusionMatrix]]] = [
+        blocks: list[
+            tuple[str, Sequence[LabelOutcome], Callable[..., ConfusionMatrix]]
+        ] = [
             ("intentClassification", self.surface(INTENT_SURFACE), _matrix_for),
             ("reminderExtraction", self.surface(EXTRACTION_SURFACE), _matrix_for),
             ("judge", self.surface(EXTRACTION_SURFACE), _judge_matrix_for),
@@ -426,6 +430,25 @@ class BehavioralRun:
             for name, outcomes, build in blocks
             if outcomes
             for split in ("calibration", "holdout")
+        )
+
+    def judge_authority(self) -> AuthorityDecision:
+        """Whether this run's evidence lets the judge block a build.
+
+        Computed from the holdout split only, and reported even when the answer
+        is the boring one, so the report always states the judge's standing
+        instead of leaving a reader to infer it from the rates.
+        """
+        extraction = [
+            outcome
+            for outcome in self.surface(EXTRACTION_SURFACE)
+            if outcome.split == "holdout"
+        ]
+        matrix = _judge_matrix_for(extraction) if extraction else None
+        return judge_authority(
+            matrix,
+            split="holdout",
+            is_calibration_evidence=self.is_calibration_evidence,
         )
 
     def metrics(self) -> dict[str, object]:
@@ -443,7 +466,8 @@ class BehavioralRun:
                 "bySplit": _by_split(intent, _matrix_for),
                 "kindAgreement": _kind_agreement(intent).as_dict(),
                 "thresholdSweep": [
-                    point.as_dict() for point in threshold_sweep(scored, SWEEP_THRESHOLDS)
+                    point.as_dict()
+                    for point in threshold_sweep(scored, SWEEP_THRESHOLDS)
                 ]
                 if scored
                 else [],
@@ -451,6 +475,7 @@ class BehavioralRun:
         if extraction:
             report["judge"] = {
                 "bySplit": _by_split(extraction, _judge_matrix_for),
+                "authority": self.judge_authority().as_dict(),
             }
             report["reminderExtraction"] = {
                 "bySplit": _by_split(extraction, _matrix_for),
@@ -484,9 +509,7 @@ _RUNNERS: dict[str, Callable[..., LabelOutcome]] = {
 }
 
 
-def _replay_provider(
-    corpus_dir: Path, surface: str
-) -> tuple[ReplayLLMProvider, str]:
+def _replay_provider(corpus_dir: Path, surface: str) -> tuple[ReplayLLMProvider, str]:
     path = cassette_path(corpus_dir, surface)
     if not path.is_file():
         raise BehavioralRunError(
