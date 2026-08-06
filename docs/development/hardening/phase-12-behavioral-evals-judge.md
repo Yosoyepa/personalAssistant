@@ -178,5 +178,7 @@ grabación real que regenere el reporte como v2. Ver
 ## Pendientes de cierre
 
 - [x] Gate completo de fase (`maintainer-workflow.md` §8) — ver tabla arriba.
+- [x] Addendum de fase 12 en el documento de auditoría
+      (`production-readiness-v0.2.0-alpha.1.md`, commit `b928093`).
 - [ ] Push de rama y PR (`gh` no instalado; queda al mantenedor).
-- [ ] Addendum de fase 12 en el documento de auditoría.
+- [ ] CI alojado 5/5 y merge commit (dependen del PR).
