@@ -7,9 +7,25 @@ repos:
         args: [--maxkb=500]
       - id: check-merge-conflict
       - id: detect-private-key
-      - id: detect-aws-credentials
+  # `detect-aws-credentials` is deliberately absent. The project has no AWS
+  # surface at all -- no SDK dependency, no deployment target, no credential to
+  # leak -- so the hook could only ever fire on a false positive, and with no
+  # credentials file present it exited nonzero on their absence rather than on a
+  # finding, failing the whole `pre-commit run --all-files` gate. Repository
+  # secret scanning is gitleaks in the required `security` job, which covers
+  # `AKIA`/`ASIA` key ids among every other pattern; dropping this hook removes
+  # a broken check, not a layer of protection.
+  # Keep this rev aligned with the ruff floor in pyproject.toml (>=0.16.1, locked
+  # at 0.16.1) so the hook and CI's `uv run ruff check .` evaluate the same rule
+  # set. Both read the phase-10 `select` list from pyproject, but v0.11.0 did not
+  # implement 30 of the rules those families now cover — 13 of them stable, not
+  # preview-gated (B912, ISC004, PLR1708, UP050, RUF060/061/063/064/068/076,
+  # RUF102/103/104). Verified: a `value in []` body is clean under the v0.11.0
+  # hook and RUF060 under v0.16.1. The local gate was strictly weaker than CI.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.0
+    rev: v0.16.1
     hooks:
-      - id: ruff
+      # `ruff-check` is the canonical id from 0.16; the bare `ruff` id still
+      # works but is published as a legacy alias and should not be depended on.
+      - id: ruff-check
         args: [--no-fix]

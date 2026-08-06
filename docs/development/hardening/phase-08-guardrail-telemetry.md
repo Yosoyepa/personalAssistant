@@ -9,13 +9,13 @@ plan y, durante la ejecución, las decisiones y evidencia de la fase.
 | Campo | Valor |
 |---|---|
 | Fase | `08 — guardrails de contenido/citas y telemetría de hit-rate` |
-| Estado | `IN_PROGRESS` |
+| Estado | `MERGED` |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `kimi/phase-8-guardrail-telemetry` |
 | Commit base | `739ccb9d212a8d2b983f88e9b10b0fdcdddcf55d` (merge commit de la PR #15, fase 07; `main` sincronizado con `origin/main`) |
 | Fecha de inicio | `2026-07-30` (plan aprobado por el mantenedor en conversación) |
-| PR | `<pendiente>` |
-| Merge commit | `<pendiente>` |
+| PR | `#16` |
+| Merge commit | `96d4fc26a4f1292d7616a24a71a273e98c997a66` (2026-07-30) |
 
 ## Contexto y justificación
 
