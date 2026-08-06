@@ -10,7 +10,7 @@
 | Base commit | `ac1278d` |
 | Pull request | `#13` (https://github.com/Yosoyepa/personalAssistant/pull/13) |
 | Merge commit | `6e95c1f` |
-| Release | `PENDING` |
+| Release | `UNRELEASED` — merged after `v0.2.0-alpha.1` (tagged at `ac1278d`, phase 05); ships in the next tag |
 | Date | `2026-07-28` |
 
 ## Objective and current decision
