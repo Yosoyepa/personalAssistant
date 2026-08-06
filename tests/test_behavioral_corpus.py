@@ -5,11 +5,21 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from personal_assistant.application.use_cases.commands import (
+    _allowed_free_text_intents,
+)
+from personal_assistant.domain.reminders.parser import (
+    REMINDER_TRIGGERS,
+    _fold_text,
+)
 from personal_assistant.evals.behavioral.corpus import (
     CorpusValidationError,
     load_corpus,
     select,
 )
+from personal_assistant.evals.behavioral.schema import IntentLabel
+
+SHIPPED_CORPUS = Path(__file__).resolve().parents[1] / "eval" / "behavioral"
 
 
 def _label(
@@ -207,6 +217,68 @@ class SelectionTests(unittest.TestCase):
     def test_empty_selection_is_an_error_not_an_empty_pass(self) -> None:
         with self.assertRaises(CorpusValidationError):
             select(self.corpus, splits=["calibration"], tags=["dst"])
+
+
+class ShippedCorpusTests(unittest.TestCase):
+    """Guard the claims `docs/development/judge-labeling-rubric.md` makes."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.corpus = load_corpus(SHIPPED_CORPUS)
+
+    def intent_labels(self) -> tuple[IntentLabel, ...]:
+        return tuple(label for label in self.corpus.labels if label.id.startswith("ic-"))
+
+    def extraction_labels(self) -> tuple[IntentLabel, ...]:
+        return tuple(label for label in self.corpus.labels if label.id.startswith("re-"))
+
+    def test_meets_the_scorecard_minimum_of_one_hundred_labels(self) -> None:
+        # Row 11 of the readiness scorecard asks for >=100 human labels. The
+        # intent surface alone has to clear it, so the number does not depend
+        # on counting two surfaces together.
+        self.assertGreaterEqual(len(self.intent_labels()), 100)
+
+    def test_intent_kinds_stay_inside_the_prompt_allowlist(self) -> None:
+        allowed = {kind.value for kind in _allowed_free_text_intents()}
+        for label in self.intent_labels():
+            with self.subTest(label=label.id):
+                self.assertIn(label.expectedKind, allowed)
+
+    def test_extraction_labels_reach_the_llm_path(self) -> None:
+        # `_extract_with_llm` only runs when the deterministic parser returns
+        # `not_a_reminder`, which happens only when the folded text contains no
+        # trigger. A label with a trigger would measure a path the runtime never
+        # takes for it.
+        for label in self.extraction_labels():
+            folded = _fold_text(label.text)
+            hits = [trigger for trigger in REMINDER_TRIGGERS if trigger in folded]
+            with self.subTest(label=label.id):
+                self.assertEqual(hits, [])
+
+    def test_both_splits_carry_both_classes(self) -> None:
+        # Without both classes in holdout, one of TPR or TNR is undefined there
+        # and the published calibration would be half a report.
+        for split in ("calibration", "holdout"):
+            decisions = {label.shouldAccept for label in self.corpus.split(split)}
+            with self.subTest(split=split):
+                self.assertEqual(decisions, {True, False})
+
+    def test_ambiguous_labels_are_never_marked_acceptable(self) -> None:
+        # Rubric section 4, rule 5: no referent in a single-shot system means
+        # the runtime must not act. Flipping one of these would inflate TPR.
+        ambiguous = [
+            label for label in self.corpus.labels if "ambiguous" in label.tags
+        ]
+        self.assertGreater(len(ambiguous), 0)
+        for label in ambiguous:
+            with self.subTest(label=label.id):
+                self.assertFalse(label.shouldAccept)
+
+    def test_every_label_is_traceable_to_a_labeler_and_a_reason(self) -> None:
+        for label in self.corpus.labels:
+            with self.subTest(label=label.id):
+                self.assertTrue(label.labeler.strip())
+                self.assertTrue(label.rationale.strip())
 
 
 if __name__ == "__main__":
