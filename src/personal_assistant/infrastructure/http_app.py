@@ -29,6 +29,9 @@ from personal_assistant.infrastructure.http_routes_admin_metrics import (
 from personal_assistant.infrastructure.http_routes_health import (
     register_health_routes,
 )
+from personal_assistant.infrastructure.http_routes_outbox import (
+    register_outbox_routes,
+)
 from personal_assistant.infrastructure.http_routes_runtime import (
     register_runtime_routes,
 )
@@ -138,6 +141,10 @@ def create_app(
         dashboard=dashboard,
     )
     register_runtime_routes(
+        app,
+        container=runtime_container,
+    )
+    register_outbox_routes(
         app,
         container=runtime_container,
     )

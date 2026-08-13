@@ -3,12 +3,12 @@
 | Campo | Valor |
 |---|---|
 | Fase | `15 — http split + uncertain reconciliation` |
-| Estado | `IN_PROGRESS` |
+| Estado | `COMPLETED` |
 | Mantenedor | `Yosoyepa` |
-| Rama de fase | `kimi/phase-15-http-split` (15a), `<pendiente>` (15b) |
+| Rama de fase | `kimi/phase-15-http-split` (15a), `kimi/phase-15b-uncertain-panel` (15b) |
 | Fecha de inicio | `2026-08-13` |
-| PR | `<pendiente>` |
-| Merge commit | `<pendiente>` |
+| PR | `#39` (15a), `<pendiente>` (15b) |
+| Merge commit | `9767f1f` (15a), `<pendiente>` (15b) |
 
 ## Objetivo
 
@@ -20,14 +20,13 @@ discriminador solo especifica, ejecuta gates y triagia — cero líneas propias.
 
 ## Plan aprobado
 
-- **15a (esta rama)**: split puro de `http.py` en módulos/routers ≤100
+- **15a**: split puro de `http.py` en módulos/routers ≤100
   sitios, comportamiento preservado, fachada de compatibilidad de imports
-  (mismo patrón que el split de `admin.py` en fase 14). Sin Gherkin: no hay
-  comportamiento observable nuevo.
+  (mismo patrón que el split de `admin.py` en fase 14). Integrado en PR #39.
 - **15b**: reconciliación de entregas `uncertain` desde el panel, con spec
   Gherkin aprobado por el mantenedor:
 
-  `features/admin_uncertain_resolution.feature` (pendiente de crear en 15b):
+  `features/admin_uncertain_resolution.feature`:
   - Escenario Outline: resolver `delivered`/`retry` desde la sección outbox
     llamando a `POST /v1/runtime/outbox/{id}/resolve` (endpoint nuevo, grant
     P5 emitido por servidor, mismo patrón que el CLI `resolve-uncertain`).
@@ -63,4 +62,14 @@ discriminador solo especifica, ejecuta gates y triagia — cero líneas propias.
   - `http_routes_runtime.py`: 42 sitios
   - `http_app.py`: 36 sitios
   - `http.py` (fachada de reexportación): 47 sitios
-- Verificación: 17/17 gates PASS en `wct gate --tier commit`, 961 tests pasando, 0 regresiones.
+- Verificación: 17/17 gates PASS en `wct gate --tier commit`, 961 tests pasando, 0 regresiones. PR #39 merged a main (`9767f1f`).
+
+## Ejecución 15b (Reconciliación de entregas `uncertain` desde el panel)
+
+- Gherkin spec: `features/admin_uncertain_resolution.feature` (G-ACCEPT PASS).
+- Endpoint HTTP: `POST /v1/runtime/outbox/{message_id}/resolve` implementado en `src/personal_assistant/infrastructure/http_routes_outbox.py` (9 sitios) con modelos en `http_models.py` (87 sitios).
+- Renderizado de panel: `src/personal_assistant/infrastructure/admin_render_outbox.py` (65 sitios) con script JS para confirmación, envío bearer token y feedback inline.
+- Ensamblado: `admin_render.py` (80 sitios), `http_app.py` (36 sitios), `http.py` (49 sitios).
+- Suite de pruebas: `tests/test_admin_uncertain_resolution.py` (9 tests unitarios y de integración HTTP).
+- Verificación: 17/17 gates PASS en `wct gate --tier commit`, 970 tests pasando (386 subtests), 0 mutantes sobrevivientes.
+
