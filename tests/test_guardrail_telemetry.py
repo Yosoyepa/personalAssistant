@@ -170,7 +170,7 @@ class TestPayloadSanitization:
 
     def test_unknown_action_is_rejected(self) -> None:
         with pytest.raises(ValueError, match="guardrail action"):
-            build_guardrail_validation(GuardrailResult(), "sometimes")  # type: ignore[arg-type]
+            build_guardrail_validation(GuardrailResult(), "sometimes")  # type: ignore[arg-type]  # reason: se pasa una acción inválida a propósito para probar el rechazo
 
     def test_payload_survives_trace_privacy_redaction_unchanged(self) -> None:
         result = GuardrailResult(

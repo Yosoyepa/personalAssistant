@@ -40,6 +40,18 @@ dev = [
   "pytest>=9.1.1",
   "ruff>=0.16.2",
 ]
+# Herramientas del harness WCT (fase 13, piloto). Solo las que necesitan los
+# tiers fast/commit más cobertura con rama; semgrep/mutmut/cyclonedx quedan
+# como gates opcionales (SKIPPED si la herramienta no está instalada).
+quality = [
+  "PyYAML>=6.0.2",
+  "bandit>=1.8",
+  "deptry>=0.23",
+  "detect-secrets>=1.5",
+  "import-linter>=2.3",
+  "pytest-cov>=6.0",
+  "vulture>=2.14",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -124,3 +136,21 @@ check_untyped_defs = true
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
+
+# deptry (gate G-DEPS del harness WCT). Justificaciones:
+# - tzdata: paquete de datos para zoneinfo; nunca se importa por nombre.
+# - uvicorn: entry point de proceso (`python -m uvicorn ...`), no se importa.
+# - httpx/pytest: se usan en tests/, que deptry no escanea en este gate.
+# - psycopg: import diferido intencional vía importlib en
+#   adapters/persistence/postgres.py (_load_psycopg) para no cargarlo sin DSN.
+[tool.deptry.per_rule_ignores]
+DEP002 = ["tzdata", "uvicorn", "httpx", "pytest", "psycopg"]
+
+# Bandit (gate G-SAST-BANDIT del harness WCT, fase 13). Los skips replican 1:1
+# las familias S* ya triadas en [tool.ruff.lint] ignore durante la fase 10, con
+# la misma justificación documentada allí (asserts como invariantes internas,
+# strings "password" ficticios de fixtures, urlopen/subprocess/SQL sobre
+# endpoints y comandos controlados internamente). No es superficie nueva: es
+# el mismo análisis medido dos veces por dos herramientas.
+[tool.bandit]
+skips = ["B101", "B105", "B106", "B310", "B404", "B603", "B608"]

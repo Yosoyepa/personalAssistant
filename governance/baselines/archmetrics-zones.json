@@ -1,0 +1,14 @@
+{
+  "metric": "archmetrics-zones",
+  "recorded_at": "2026-08-13T05:01:42.404935+00:00",
+  "commit": "d6815687558ac4c171330ed40f49e419c95cf5a1",
+  "recorded_by": "Yosoyepa",
+  "value": 3.0,
+  "unit": "count",
+  "direction": "lower_is_better",
+  "breakdown": {
+    "pain": 0,
+    "useless": 0
+  },
+  "note": "Bootstrap: adapters y domain están en dolor; el conteo solo puede bajar."
+}

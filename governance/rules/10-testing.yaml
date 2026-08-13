@@ -1,0 +1,142 @@
+# governance/rules/10-testing.yaml
+schema_version: 1
+group: testing
+title: Tests y verificación
+order: 10
+
+rules:
+  - id: TEST-001
+    text: >
+      Usa TDD: escribe primero un test enfocado que exprese el comportamiento
+      observable pedido y que FALLARÍA ante una implementación plausiblemente
+      incorrecta. Luego implementa el mínimo que lo hace pasar.
+    rationale: >
+      Fuente: swarm-forge roles/coder.prompt. La cláusula clave es "fallaría
+      ante una implementación plausiblemente incorrecta": es la definición
+      operativa de un test útil, y es exactamente lo que la mutación verifica.
+    verified_by: [G-MUT, G-COV-DIFF]
+    severity: hard
+    fails: [F3]
+
+  - id: TEST-002
+    text: >
+      Cero mutantes sobrevivientes en el código que cambiaste. Un mutante que
+      sobrevive es un cambio de comportamiento que ningún test detecta.
+    rationale: >
+      La cobertura demuestra que el código se ejecutó; solo la mutación
+      demuestra que los tests DETECTAN cambios. Un test que llama a la función
+      sin aseverar nada da 100 % de cobertura.
+    verified_by: [G-MUT]
+    severity: hard
+    fails: [F3, F5]
+
+  - id: TEST-003
+    text: >
+      Las aserciones deben trazar al System Under Test. Un test cuya única
+      aserción es `mock.assert_called_once_with(...)`, sin aserción alguna sobre
+      el valor que retorna el SUT, no verifica comportamiento: verifica su
+      propio andamiaje.
+    rationale: >
+      Fuente: unclebob/deintroverter4clj. Es el modo de fallo más frecuente en
+      tests generados, y es invisible para coverage y para mutación (un mock
+      bien configurado mata mutantes).
+    verified_by: [G-INTROVERT]
+    severity: ratchet
+    fails: [F4]
+
+  - id: TEST-004
+    text: >
+      Cobertura de rama mínima del 90 % sobre las líneas nuevas o modificadas.
+      La cobertura total del repo es un ratchet: puede subir, nunca bajar.
+    rationale: >
+      El porcentaje total es un promedio que esconde el diff. Lo que importa es
+      si lo que acabas de escribir está cubierto.
+    verified_by: [G-COV-DIFF, G-COV-TOTAL]
+    severity: hard
+    fails: [F3, F5]
+
+  - id: TEST-005
+    text: >
+      Si `wct mutate` reporta código UNCOVERED, cúbrelo con tests antes de
+      volver a mutar. No gastes ciclos mutando código sin cobertura.
+    rationale: >
+      Fuente: unclebob/mutate4go. Mutar código no cubierto genera survivors
+      garantizados y ruido que enmascara los survivors reales.
+    verified_by: [G-MUT, G-COV-DIFF]
+    severity: hard
+    fails: [F5]
+
+  - id: TEST-006
+    text: >
+      Los tests deben pasar en orden aleatorio. Si fallan con `-p randomly`,
+      hay estado compartido entre tests.
+    rationale: >
+      El acoplamiento entre tests convierte un fallo real en un fallo
+      intermitente, y un fallo intermitente en un `@pytest.mark.skip`.
+    verified_by: [G-TEST-RANDOM]
+    severity: hard
+    fails: [F3]
+
+  - id: TEST-007
+    text: >
+      Si un archivo fuente cambiado tiene más de 100 sitios de mutación, pártelo
+      preservando comportamiento antes de entregar.
+    rationale: >
+      Fuente: swarm-forge roles/cleaner.prompt. Es un proxy directo de tamaño y
+      complejidad, y además mantiene la mutación diferencial en tiempos
+      utilizables.
+    verified_by: [G-MUT-SITES]
+    severity: hard
+    fails: [F9]
+
+  - id: TEST-008
+    text: >
+      Mantén los property tests separados de la verificación normal. No los
+      incluyas en coverage, mutación, CRAP ni en las corridas de aceptación.
+      Márcalos con `@pytest.mark.property`.
+    rationale: >
+      Fuente: swarm-forge engineering.prompt. Los property tests generan casos
+      aleatorios: contaminan las métricas de cobertura y hacen la mutación no
+      determinista.
+    verified_by: [G-PROP, G-TEST]
+    severity: hard
+    fails: [F3]
+
+  - id: TEST-009
+    text: >
+      No edites a mano los manifests de mutación (`governance/mutation-manifest.json`)
+      ni los del pipeline de aceptación. Solo las herramientas los actualizan,
+      como parte de su corrida normal.
+    rationale: >
+      Fuente literal de swarm-forge engineering.prompt. Es el reconocimiento de
+      que un agente presionado por un gate editará el manifest en vez de
+      arreglar el test. Aquí está movido al Plano de la Prueba: el hook lo
+      bloquea.
+    verified_by: [G-META-1]
+    severity: hard
+    fails: [F14]
+
+  - id: TEST-010
+    text: >
+      Cada feature con comportamiento observable por el usuario necesita un
+      escenario Gherkin, y ese escenario debe usar parámetros para todo campo
+      que pueda variar.
+    rationale: >
+      Fuente: swarm-forge roles/specifier.prompt. Un escenario con valores
+      hardcodeados es inmune a la mutación de aceptación, y por tanto no
+      demuestra que la especificación esté conectada a la implementación.
+    verified_by: [G-ACCEPT, G-ACCEPT-MUT]
+    severity: hard
+    fails: [F12, F15]
+
+  - id: TEST-011
+    text: >
+      Corre `pytest --collect-only -q` después de tocar archivos de test. Un
+      test que no se colecciona no falla: simplemente no existe.
+    rationale: >
+      Equivalente Python de speclj-structure-check. Un error de anidamiento o
+      un nombre de fixture inexistente puede hacer desaparecer un archivo
+      entero de la suite sin ninguna señal roja.
+    verified_by: [G-TEST]
+    severity: hard
+    fails: [F3]

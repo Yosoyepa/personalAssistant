@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
             splits=args.split,
             tags=args.tag,
             provider_factory=(
-                None if args.mode == "replay" else _live_provider_factory  # type: ignore[arg-type]
+                None if args.mode == "replay" else _live_provider_factory  # type: ignore[arg-type]  # reason: en modo replay se pasa None a propósito; el runner no construye proveedor
             ),
         )
     except (CorpusValidationError, BehavioralRunError) as exc:
@@ -124,5 +124,5 @@ def main(argv: list[str] | None = None) -> int:
     return 1 if run.errored else 0
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover  # reason: entrada CLI directa; no se ejecuta bajo pytest
     raise SystemExit(main())

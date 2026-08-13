@@ -1,0 +1,107 @@
+# governance/rules/40-security.yaml
+schema_version: 1
+group: security
+title: Seguridad y cadena de suministro
+order: 40
+
+rules:
+  - id: SEC-001
+    text: >
+      Nunca escribas credenciales, tokens, claves privadas ni cadenas de
+      conexión en el código, ni siquiera como valor de ejemplo o placeholder
+      realista. Usa variables de entorno leídas en la capa de entrypoints.
+    rationale: >
+      Un secreto committeado está comprometido para siempre, aunque se borre en
+      el commit siguiente: queda en el historial y en cualquier clon o caché.
+      Por eso el guard lo bloquea en PreToolUse, antes de que el archivo exista.
+    verified_by: [G-SECRET]
+    severity: hard
+    fails: [F14]
+
+  - id: SEC-002
+    text: >
+      Cero findings de severidad alta o media en `bandit` y `semgrep`.
+    rationale: >
+      Los patrones que detectan (eval de entrada, SQL por concatenación,
+      deserialización insegura, subprocess con shell=True) son fallos de
+      seguridad reconocibles por patrón, y por tanto exactamente el tipo que un
+      agente reproduce al copiar una forma que vio.
+    verified_by: [G-SAST, G-SAST-SEMGREP]
+    severity: hard
+    fails: [F14]
+
+  - id: SEC-003
+    text: >
+      Cero CVEs críticos o altos en las dependencias. `pip-audit` corre en cada
+      commit.
+    rationale: >
+      Es el gate más barato de todo el harness y el que cubre el vector que no
+      depende de la calidad del código propio.
+    verified_by: [G-CVE]
+    severity: hard
+    fails: [F10]
+
+  - id: SEC-004
+    text: >
+      No añadas una dependencia nueva sin recorrer los peldaños 3, 4 y 5 de la
+      escalera primero. Si la añades, declárala explícitamente con versión
+      acotada y justifica qué peldaño no la cubría.
+    rationale: >
+      Cada dependencia nueva es superficie de supply chain permanente a cambio
+      de un ahorro que suele ser de pocas líneas. El peldaño 3 (stdlib) cubre la
+      mayoría de los casos en que un agente instala algo.
+    verified_by: [G-DEPS, G-CVE, human]
+    severity: hard
+    fails: [F10]
+
+  - id: SEC-005
+    text: >
+      No modifiques archivos de gobernanza (governance/**, .claude/settings.json,
+      .pre-commit-config.yaml, .importlinter, .github/workflows/**,
+      pyproject.toml) como parte de una tarea de implementación. Si un umbral
+      está mal, dilo y espera autorización humana explícita.
+    rationale: >
+      F14, el modo de fallo que invalida todos los demás gates. La ruta de menor
+      resistencia ante un gate rojo es aflojar el gate, y un agente la toma.
+      Aquí PreToolUse pide autorización y G-META-1 exige rastro firmado por un
+      humano en integrity-log.md.
+    verified_by: [G-META-1]
+    severity: hard
+    fails: [F14]
+
+  - id: SEC-006
+    text: >
+      No uses `git commit --no-verify`, `--no-gpg-sign` ni ninguna bandera que
+      salte los hooks. No corras subconjuntos de la suite (`pytest -k`) como
+      evidencia de que el gate pasa.
+    rationale: >
+      Saltar el gate y pasar el gate son indistinguibles desde el log de
+      commits. El guard de Bash parsea el comando y lo bloquea; el gate de CI lo
+      atrapa igual.
+    verified_by: [G-META-1, G-HOOKS-WIRED]
+    severity: hard
+    fails: [F14]
+
+  - id: SEC-007
+    text: >
+      Valida y normaliza toda entrada en la frontera (entrypoints/adapters), no
+      dentro del dominio. El dominio asume tipos válidos y lo hace explícito en
+      sus firmas.
+    rationale: >
+      Validar en el dominio obliga a importar el framework de validación allí,
+      lo que viola ARCH-002; y validar en ambos lados duplica reglas que se
+      desincronizan.
+    verified_by: [G-ARCH, human]
+    severity: hard
+    fails: [F8]
+
+  - id: SEC-008
+    text: >
+      Las licencias de las dependencias deben ser compatibles con la del
+      proyecto. Se genera SBOM en cada release.
+    rationale: >
+      Es el único requisito legal del conjunto y el más fácil de violar sin
+      darse cuenta al añadir una dependencia transitiva.
+    verified_by: [G-SBOM]
+    severity: hard
+    fails: [F10]

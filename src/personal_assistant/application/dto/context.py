@@ -25,7 +25,7 @@ class TokenBudget(ApplicationDTO):
             raise ValueError("used plus reserved tokens cannot exceed limit")
         return self
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]  # reason: pydantic v2 lo expone como property; mypy no modela ese descriptor
     @property
     def remaining(self) -> int:
         return self.limit - self.used - self.reserved
@@ -58,7 +58,7 @@ class RequestContext(ApplicationDTO):
     channel: Literal["api", "worker", "cli", "system"] = "api"
     metadata: dict[str, str] = Field(default_factory=dict)
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]  # reason: pydantic v2 lo expone como property; mypy no modela ese descriptor
     @property
     def tenant_id(self) -> str:
         return self.principal.tenant_id

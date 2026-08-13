@@ -269,8 +269,8 @@ def test_store_remains_tenant_scoped_even_for_same_raw_key() -> None:
 
     assert first.replayed is False
     assert second.replayed is False
-    assert store.get_by_idempotency_key(tenant_a, key).tenant_id == "tenant-a"  # type: ignore[union-attr]
-    assert store.get_by_idempotency_key(tenant_b, key).tenant_id == "tenant-b"  # type: ignore[union-attr]
+    assert store.get_by_idempotency_key(tenant_a, key).tenant_id == "tenant-a"  # type: ignore[union-attr]  # reason: el estado acaba de registrarse; aquí nunca es None
+    assert store.get_by_idempotency_key(tenant_b, key).tenant_id == "tenant-b"  # type: ignore[union-attr]  # reason: el estado acaba de registrarse; aquí nunca es None
 
 
 def test_register_or_replay_is_atomic_under_concurrency() -> None:

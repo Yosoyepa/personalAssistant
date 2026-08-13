@@ -2544,7 +2544,7 @@ class PostgresReminderTransaction:
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        traceback: TracebackType | None,
+        exc_traceback: TracebackType | None,
     ) -> Literal[False]:
         try:
             if exc_value is not None or not self._commit_requested:

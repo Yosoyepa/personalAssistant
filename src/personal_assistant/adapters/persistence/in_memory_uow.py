@@ -78,7 +78,7 @@ class InMemoryReminderTransaction:
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        traceback: TracebackType | None,
+        exc_traceback: TracebackType | None,
     ) -> Literal[False]:
         try:
             if exc_type is not None or not self._committed:

@@ -1,0 +1,10 @@
+{
+  "metric": "gherkin-ir-dry",
+  "recorded_at": "2026-08-11T00:00:00Z",
+  "commit": null,
+  "recorded_by": "seed",
+  "value": 0,
+  "unit": "count",
+  "direction": "lower_is_better",
+  "note": "Duplicados en el IR de Gherkin. No fusionar solo por parecerse (aviso del APS)."
+}

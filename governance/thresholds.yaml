@@ -1,0 +1,217 @@
+# governance/thresholds.yaml
+# TODOS los números del harness viven aquí. Cada valor lleva la cita de su
+# procedencia para que no se pierda por qué es ese número y no otro.
+#
+# Protegido por G-META-1. Subir un umbral requiere:
+#   wct integrity bless --reason "<texto>" --approved-by "<humano>"
+# y deja rastro en governance/integrity-log.md.
+
+schema_version: 1
+
+# ---------------------------------------------------------------------------
+# CRAP — Change Risk Anti-Pattern
+#   CRAP(fn) = CC² × (1 − coverage)³ + CC
+# Fuente de la fórmula: unclebob/crap4go README, unclebob/crap4clj README.
+# Fuente del umbral 6: unclebob/swarm-forge@six-pack roles/cleaner.prompt —
+#   "Run the language CRAP tool first and reduce CRAP to 6 or below."
+# Decisión A1 (ADR-003): 6 aplica SIEMPRE al código cambiado. El repo completo
+# usa el umbral de su perfil, con ratchet bajando.
+# ---------------------------------------------------------------------------
+crap:
+  # Umbral para código cambiado (diff). No depende del perfil del repo.
+  changed_max: 6
+  # Umbral para el repo completo, por perfil (policy.yaml: profile).
+  profiles:
+    strict: 6
+    standard: 15
+    legacy: 30      # tabla publicada por crap4go: 30+ = "crappy"
+
+# ---------------------------------------------------------------------------
+# Mutación
+# Fuente: unclebob/mutate4go README (operadores, clasificación),
+#         swarm-forge@six-pack roles/hardender.prompt (workers, diferencial),
+#         swarm-forge@six-pack roles/cleaner.prompt (100 sites).
+# ---------------------------------------------------------------------------
+mutation:
+  # "If any changed or new source file has more than 100 mutation sites,
+  #  perform a reasonable behavior-preserving split before handoff."
+  max_sites_per_file: 100
+  # hardender.prompt: --max-workers 8
+  max_workers: 8
+  # hardender.prompt: "Always use differential mutation against the manifest."
+  differential: true
+  # Survivors tolerados en código cambiado. Cero: un mutante que sobrevive es
+  # un cambio de comportamiento que ningún test detecta.
+  max_survivors_changed: 0
+  # Timeout por mutante, segundos. Un timeout cuenta como KILLED (mutate4go):
+  # el comportamiento cambió, y eso es lo que se estaba verificando.
+  timeout_per_mutant: 10
+  engine: mutmut        # decisión A2: mutmut en dev loop, cosmic-ray opt-in
+
+# ---------------------------------------------------------------------------
+# DRY estructural
+# Fuente: unclebob/dry4go README (defaults y algoritmo Jaccard).
+# La capa de decisión (extraction_pressure) viene de unclebob/scrap.
+# ---------------------------------------------------------------------------
+dry:
+  threshold: 0.82       # similitud de Jaccard mínima para reportar
+  min_lines: 4
+  min_nodes: 20
+  # Parámetros de extraction_pressure (scrap README):
+  #   D_before = 0                                   si F <= 3 o V > 4
+  #   D_before = (max(0, F-3) × (I-1)^1.5) / (V+1)   en otro caso
+  #   pressure = max(0, D_before - D_after - H)
+  extraction:
+    min_shared_forms: 3      # F: por debajo de esto, extraer no paga
+    max_variable_points: 4   # V: por encima de esto, el helper es un despliegue de params
+    helper_cost: 1.0         # H: coste estimado de introducir el helper
+    min_pressure: 0.5        # por debajo, ai_actionability = LEAVE_ALONE
+  # Protección de matrices de cobertura: un cluster cuyos miembros son casos de
+  # test pequeños y estructuralmente idénticos NO es duplicación dañina, es una
+  # tabla. Deduplicarlo destruye cobertura.
+  coverage_matrix_guard:
+    enabled: true
+    max_lines_per_member: 12
+    min_members: 3
+
+# ---------------------------------------------------------------------------
+# Complejidad
+# ---------------------------------------------------------------------------
+complexity:
+  # xenon: grados A-F sobre radon. B absoluto ≈ CC <= 10.
+  xenon_max_absolute: B
+  xenon_max_modules: A
+  xenon_max_average: A
+  # Límite duro de CC por función, verificado también por wct (independiente de
+  # xenon para no depender de una sola herramienta).
+  max_cc_per_function: 10
+
+# ---------------------------------------------------------------------------
+# Cobertura
+# ---------------------------------------------------------------------------
+coverage:
+  # Cobertura de líneas NUEVAS o modificadas (diff-cover). Este es el número
+  # que importa: la cobertura total es un promedio que esconde el diff.
+  diff_min: 90
+  # Branch coverage obligatorio: crap4py lee registros BRDA de LCOV.
+  branch: true
+  # La cobertura total es un ratchet, no un umbral fijo. Ver baselines/.
+  total_is_ratchet: true
+
+# ---------------------------------------------------------------------------
+# Arquitectura
+# Fuente: unclebob/dependency-checker README (:healthy-threshold 0.3, zonas).
+# Fórmulas de Clean Architecture (Martin):
+#   I = fan_out / (fan_in + fan_out)
+#   A = abstract_symbols / total_symbols
+#   D = |A + I - 1|
+# ---------------------------------------------------------------------------
+architecture:
+  healthy_threshold: 0.3
+  # healthy : |A + I - 1| <= threshold
+  # pain    : A + I < 1 - threshold   (concreto y estable → difícil de cambiar)
+  # useless : A + I > 1 + threshold   (abstracto e inestable → abstracción muerta)
+  max_new_pain_packages: 0
+  max_new_useless_packages: 0
+  # Ciclos entre hermanos: cero, siempre. No hay umbral que negociar.
+  max_cycles: 0
+  # Excepciones documentadas a max_cycles (adopción fase 13). Cada entrada
+  # necesita una razón concreta; ampliar esta lista exige bless humano
+  # (archivo protegido por G-META-1).
+  cycle_allowlist:
+    - modules:
+        - personal_assistant.infrastructure.worker
+        - personal_assistant.infrastructure.bootstrap
+      reason: >-
+        worker._runtime importa bootstrap de forma diferida dentro del CLI;
+        bootstrap cablea ReminderWorker a nivel de módulo. Wiring diferido
+        intencional: romperlo exige mover el entry point público documentado
+        `python -m personal_assistant.infrastructure.worker` y sus tests.
+
+# ---------------------------------------------------------------------------
+# Aceptación (Gherkin)
+# Fuente: unclebob/Acceptance-Pipeline-Specification,
+#         swarm-forge@six-pack roles/hardender.prompt ("--level soft").
+# ---------------------------------------------------------------------------
+acceptance:
+  mutation_level: soft        # soft | hard
+  max_survivors: 0
+  # Un Scenario sin parámetros de Gherkin es inmune a la mutación y por tanto
+  # no verificable. specifier.prompt: "use Gherkin parameters for any fields
+  # that might vary."
+  require_parameters: true
+  # Intervalo de reporte de progreso, segundos. El spec lo exige para que un
+  # agente distinga trabajo largo de un cuelgue.
+  progress_interval: 15
+
+# ---------------------------------------------------------------------------
+# Honestidad de tests
+# Fuente: unclebob/deintroverter4clj README.
+# El original advierte: "It is not meant to be wired into CI gates... Verdicts
+# are heuristic; treat them as guidance for human judgment." Por eso RATCHET.
+# ---------------------------------------------------------------------------
+introvert:
+  mode: ratchet              # ratchet | off. NUNCA hard: son heurísticos.
+  # `questionable` no cuenta para el ratchet: es "no sé", no "está mal".
+  count_verdicts: [introverted]
+  # Caso específico de Python: assert_called_* sin ninguna aserción sobre el
+  # valor de retorno del SUT. Es el falso test más común en código generado.
+  flag_mock_only_assertions: true
+
+# ---------------------------------------------------------------------------
+# Supresiones — contramedida de F13 (erosión por supresión)
+# ---------------------------------------------------------------------------
+suppressions:
+  mode: ratchet              # el conteo total solo puede bajar
+  patterns:
+    - "# noqa"
+    - "# type: ignore"
+    - "# pragma: no cover"
+    - "@pytest.mark.skip"
+    - "@pytest.mark.xfail"
+    - "# nosec"
+    - "# fmt: off"
+  # Toda supresión nueva debe llevar código de regla Y justificación en la
+  # misma línea:  x = f()  # noqa: E501 — URL literal, no se puede partir
+  require_justification: true
+  min_justification_chars: 12
+
+# ---------------------------------------------------------------------------
+# Deuda diferida — override 3 de ponytail
+# ---------------------------------------------------------------------------
+debt:
+  markers: [ "ponytail:", "TODO", "FIXME", "HACK", "XXX" ]
+  require_owner: true
+  require_issue: true
+  # Formato exigido:  # TODO(owner=jandradeu, issue=#42): texto
+  mode: ratchet
+
+# ---------------------------------------------------------------------------
+# Código muerto / dependencias / documentación
+# ---------------------------------------------------------------------------
+dead_code:
+  vulture_min_confidence: 80
+  mode: ratchet
+
+dependencies:
+  max_unused: 0
+  max_missing: 0
+  max_transitive: 0
+  max_cve_critical: 0
+  max_cve_high: 0
+
+docs:
+  interrogate_mode: ratchet
+  pydoclint: true
+
+# ---------------------------------------------------------------------------
+# Presupuestos de latencia por tier. Un tier que se pasa de su presupuesto
+# deja de usarse; la latencia es un requisito funcional del harness, no un
+# detalle de comodidad.
+# ---------------------------------------------------------------------------
+budgets_seconds:
+  hook_pre: 2
+  hook_post: 10
+  tier_fast: 10
+  tier_commit: 120
+  tier_full: 1800

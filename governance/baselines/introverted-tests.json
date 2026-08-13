@@ -1,0 +1,10 @@
+{
+  "metric": "introverted-tests",
+  "recorded_at": "2026-08-13T05:01:42.402246+00:00",
+  "commit": "d6815687558ac4c171330ed40f49e419c95cf5a1",
+  "recorded_by": "Yosoyepa",
+  "value": 37.0,
+  "unit": "count",
+  "direction": "lower_is_better",
+  "note": "Solo el veredicto `introverted`. `questionable` NO cuenta: es 'no se', no 'esta mal'."
+}

@@ -26,17 +26,17 @@ WEBHOOK_SECRET = "test_webhook_secret"
 class _NoNetworkNotificationProvider:
     """A provider fake that fails if a webhook test attempts network egress."""
 
-    def send(self, principal, request, *, approval=None):  # type: ignore[no-untyped-def]
+    def send(self, principal, request, *, approval=None):  # type: ignore[no-untyped-def]  # reason: fake de frontera sin anotaciones; solo debe explotar si se invoca
         raise AssertionError("Telegram boundary tests must not send notifications")
 
 
 class _NoTranscriptionProvider:
-    def transcribe(self, request, *, budget):  # type: ignore[no-untyped-def]
+    def transcribe(self, request, *, budget):  # type: ignore[no-untyped-def]  # reason: fake de frontera sin anotaciones; solo debe explotar si se invoca
         raise AssertionError("Denied Telegram updates must not be transcribed")
 
 
 class _NoTTSProvider:
-    def synthesize(self, request, *, budget):  # type: ignore[no-untyped-def]
+    def synthesize(self, request, *, budget):  # type: ignore[no-untyped-def]  # reason: fake de frontera sin anotaciones; solo debe explotar si se invoca
         raise AssertionError("Denied Telegram updates must not be synthesized")
 
 

@@ -1,0 +1,33 @@
+schema_version: 1
+cases:
+  - {id: F1-a, failure_mode: F1, gate: G-DRY, checker: duplicate, payload: "def a(): return 1\ndef b(): return 1"}
+  - {id: F1-b, failure_mode: F1, gate: G-DEAD, checker: unused, payload: "def generated_helper(): pass"}
+  - {id: F2-a, failure_mode: F2, gate: G-MUT, checker: testless, payload: "production=true;tests=false"}
+  - {id: F2-b, failure_mode: F2, gate: G-TEST, checker: hardcoded, payload: "return 42 # expected fixture"}
+  - {id: F3-a, failure_mode: F3, gate: G-INTROVERT, checker: introvert, payload: "assert 2 + 2 == 4"}
+  - {id: F3-b, failure_mode: F3, gate: G-INTROVERT, checker: mock-only, payload: "client.save.assert_called_once()"}
+  - {id: F4-a, failure_mode: F4, gate: G-SUPPRESS, checker: suppression, payload: "# pragma: no cover"}
+  - {id: F4-b, failure_mode: F4, gate: G-COV-DIFF, checker: testless, payload: "production=true;tests=false"}
+  - {id: F5-a, failure_mode: F5, gate: G-MUT-SITES, checker: mutation-budget, payload: "101"}
+  - {id: F5-b, failure_mode: F5, gate: G-MUT, checker: survivor, payload: "survived=1"}
+  - {id: F6-a, failure_mode: F6, gate: G-ARCH, checker: outer-import, payload: "domain:from example.adapters import db"}
+  - {id: F6-b, failure_mode: F6, gate: G-ARCHMETRICS, checker: outer-import, payload: "application:from example.entrypoints import cli"}
+  - {id: F7-a, failure_mode: F7, gate: G-ARCH-CYCLE, checker: cycle, payload: "a->b,b->a"}
+  - {id: F7-b, failure_mode: F7, gate: G-ARCH-CYCLE, checker: cycle, payload: "a->b,b->c,c->a"}
+  - {id: F8-a, failure_mode: F8, gate: G-SAST-SEMGREP, checker: framework-leak, payload: "domain:import sqlalchemy"}
+  - {id: F8-b, failure_mode: F8, gate: G-SAST-SEMGREP, checker: framework-leak, payload: "application:from fastapi import Request"}
+  - {id: F9-a, failure_mode: F9, gate: G-ARCH, checker: environment, payload: "domain:subprocess.run"}
+  - {id: F9-b, failure_mode: F9, gate: G-ARCH, checker: environment, payload: "application:tkinter.Tk"}
+  - {id: F10-a, failure_mode: F10, gate: G-DEPS, checker: undeclared, payload: "import imaginary_sdk"}
+  - {id: F10-b, failure_mode: F10, gate: G-DEPS, checker: undeclared, payload: "from transitive_only import api"}
+  - {id: F11-a, failure_mode: F11, gate: G-DEAD, checker: unused, payload: "def never_called(): pass"}
+  - {id: F11-b, failure_mode: F11, gate: G-DEAD, checker: unused, payload: "UNUSED_CONSTANT = 7"}
+  - {id: F12-a, failure_mode: F12, gate: G-SECRET, checker: secret, payload: "AWS_SECRET_ACCESS_KEY=abcd1234secret"}
+  - {id: F12-b, failure_mode: F12, gate: G-SECRET, checker: secret, payload: "-----BEGIN PRIVATE KEY-----"}
+  - {id: F13-a, failure_mode: F13, gate: G-SUPPRESS, checker: suppression, payload: "value = call() # noqa"}
+  - {id: F13-b, failure_mode: F13, gate: G-SUPPRESS, checker: suppression, payload: "value = call() # type: ignore"}
+  - {id: F14-a, failure_mode: F14, gate: G-META-1, checker: protected-write, payload: "governance/thresholds.yaml"}
+  - {id: F14-b, failure_mode: F14, gate: G-META-1, checker: protected-write, payload: ".github/workflows/quality.yml"}
+  - {id: F15-a, failure_mode: F15, gate: G-HOOKS-WIRED, checker: forbidden-command, payload: "git commit --no-verify"}
+  - {id: F15-b, failure_mode: F15, gate: G-HOOKS-WIRED, checker: forbidden-command, payload: "git push --no-verify"}
+

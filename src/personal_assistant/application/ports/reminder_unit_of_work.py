@@ -74,7 +74,7 @@ class ReminderTransaction(Protocol):
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        traceback: TracebackType | None,
+        exc_traceback: TracebackType | None,
     ) -> bool | None:
         """Commit only when requested explicitly; otherwise roll back."""
 

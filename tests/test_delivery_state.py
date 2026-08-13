@@ -137,7 +137,7 @@ def test_claim_bounds_are_validated_before_mutation(
     add_message(outbox, actor)
 
     with pytest.raises(error_type):
-        outbox.claim_due(actor, NOW, **kwargs)  # type: ignore[arg-type]
+        outbox.claim_due(actor, NOW, **kwargs)  # type: ignore[arg-type]  # reason: parametrize inyecta kwargs inválidos a propósito para probar la validación
 
     assert outbox.list_for_tenant(actor)[0].attempts == 0
 

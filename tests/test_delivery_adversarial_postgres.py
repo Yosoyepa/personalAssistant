@@ -178,7 +178,7 @@ def _result(
             ),
             channel=request.channel,
             idempotency_key=request.idempotency_key,
-            outcome=outcome,  # type: ignore[arg-type]
+            outcome=outcome,  # type: ignore[arg-type]  # reason: outcome llega parametrizado como str; los casos solo usan valores del Literal
             provider_code=provider_code,
             retry_after=retry_after,
             provider_message_id=provider_message_id if success else None,

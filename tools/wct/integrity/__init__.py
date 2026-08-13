@@ -1,0 +1,1 @@
+"""Gate configuration integrity checks."""

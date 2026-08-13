@@ -1,0 +1,159 @@
+# governance/policy.yaml
+# Configuración operativa del harness. Editable, pero protegido por G-META-1:
+# todo cambio aquí requiere una entrada firmada en governance/integrity-log.md.
+#
+# Fuente única de verdad. NO edites governance/generated/** ni CLAUDE.md/AGENTS.md
+# a mano: se generan con `wct rules build` y `wct rules check` falla si divergen.
+
+schema_version: 1
+
+project:
+  name: personal_assistant
+  # Lenguaje primario. Determina qué gates se activan.
+  language: python
+  # Lenguajes secundarios presentes en el repo (activan gates polyglot).
+  secondary_languages: []
+  python_requires: ">=3.11"
+  package_manager: uv
+
+# ---------------------------------------------------------------------------
+# Modo de operación — §4 del PLAN
+# ---------------------------------------------------------------------------
+# solo  : sesión única. Anillos 1-5 activos; el verifier corre en CI (anillo 6).
+# pair  : la sesión principal codea; el subagente `verifier` corre en el anillo 4
+#         antes de cada Stop. Modela el two-pack de swarm-forge.
+# swarm : pipeline completa specifier → coder → cleaner → architect → hardener
+#         → verifier, cada uno en su worktree. Coste alto, opt-in explícito.
+mode: solo
+
+# ---------------------------------------------------------------------------
+# Perfil de calidad — §5.3 del PLAN
+# ---------------------------------------------------------------------------
+# Controla el umbral aplicado al REPO COMPLETO. El código CAMBIADO se evalúa
+# siempre con `strict`, independientemente de este valor: un repo legacy no
+# autoriza escribir código nuevo malo.
+profile: strict
+
+# Perfil de lint. `ruff` es el canónico (decisión ADR-002).
+# `legacy` conmuta G-LINT/G-FMT/G-IMPORT-ORDER a flake8 + isort + black,
+# con el mismo umbral (0 findings). Ver governance/lint/legacy/.
+lint_profile: ruff
+
+# Modo de la escalera de minimalismo (ponytail vendorizado, ADR-001).
+# off | lite | full.  `ultra` está PROHIBIDO (override 4).
+minimalism_mode: lite
+
+# ---------------------------------------------------------------------------
+# Rutas
+# ---------------------------------------------------------------------------
+paths:
+  source: [src]
+  tests: [tests]
+  features: [features]
+  tools: [tools]
+  build: build
+  # Rutas protegidas por G-META-1. Editarlas requiere blessing humano.
+  # Adaptado a este repo (fase 13): las skills viven en .agents/skills y los
+  # artefactos de contenido versionado (prompts/replies/eval) ya tienen sus
+  # propios gates de registro; no se duplican aquí en el piloto.
+  protected:
+    - governance/**
+    - .pre-commit-config.yaml
+    - .importlinter
+    - .github/workflows/**
+    - pyproject.toml
+    - uv.lock
+    - tools/wct/**
+    - quality/redteam/**
+    - .agents/skills/**
+  # Rutas generadas. PreToolUse bloquea escrituras directas: se regeneran.
+  generated:
+    - governance/generated/**
+    - AGENTS.md
+
+# ---------------------------------------------------------------------------
+# Capas arquitectónicas — la definición vive aquí; los contratos ejecutables
+# se generan a .importlinter con `wct rules build`.
+# ---------------------------------------------------------------------------
+architecture:
+  root_package: personal_assistant
+  # Orden de MÁS alto nivel (lejos de IO) a MÁS bajo nivel (cerca de IO).
+  # La Dependency Rule: cada capa solo puede importar capas por debajo de ella
+  # en esta lista. domain no puede importar nada del proyecto.
+  # Mapeo desde ADR-003 (docs/adr/ADR-003-hexagonal-boundaries.md):
+  #   infrastructure (composition root) -> adapters -> contracts -> application -> domain
+  # `evals` queda por encima de todo: es el harness de evaluación, puede tocar
+  # el runtime completo pero nada del runtime lo importa.
+  layers:
+    - evals
+    - infrastructure
+    - adapters
+    - contracts
+    - application
+    - domain
+  # Paquetes externos prohibidos por capa. Override 1 de ponytail: el peldaño
+  # "usa la dependencia ya instalada" NO aplica en estas capas.
+  # ADAPTACIÓN fase 13: `pydantic` NO está prohibido en domain porque ADR-003
+  # permite modelos Pydantic en dominio cuando la validación ES parte del
+  # contrato de dominio ("Domain models may use Pydantic when validation is
+  # part of the domain contract").
+  forbidden_external:
+    domain:
+      - sqlalchemy
+      - fastapi
+      - flask
+      - django
+      - requests
+      - httpx
+      - boto3
+      - redis
+      - psycopg
+      - psycopg2
+      - pymongo
+      - kafka
+      - celery
+    application:
+      - sqlalchemy
+      - fastapi
+      - flask
+      - django
+      - requests
+      - httpx
+      - boto3
+      - redis
+      - psycopg
+      - psycopg2
+      - pymongo
+      - kafka
+      - celery
+  # Módulos ambientalmente inadecuados (engineering.prompt de swarm-forge):
+  # abren GUIs, dependen de dispositivos, cuelgan bajo test. Se EXCLUYEN de
+  # coverage, mutación, CRAP y DRY. Mantén esta lista mínima.
+  unsuitable_for_test: []
+
+# ---------------------------------------------------------------------------
+# Proveedores de agentes para los que se generan reglas — §14
+# Fase 13 (piloto): solo AGENTS.md, que es el archivo que lee Kimi Code.
+# Añadir claude/cursor/etc. es regenerar con `wct rules build`, nada más.
+# ---------------------------------------------------------------------------
+providers:
+  - id: agents-md
+    target: AGENTS.md
+
+# ---------------------------------------------------------------------------
+# Flags de gates. Un gate desactivado aparece en `wct report` como NO CUBIERTO
+# y el modo de fallo que cubría queda listado como no verificado.
+# ---------------------------------------------------------------------------
+gates:
+  # Piloto fase 13: G-FMT desactivado porque el proyecto no exige `ruff format`
+  # (ni CI ni pre-commit lo chequean; ruff 0.16.2 reformatearía 56 archivos).
+  # La decisión de adoptar formato estricto corresponde a una fase de estilo
+  # propia, no a la adopción del harness. Reportado como NO CUBIERTO en
+  # `wct report` mientras tanto.
+  disabled: [G-FMT]
+  # Gates que requieren herramientas externas opcionales. Si la herramienta
+  # falta, el gate reporta SKIPPED (visible en el report) en vez de fallar.
+  optional_tools:
+    - G-DRY-TOK      # jscpd (node)
+    - G-SAST-SEMGREP # semgrep
+    - G-SBOM         # cyclonedx-py

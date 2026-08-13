@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "SessionStart": [{"matcher": "startup|resume|clear|compact", "hooks": [{"type": "command", "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" python -m tools.wct hook session-start", "timeout": 10}]}],
+    "PreToolUse": [{"matcher": "Write|Edit|NotebookEdit|Bash", "hooks": [{"type": "command", "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" python -m tools.wct hook pre-tool-use", "timeout": 5}]}],
+    "PostToolUse": [{"matcher": "Write|Edit|NotebookEdit", "hooks": [{"type": "command", "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" python -m tools.wct hook post-tool-use", "timeout": 15}]}],
+    "PostToolBatch": [{"hooks": [{"type": "command", "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" python -m tools.wct hook post-tool-batch", "timeout": 15}]}],
+    "Stop": [{"hooks": [{"type": "command", "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" python -m tools.wct hook stop", "timeout": 125}]}],
+    "SubagentStart": [{"hooks": [{"type": "command", "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" python -m tools.wct hook subagent-start", "timeout": 10}]}],
+    "SubagentStop": [{"hooks": [{"type": "command", "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" python -m tools.wct hook subagent-stop", "timeout": 125}]}],
+    "ConfigChange": [{"hooks": [{"type": "command", "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" python -m tools.wct hook config-change", "timeout": 15}]}],
+    "PostCompact": [{"hooks": [{"type": "command", "command": "uv run --project \"${CLAUDE_PROJECT_DIR}\" python -m tools.wct hook post-compact", "timeout": 10}]}]
+  }
+}

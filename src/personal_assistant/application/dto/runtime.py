@@ -108,7 +108,7 @@ class ToolDefinition(BaseModel):
     idempotent: bool = True
     timeout_seconds: float = Field(default=10.0, gt=0)
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]  # reason: pydantic v2 lo expone como property; mypy no modela ese descriptor
     @property
     def approval_required(self) -> bool:
         return self.permission_tier.rank >= PermissionTier.P3.rank
@@ -130,7 +130,7 @@ class ToolCall(BaseModel):
             raise ValueError("A2A and MCP tools are prepared but inactive in the MVP runtime")
         return value
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]  # reason: pydantic v2 lo expone como property; mypy no modela ese descriptor
     @property
     def approval_required(self) -> bool:
         return self.permission_tier.rank >= PermissionTier.P3.rank
@@ -211,7 +211,7 @@ class ApprovalRequest(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     expires_at: datetime | None = None
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]  # reason: pydantic v2 lo expone como property; mypy no modela ese descriptor
     @property
     def approval_required(self) -> bool:
         return self.permission_tier.rank >= PermissionTier.P3.rank

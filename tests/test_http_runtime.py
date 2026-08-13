@@ -35,11 +35,11 @@ try:
         create_app,
     )
 except ModuleNotFoundError:
-    TestClient = None  # type: ignore[assignment]
-    create_app = None  # type: ignore[assignment]
-    _run_reminder_worker_loop = None  # type: ignore[assignment]
-    _send_telegram_audio_reply = None  # type: ignore[assignment]
-    _transcribe_telegram_media = None  # type: ignore[assignment]
+    TestClient = None  # type: ignore[assignment]  # reason: fallback a None cuando faltan las dependencias opcionales de HTTP
+    create_app = None  # type: ignore[assignment]  # reason: fallback a None cuando faltan las dependencias opcionales de HTTP
+    _run_reminder_worker_loop = None  # type: ignore[assignment]  # reason: fallback a None cuando faltan las dependencias opcionales de HTTP
+    _send_telegram_audio_reply = None  # type: ignore[assignment]  # reason: fallback a None cuando faltan las dependencias opcionales de HTTP
+    _transcribe_telegram_media = None  # type: ignore[assignment]  # reason: fallback a None cuando faltan las dependencias opcionales de HTTP
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]

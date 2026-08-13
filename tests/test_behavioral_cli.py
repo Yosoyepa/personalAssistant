@@ -115,7 +115,7 @@ class ShippedCorpusReplayTests(unittest.TestCase):
             raise AssertionError("replay must not construct a live provider")
 
         original = cli._live_provider_factory
-        cli._live_provider_factory = boom  # type: ignore[assignment]
+        cli._live_provider_factory = boom  # type: ignore[assignment]  # reason: el test inyecta una factory que explota; su firma exacta no importa
         self.addCleanup(setattr, cli, "_live_provider_factory", original)
         code, _, _ = _json_run("--corpus", str(SHIPPED_CORPUS))
         self.assertEqual(code, 0)
@@ -226,5 +226,5 @@ class LiveModeGuardTests(unittest.TestCase):
         self.assertEqual(ctx.exception.code, 2)
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover  # reason: entrada directa de unittest; no se ejecuta bajo pytest
     unittest.main()

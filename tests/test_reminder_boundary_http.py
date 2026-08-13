@@ -22,7 +22,7 @@ BASE_HEADERS = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
 class _NoNetworkNotificationProvider:
     """A provider fake that fails if an HTTP test attempts outbound delivery."""
 
-    def send(self, principal, request, *, approval=None):  # type: ignore[no-untyped-def]
+    def send(self, principal, request, *, approval=None):  # type: ignore[no-untyped-def]  # reason: fake de frontera sin anotaciones; solo debe explotar si se invoca
         raise AssertionError("HTTP boundary tests must not send notifications")
 
 

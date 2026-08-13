@@ -76,7 +76,7 @@ def test_atomicity_executor_rejects_unexpected_faults_and_keeps_utf8_source() ->
 
 
 def test_missing_dsn_is_a_sanitized_blocking_failure(monkeypatch: object) -> None:
-    monkeypatch.delenv("TEST_POSTGRES_DSN", raising=False)  # type: ignore[attr-defined]
+    monkeypatch.delenv("TEST_POSTGRES_DSN", raising=False)  # type: ignore[attr-defined]  # reason: el módulo no importa pytest; delenv existe en la fixture MonkeyPatch
     result = run_suite(SUITE, categories=["atomicity-recovery"])
 
     assert result.selected == 50

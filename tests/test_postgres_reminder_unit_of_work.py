@@ -106,7 +106,7 @@ def test_one_connection_and_database_are_shared_by_every_transaction_store() -> 
     with unit_of_work.begin(_principal()) as transaction:
         assert isinstance(transaction, PostgresReminderTransaction)
         databases = {
-            id(store._db)  # type: ignore[attr-defined]
+            id(store._db)  # type: ignore[attr-defined]  # reason: los stores concretos exponen _db; el test verifica la conexión compartida
             for store in (
                 transaction.calendar,
                 transaction.scheduler,

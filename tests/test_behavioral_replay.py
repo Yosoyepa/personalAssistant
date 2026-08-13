@@ -43,7 +43,7 @@ def _request(prompt: str = "clasifica esto", **overrides: object) -> LLMRequest:
         "temperature": 0.0,
     }
     payload.update(overrides)
-    return LLMRequest(**payload)  # type: ignore[arg-type]
+    return LLMRequest(**payload)  # type: ignore[arg-type]  # reason: payload armado como dict genérico; el modelo valida en runtime
 
 
 class RequestKeyTests(unittest.TestCase):

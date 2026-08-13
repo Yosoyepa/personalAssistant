@@ -1,0 +1,134 @@
+# governance/lint/ruff.toml
+#
+# Perfil canónico de lint. Decisión ADR-002: ruff es el motor único.
+# Se referencia desde pyproject.toml con `extend = "governance/lint/ruff.toml"`.
+#
+# TABLA DE EQUIVALENCIA con las herramientas que reemplaza
+# --------------------------------------------------------
+#   flake8 (pycodestyle)      → reglas E, W
+#   flake8 (pyflakes)         → reglas F
+#   isort                     → reglas I
+#   black                     → `ruff format` (mismo algoritmo, compatible)
+#   flake8-bugbear            → reglas B
+#   flake8-comprehensions     → reglas C4
+#   flake8-simplify           → reglas SIM
+#   flake8-bandit             → reglas S  (subconjunto; bandit completo sigue en G-SAST)
+#   flake8-annotations        → reglas ANN
+#   flake8-pytest-style       → reglas PT
+#   pyupgrade                 → reglas UP
+#   pep8-naming               → reglas N
+#   flake8-datetimez          → reglas DTZ
+#   flake8-boolean-trap       → reglas FBT
+#   flake8-return             → reglas RET
+#   flake8-use-pathlib        → reglas PTH
+#   pydocstyle                → reglas D
+#   eradicate                 → reglas ERA (código comentado = F11)
+#   tryceratops               → reglas TRY
+#
+# El perfil legacy equivalente vive en governance/lint/legacy/ y se activa con
+# `wct config --lint-profile legacy`. El umbral no cambia: 0 findings.
+
+target-version = "py311"
+line-length = 100
+indent-width = 4
+
+extend-exclude = [
+    "build",
+    ".venv",
+    "governance/generated",
+    "quality/redteam/**/fixtures",
+]
+
+[lint]
+select = [
+    "E", "W",      # pycodestyle
+    "F",           # pyflakes
+    "I",           # isort            → G-IMPORT-ORDER
+    "B",           # bugbear
+    "C4",          # comprehensions
+    "SIM",         # simplify
+    "S",           # bandit subset
+    "ANN",         # annotations      → apoya STYLE-007
+    "PT",          # pytest style
+    "UP",          # pyupgrade
+    "N",           # naming           → apoya STYLE-009 (parcial)
+    "DTZ",         # datetimez
+    "FBT",         # boolean trap
+    "RET",         # return
+    "PTH",         # use pathlib
+    "D",           # pydocstyle       → apoya STYLE-010
+    "ERA",         # código comentado → F11
+    "TRY",         # excepciones
+    "C90",         # mccabe           → apoya STYLE-004
+    "ARG",         # argumentos sin uso
+    "PL",          # pylint subset
+    "RUF",         # reglas propias de ruff
+]
+
+ignore = [
+    "D203",    # incompatible con D211 (conflicto conocido de pydocstyle)
+    "D213",    # incompatible con D212
+    "ANN401",  # `Any` explícito: permitido cuando está justificado
+    "TRY003",  # mensajes largos en excepciones: se prefiere claridad
+    "S603",    # subprocess: el harness lo usa deliberadamente, con listas
+    "S607",    # ruta parcial de ejecutable: idem
+    # El harness evita docstrings que solo repiten el nombre. Las clases y
+    # módulos conceptuales sí conservan D101/D104; la cobertura documental
+    # útil se mide por ratchet con interrogate (G-DOC).
+    "D100",
+    "D102",
+    "D103",
+    "D107",
+]
+
+# STYLE-008 exige justificación en cada supresión. `ruff` no lo verifica por
+# sí solo, así que lo hace `wct check suppressions` (G-SUPPRESS).
+external = ["WCT"]
+
+[lint.mccabe]
+# STYLE-004: CC máximo 10.
+max-complexity = 10
+
+[lint.pylint]
+max-args = 5
+max-branches = 10
+max-returns = 4
+max-statements = 40
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.isort]
+known-first-party = ["example", "wct"]
+force-sort-within-sections = true
+combine-as-imports = true
+split-on-trailing-comma = false
+
+[lint.flake8-pytest-style]
+fixture-parentheses = false
+mark-parentheses = false
+
+[lint.per-file-ignores]
+# Los tests pueden usar assert (S101) y no necesitan docstrings en cada caso.
+"tests/**" = ["S101", "D100", "D101", "D102", "D103", "ANN", "PLR2004", "FBT"]
+# Los fixtures del red team son código deliberadamente malo: es su propósito.
+"quality/redteam/**" = ["ALL"]
+# El proyecto ejemplo mantiene el estándar completo: es la demostración.
+# Los __init__.py pueden estar vacíos sin docstring de módulo.
+"**/__init__.py" = ["D104"]
+"tests/acceptance/generated/**" = ["E501", "PTH123", "D"]
+"tools/wct/model.py" = ["S105"]
+"tools/wct/accept/pipeline.py" = ["C901", "PLR0912", "PLR0915"]
+"tools/wct/archmetrics/analyzer.py" = ["C901", "PLR0911", "PLR0912", "PLR0915"]
+"tools/wct/cli.py" = ["C901", "PLR0911", "PLR0912", "PLR0915"]
+"tools/wct/dry/analyzer.py" = ["C901", "PLR0912"]
+"tools/wct/hooks/guard.py" = ["PLR0911"]
+"tools/wct/introvert/analyzer.py" = ["C901", "PLR0912", "PLR0915"]
+"tools/wct/selftest/redteam.py" = ["C901", "PLR0911", "PLR0912"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+docstring-code-format = true

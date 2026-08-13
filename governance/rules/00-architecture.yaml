@@ -1,0 +1,125 @@
+# governance/rules/00-architecture.yaml
+# G-META-2 exige que cada regla declare `verified_by`. Un valor `[human]`
+# es legítimo, pero esa regla aparece en `wct report` bajo "NO AUTOMATIZADO".
+
+schema_version: 1
+group: architecture
+title: Arquitectura y dependencias
+# Orden de inyección: menor primero. La arquitectura va primero porque es la
+# restricción que más caro cuesta violar.
+order: 0
+
+rules:
+  - id: ARCH-001
+    text: >
+      Respeta la Dependency Rule. Las capas, de más alto a más bajo nivel, son:
+      entrypoints → adapters → application → domain. Una capa solo puede
+      importar capas por debajo de ella. `domain` no importa ninguna otra capa
+      del proyecto.
+    rationale: >
+      Es la regla de la que dependen todas las demás propiedades de la
+      arquitectura. Si el core depende de los detalles, ni la testabilidad ni
+      la sustituibilidad son alcanzables, y ninguna otra métrica lo compensa.
+    verified_by: [G-ARCH]
+    severity: hard
+    fails: [F6]
+
+  - id: ARCH-002
+    text: >
+      No importes frameworks, ORMs, clientes HTTP ni SDKs de nube dentro de
+      `domain/` ni `application/`. La lista exacta está en
+      governance/policy.yaml → architecture.forbidden_external.
+    rationale: >
+      Override 1 de la escalera de minimalismo: "usa la dependencia que ya está
+      instalada" es correcto en la capa de adaptadores y es exactamente la
+      violación que este gate rechaza dentro del core.
+    verified_by: [G-ARCH, G-SAST-SEMGREP]
+    severity: hard
+    fails: [F6, F8]
+
+  - id: ARCH-003
+    text: >
+      Cero ciclos de importación entre módulos hermanos.
+    rationale: >
+      Un ciclo hace que dos módulos sean, en la práctica, un solo módulo con
+      dos nombres: no se pueden testear, desplegar ni razonar por separado.
+    verified_by: [G-ARCH-CYCLE]
+    severity: hard
+    fails: [F7]
+
+  - id: ARCH-004
+    text: >
+      No filtres tipos de infraestructura por los límites de capa. Un caso de
+      uso no retorna filas de ORM, respuestas HTTP, ni objetos de framework:
+      retorna tipos del dominio.
+    rationale: >
+      Cuarta fase de revisión arquitectónica: information hiding. Un tipo
+      filtrado propaga la dependencia sin que aparezca en la lista de imports,
+      lo que la hace invisible para los contratos declarativos.
+    verified_by: [G-ARCH, G-SAST-SEMGREP, human]
+    severity: hard
+    fails: [F8]
+
+  - id: ARCH-005
+    text: >
+      Define los puertos (interfaces) en la capa que los USA, no en la que los
+      implementa. Un `Protocol` que describe persistencia vive en
+      `application/`, y `adapters/` lo implementa.
+    rationale: >
+      Es la inversión de dependencia concreta: sin esto, la capa alta termina
+      importando la baja para conocer la interfaz y la Dependency Rule se
+      cumple solo en apariencia.
+    verified_by: [G-ARCH, G-ARCHMETRICS]
+    severity: hard
+    fails: [F6]
+
+  - id: ARCH-006
+    text: >
+      Ningún paquete debe entrar en la Zona de Dolor (concreto y estable) ni en
+      la Zona de Inutilidad (abstracto e inestable). Mide con
+      `wct archmetrics`.
+    rationale: >
+      Fan-in/fan-out, I, A y D detectan degradación estructural que ningún
+      contrato declarativo ve: un paquete puede cumplir todos los contratos y
+      seguir siendo imposible de cambiar.
+    verified_by: [G-ARCHMETRICS]
+    severity: ratchet
+    fails: [F6, F8]
+
+  - id: ARCH-007
+    text: >
+      Un símbolo cuenta como abstracción solo si es indirección real:
+      `typing.Protocol`, `abc.ABC` con `@abstractmethod`, `TypeVar` con bound,
+      o `functools.singledispatch`. Declararlo en un archivo de configuración
+      no cuenta.
+    rationale: >
+      Sin esta regla, la métrica de Abstractness se puede inflar editando un
+      YAML en vez de escribiendo indirección, y el gate mide una ficción.
+    verified_by: [G-ARCHMETRICS]
+    severity: hard
+    fails: [F14]
+
+  - id: ARCH-008
+    text: >
+      Separa los módulos testeables de los ambientalmente inadecuados (abren
+      GUIs, dependen de dispositivos, cuelgan bajo automatización). Maximiza el
+      código testeable y minimiza esa frontera. Solo los módulos testeables
+      participan en coverage, mutación, CRAP y DRY.
+    rationale: >
+      Fuente: swarm-forge engineering.prompt. Sin esta separación, un solo
+      módulo inadecuado contamina todas las métricas del repo y la reacción
+      natural del agente es bajar los umbrales.
+    verified_by: [G-ARCH, human]
+    severity: hard
+    fails: [F9]
+
+  - id: ARCH-009
+    text: >
+      Toda dependencia usada debe estar declarada, y toda dependencia declarada
+      debe usarse. Nada de imports transitivos.
+    rationale: >
+      Una dependencia transitiva es una dependencia sin contrato: desaparece
+      cuando el paquete intermedio cambia su propio árbol.
+    verified_by: [G-DEPS]
+    severity: hard
+    fails: [F10]

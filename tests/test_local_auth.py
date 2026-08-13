@@ -26,7 +26,7 @@ def _config(**overrides: object) -> LocalPrincipalConfig:
         "permission_tier": PermissionTier.P4,
     }
     values.update(overrides)
-    return LocalPrincipalConfig(**values)  # type: ignore[arg-type]
+    return LocalPrincipalConfig(**values)  # type: ignore[arg-type]  # reason: dict de overrides genérico; el modelo valida en runtime
 
 
 def _provider(**overrides: object) -> LocalPrincipalProvider:

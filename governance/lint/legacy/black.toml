@@ -1,0 +1,24 @@
+# governance/lint/legacy/black.toml
+#
+# PERFIL DE COMPATIBILIDAD — inactivo por defecto.
+# Equivalente de `ruff format`. Activar con: wct config --lint-profile legacy
+#
+# `ruff format` implementa el mismo algoritmo que black y es compatible salvo
+# en casos marginales documentados por ruff (magic trailing comma en algunos
+# literales anidados). Si tu repo ya está formateado con black, `ruff format`
+# produce el mismo resultado en la práctica: puedes verificarlo con
+#   ruff format --diff .
+# antes de conmutar el perfil.
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+skip-magic-trailing-comma = false
+extend-exclude = '''
+(
+    build/
+  | \.venv/
+  | governance/generated/
+  | quality/redteam/
+)
+'''

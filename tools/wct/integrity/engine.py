@@ -1,0 +1,86 @@
+from __future__ import annotations
+
+import fnmatch
+import hashlib
+import json
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from tools.wct.config import load_config
+from tools.wct.util.git import head_sha
+
+LOCK_PATH = Path("governance/integrity.lock")
+MIN_REASON = 12
+MIN_APPROVER = 2
+
+
+def _protected(root: Path) -> list[Path]:
+    _root, policy, _thresholds = load_config(root)
+    patterns = policy["paths"]["protected"]
+    files: set[Path] = set()
+    ignored_parts = {".venv", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
+    for path in root.rglob("*"):
+        if not path.is_file() or ".git" in path.parts or set(path.parts) & ignored_parts:
+            continue
+        relative = path.relative_to(root).as_posix()
+        if relative == LOCK_PATH.as_posix():
+            continue
+        if any(fnmatch.fnmatch(relative, pattern) for pattern in patterns):
+            files.add(path)
+    return sorted(files)
+
+
+def snapshot(root: Path) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "commit": head_sha(root),
+        "files": {
+            path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in _protected(root)
+        },
+    }
+
+
+def write_lock(root: Path, *, force: bool = False) -> Path:
+    path = root / LOCK_PATH
+    if path.exists() and not force:
+        raise ValueError(
+            "integrity.lock ya existe; solo un humano puede actualizarlo con `wct integrity bless`"
+        )
+    path.write_text(json.dumps(snapshot(root), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def violations(root: Path) -> list[str]:
+    path = root / LOCK_PATH
+    if not path.is_file():
+        return [f"falta {LOCK_PATH}; ejecuta `wct integrity lock` durante bootstrap"]
+    try:
+        expected = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"lock ilegible: {exc}"]
+    actual = snapshot(root)["files"]
+    previous = expected.get("files", {})
+    messages = [
+        f"modificado: {name}"
+        for name in sorted(actual.keys() & previous.keys())
+        if actual[name] != previous[name]
+    ]
+    messages += [f"nuevo protegido: {name}" for name in sorted(actual.keys() - previous.keys())]
+    messages += [f"eliminado protegido: {name}" for name in sorted(previous.keys() - actual.keys())]
+    return messages
+
+
+def bless(root: Path, reason: str, approved_by: str) -> Path:
+    if len(reason.strip()) < MIN_REASON or len(approved_by.strip()) < MIN_APPROVER:
+        raise ValueError("reason (>=12 caracteres) y approved-by son obligatorios")
+    log = root / "governance/integrity-log.md"
+    with log.open("a", encoding="utf-8") as stream:
+        stream.write(
+            f"\n## {datetime.now(UTC).isoformat()}\n\n"
+            f"- Approved by: {approved_by}\n"
+            f"- Reason: {reason}\n"
+            f"- Commit: {head_sha(root) or 'unborn'}\n"
+        )
+    return write_lock(root, force=True)

@@ -163,7 +163,7 @@ def _settings(**overrides: object) -> AppSettings:
         "reminder_worker_enabled": False,
     }
     values.update(overrides)
-    return AppSettings(**values)  # type: ignore[arg-type]
+    return AppSettings(**values)  # type: ignore[arg-type]  # reason: dict de overrides genérico; AppSettings valida los tipos en runtime
 
 
 def _principal() -> Principal:
@@ -294,7 +294,7 @@ def _local_authority(variant: str) -> ExpectedModel:
             recorded.append(principal)
             return delegate.run(principal, request)
 
-    container.reminder_workflow = RecordingWorkflow()  # type: ignore[assignment]
+    container.reminder_workflow = RecordingWorkflow()  # type: ignore[assignment]  # reason: wrapper de grabación no declara el protocolo; delega en el workflow real
     peer = "203.0.113.8" if variant == "forwarded-remote" else "127.0.0.1"
     client = TestClient(
         create_app(container, settings=_settings()), client=(peer, 50000)
@@ -414,7 +414,7 @@ def _webhook_allow(variant: str) -> ExpectedModel:
             recorded.append(principal)
             return delegate.handle(principal, message, **kwargs)
 
-    container.commands = RecordingCommands()  # type: ignore[assignment]
+    container.commands = RecordingCommands()  # type: ignore[assignment]  # reason: wrapper de grabación no declara el protocolo; delega vía __getattr__
     client = TestClient(create_app(container, settings=_settings()))
     if variant == "p3-reminder":
         frozen = datetime(2026, 6, 20, 12, tzinfo=UTC)

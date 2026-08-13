@@ -49,7 +49,7 @@ class GuardrailResult(BaseModel):
 
     findings: tuple[GuardrailFinding, ...] = Field(default_factory=tuple)
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]  # reason: pydantic v2 lo expone como property; mypy no modela ese descriptor
     @property
     def blocked(self) -> bool:
         return any(finding.severity == GuardrailSeverity.HIGH for finding in self.findings)

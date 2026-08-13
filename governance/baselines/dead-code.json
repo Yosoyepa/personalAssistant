@@ -1,0 +1,10 @@
+{
+  "metric": "dead-code",
+  "recorded_at": "2026-08-11T00:00:00Z",
+  "commit": null,
+  "recorded_by": "seed",
+  "value": 0,
+  "unit": "count",
+  "direction": "lower_is_better",
+  "note": "vulture con --min-confidence 80."
+}

@@ -1,0 +1,10 @@
+{
+  "metric": "coverage-total",
+  "recorded_at": "2026-08-11T00:00:00Z",
+  "commit": null,
+  "recorded_by": "seed",
+  "value": 100.0,
+  "unit": "percent",
+  "direction": "higher_is_better",
+  "note": "Cobertura de rama del repo completo. La del diff es un gate duro (90%), no un ratchet."
+}

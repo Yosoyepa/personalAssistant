@@ -15,7 +15,7 @@ from personal_assistant.adapters.outbound.egress import (
     require_startup_coverage,
 )
 from personal_assistant.domain.common.permissions import PermissionTier
-from personal_assistant.infrastructure.migrations.validation import validate_identifier
+from personal_assistant.infrastructure.validation import validate_identifier
 
 DEFAULT_MINIMAX_BASE_URL = "https://api.minimax.io/anthropic"
 DEFAULT_MINIMAX_MODEL = "MiniMax-M3"
