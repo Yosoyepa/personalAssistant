@@ -29,7 +29,7 @@ postgres = [
 
 [dependency-groups]
 dev = [
-  "build>=1.2",
+  "build>=1.5.0",
   "coverage[toml]>=7.15.2",
   "diff-cover>=9.2",
   "fastapi>=0.141.1",
