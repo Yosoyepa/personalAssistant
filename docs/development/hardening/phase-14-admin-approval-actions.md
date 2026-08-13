@@ -3,12 +3,12 @@
 | Campo | Valor |
 |---|---|
 | Fase | `14 — admin approval actions` |
-| Estado | `IN_PROGRESS` |
+| Estado | `MERGED` |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `kimi/phase-14-admin-approval-actions` |
 | Fecha de inicio | `2026-08-13` |
-| PR | `<pendiente>` |
-| Merge commit | `<pendiente>` |
+| PR | `#37` |
+| Merge commit | `8e81171` |
 
 ## Objetivo
 
@@ -127,4 +127,7 @@ El primer gate commit falló en tres gates, y cada uno mejoró el resultado:
 - `ruff check` limpio; `mypy src` limpio (128 archivos). `ruff format` no es
   gate (G-FMT desactivado por drift heredado, ver fase 13).
 - `wct gate --tier commit` con `TEST_POSTGRES_DSN` contra PostgreSQL 16:
-  ver resultado final abajo.
+  **17/17 PASS** (primer run 14/17; los tres hallazgos corregidos con cambios
+  reales: split de `admin.py`, guard de import sin supresiones, reword Gherkin).
+- CI de la PR #37: 5/5 verde (quality, tests 3.11/3.12, security,
+  postgres-integration). Merge commit `8e81171`.
