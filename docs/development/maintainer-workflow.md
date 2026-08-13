@@ -333,7 +333,11 @@ uv run pre-commit validate-config
 uv run pre-commit run --files @ChangedFiles
 ```
 
-Los hooks versionados incluyen detección de claves privadas y credenciales AWS.
+Los hooks versionados incluyen detección de claves privadas. No incluyen
+`detect-aws-credentials`: el proyecto no tiene superficie AWS, así que el hook
+sólo podía fallar por ausencia de un fichero de credenciales, nunca por un
+hallazgo. El escaneo de secretos del repositorio es `gitleaks` en el job
+`security`, que sí cubre los identificadores `AKIA`/`ASIA`.
 `gitleaks` solo cuenta como evidencia cuando existe como check CI versionado en
 el repositorio; no se improvisan comandos locales ni se declara aprobado un
 check que no está configurado. Los hooks no reemplazan la revisión completa del

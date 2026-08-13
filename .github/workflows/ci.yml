@@ -187,6 +187,15 @@ jobs:
       - name: Run deterministic release eval gate
         run: uv run python -m personal_assistant.evals --suite eval/cases
 
+      # Level 2, replay only: reads committed cassettes and makes no network
+      # call. This blocks on replay determinism and harness contract, never on
+      # the model agreeing with a human label -- see ADR-006. The L1 gate above
+      # stays LLM-free; the two steps are adjacent to keep that split visible.
+      - name: Run behavioral eval tier (replay)
+        run: >-
+          uv run python -m personal_assistant.evals.behavioral
+          --corpus eval/behavioral --mode replay
+
       - name: Run PostgreSQL adapter and configuration tests
         run: >-
           uv run pytest -q

@@ -1,0 +1,893 @@
+{
+  "entries": [
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "0196fd4bd9871f5cccc6b828351a3189f2f48f2a682faf12fdc9be8978cee506",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "03fc2b805d89031ba207ae9ac982ce3d164b07d706012235dafc9d3f3f5447c3",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "04e04b07db982b3195679123cae1cec8846093b5e223dbd15815848eadd0a26f",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "0aacf3f8221e8e6fdf1a8722d4ee679ab824c54c846f1d18491b62e5c328e1a2",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "0bfd9761c653277c42c863df55f186c37c13ce894b80e9d074872390ddcac1ff",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "0ff902bc1221c094d57223a5fbd387457f20f4b9b319ca3a224fce44796ce1fd",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "1037d16ad4f4f07452edeaff86718d9fb30083db9c52e7f5fbc93838954b06ad",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "14eba79e8ae11741a9ab039c37f0de41afb3a741938d5a7860aea0165e98d6bf",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "1f3a6c5ee624d113e407dbfc7b73c03ddf532e2a1e836902e94e9960c1ae2b8c",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "2084d385e3562cebc2b8deea21406c7b50831f079c527972ed7b726ec797331f",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "20cb64dc6c467600e6960717f6fbac8722ff570fa69ab214ae28758a59b4b059",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "2411cecfa77e90a4f52bb73353b1a6b7a51d35a78ad51869f310a49201f92197",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "24a237acfb7b34e5670a48ce0ced3a45e22e1b3e2b9887145272f0752fa164ec",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "281455713bef71666610f7727dcc045c95a595dc488543c2abe50921f7d66e3e",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "33eb83497dd4d4b46b335fb7020de9a54aa44b8b0754d7d0dac202a0cf50f1f7",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "3634de20afd2023baa4e3af5ccb81356f678dfd3d3212c7ef9ded15292eacb1f",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "3e93a39f2c5b0e7eea2e550d3dea8b3ce9227f84df7b4c993ccf4e59fd4b60f6",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "462dde472419766f07b513582c1fbd0de679936e32c958ff3d1349e388891676",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "48e5955e8971be65950b4fe618973869646da0252ed35d7e6b6803e8e330b52f",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "4b7ee43d4b44e4d2fb4f467a1d8703693dc99352e998d490bb657aa64d6feb59",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "4e966d37da778b86e6ab589dff69bba9721bd1840ccde65422ecc8d1961bee68",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "509e7551479ad5512568f68d99f97d86287b26b1f0156300ae4c97b1e5069a5c",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "521d87481ad8510316c540e378644db0ea515bef42d2cf103c5420641498ba66",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "549ab6d31c8f42ce44a1542ef6949c0bbbf96ebadddf94e422a4bd2c0ac59bf1",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "5561de50bdf951a970103b4866784ee69dd1bbfd2d49d3c4b1585b8ddcdde36c",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "55cf7f4608da1be9471c24c40a3c8039a3d43a439c38a1e50910f1048f890a1b",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "5b4244eb83a5dd0f8823c87229125f4f1fd665bb063a0a166889c04654fe62e0",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "5b53dc8d8b27001cb2dc75a355d026850872e83227afc8aac779214580222621",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "5bc045b69826967d8007acd0dbfc05f2b77d08bf81714c7016f045b5c146132c",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "5e69bcd5f62d9fab8df275c444be92fa60ca12437c9b66200c6a2bfc217fd5d1",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "61dd4c1870cd904dca9b8defb37065a0b67b36d145d5a386cf54f3b3d8cb743b",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "6b1b9ff7a679377c7fd0080d3225c1bf3621e7714eb0cce3ab6beecd9ea87547",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "6de344e9bafec5a3781d0004f246e7828c46ea5b8dbc76bd16fb82a1caf5f755",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "77b429588598bdfa415d672173615475321f7fa2a9326acd2802b1d64df8fc26",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "7c9ab0f4e11d942e4fc2e9b4f282bba545b18155a7c1893b287f708d14a5ec2c",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "8867dc3de28826716f4ee5ecb0a09e5de981b175f122046719ce3f3aaf9926b2",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "93db1e49859d1f70afcade883a5a2e84ea80be203db091215eddb3c1043c159e",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "960dfe6b68745a3f413888e67a63887b7b9214159aef567dbe5f35e9358f7a74",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "a2604156095dfadedd68894d05dca38241c9dd72ff6c63f6e33d6dab9832a764",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "a48a2fdb4e39e69378ba47d9cb9bf9512d5d1da62cc064c807c5ef26b0b476b0",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "a5178d17a5004173d0f825f7e6aad4b40902a9b06604ed65f33c61865608613f",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "a5f8201b58115ff9f2dd23e822f144634a94922ba01103402d01926516c841f1",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "ad2a720f746cb89f81c83d53ae50230fefbc4aa0ed0861472c40593d060c3a12",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "aee934a2ad04eb4a902a537785a929b0d80f914dd677fe15313afa37681f13fa",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "b12cf281afd190ef000b70c8536fba5298d1f9f39bb0a0645278e88eb7756c75",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "b1b9a71eea1d599a847fb5e02942362aa63c3be135eb06e59af6a4d0bbf973c5",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "b486102a1d7cb9d6c14d7a095c7bdfe0318e4a7cbee2d14abba614aa51152d03",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "b5a63776cd3b1ea1512b56ff395e96f31a49e9b7c29ab5cc7ad40a55e86cd37f",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "b6002ed67ee009b1578946a025a2c8fe8d68bce83f1189798c68915b25a97351",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "b724dd52294ec17270a16f154f485627b444b3092db168273d5159c9e5cbe9dc",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "b83852e4d36f02f155f2f8e363c3b634ad26a8018cac0e397b04961b8eed3fd3",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "bcaf27394331994e94891ef8d741976d378d88d7685fb36fd85c3a67216e387e",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "bf6a796b26965739ebb637ce8120c03f38a7f7070fbe7719ce8168a02ed4e9f5",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "bf8e63de4bd28a9516bb47668533231f9fdba537719551ec0c09cff84be8cb93",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "cc61cd4949f9fa5d5671761e8fd6f64901ec0d79c801c5fd2f243d8585bc874b",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "d2b7402c124a00557c18d8abc9915971b17c2931cd96863d993c2fafa53a6b36",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "d3c9a2c25f36dd2e1976feb608c9d38bece76234540a0ef9d6593b8a09c78476",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "d43ad0ed3349ff1c91cb21b672325ea2419d3757d5aa12e26b092d4e0b548630",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "d6f581156e304759f5c7f276b0fe0af87f61e08c32e150910bd72eb5c6f787af",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "defc00ec56808825d19a5993ea07c9a1a3336b4d1c6713798424111e7a0a6c80",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "e0bcbee6126a8b170a2692c53d80fe2ccff7f69945432206098efff34465c844",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "e641933fe2969f8b73e9f2b7eff84ec25bc2e91b055fe783d2242e209980f860",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "e8162989ed50fac683dbd11fd8ed5eca53925f2f4e3981fe827b630393c7283d",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "is_reminder": false
+      },
+      "inputTokens": 0,
+      "key": "ebd98f5568183a70ff5efb9537705dc95f416308b1dea53f045eed9d8767fa08",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "f1af1f06168236910133d4a5c105057df1d99ab07bc613919e6f58991c6e2a7f",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "reason": "veredicto sintetico de fixture",
+        "verdict": "pass"
+      },
+      "inputTokens": 0,
+      "key": "f85491642ec2554458f258aa7971b0414fae145340020b061068839d017d4857",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "judge_reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "fcbb31893601e5bae3fda27045f7f60ba0473d9527b3d5b8fbf0e3be8a32d044",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "is_reminder": true,
+        "starts_at": "2026-03-03T14:00:00+00:00",
+        "title": "tarea sintetica"
+      },
+      "inputTokens": 0,
+      "key": "fd4dc5d167c426558bfa1f0cd743652b0610e1da5e94597edc3ff3bf98d099f6",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "reminder_extraction"
+    }
+  ],
+  "provenance": "synthetic",
+  "recordedAt": "1970-01-01T00:00:00+00:00",
+  "schemaVersion": 1
+}
