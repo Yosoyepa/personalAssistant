@@ -337,3 +337,72 @@ full pytest suite against PostgreSQL 16 (`TEST_POSTGRES_DSN`) passed 853
 tests with 3 allowlisted compatibility-probe skips, 58 subtests, and zero
 failures; the complete eval gate passed 299/299; coverage 92% total
 (threshold 85%) and diff-cover 100% against `origin/main` (threshold 90%).
+
+## Phase 12 progress addendum (v0.2.0-alpha.1 + phase 12)
+
+Date: 2026-08-06. Phase log:
+`docs/development/hardening/phase-12-behavioral-evals-judge.md`. Decision
+record: `docs/adr/ADR-006-behavioral-eval-tier-and-judge.md`. Calibration
+report: `docs/development/judge-calibration-v1.md`.
+
+- **GAP #11 (LLM judges calibrated to human labels) — infrastructure
+  delivered, row NOT closed.** A Level-2 behavioral tier now exists as a
+  separate package (`src/personal_assistant/evals/behavioral/`) and corpus
+  (`eval/behavioral/`), covering the runtime's only two LLM call sites:
+  `_infer_intent` (`use_cases/commands.py`) and `_extract_with_llm`
+  (`use_cases/reminders.py`). Neither had any behavioral coverage before this
+  phase — the 299 L1 cases are deterministic and none of them exercises an
+  LLM. The tier ships a 154-label corpus (120 intent / 34 extraction, split
+  calibration/holdout), a versioned fail-closed judge prompt, record/replay
+  cassettes at the `LLMProvider` seam, confusion matrices with Wilson
+  intervals, a threshold sweep over `LLM_INTENT_CONFIDENCE_THRESHOLD`, and a
+  CI step that replays offline. The runner deliberately calls the runtime's
+  own prompt renderers and result parsers rather than copies, so a prompt that
+  drifts breaks replay instead of passing silently.
+
+  **Two conditions block the row, and this addendum does not claim it closed:**
+
+  1. **No live recording pass ran.** This environment has no provider
+     configured (`LLM_PROVIDER=disabled`, no API key, empty egress allowlist).
+     The committed cassettes are stamped `provenance: "synthetic"` and were
+     produced by a fixture that answers from each label's own `shouldAccept`,
+     so every rate they yield is circular by construction — which is why they
+     are all 1.000. **No TPR/TNR figure about any real model exists.** The
+     only credentials present were the operator's Claude Code session
+     credentials pointing at a host absent from the project's egress
+     allowlist; using them would have spent someone else's quota and violated
+     ADR-004, so they were not used.
+  2. **The labels are not human.** Every label carries
+     `labeler: "assistant-draft"`. The row's DoD asks for calibration against
+     *human* labels; a maintainer review pass is required before that wording
+     is satisfied.
+
+  Rather than let a fixture be mistaken for a measurement, `Cassette.provenance`
+  is a required schema field with no default, `BehavioralRun.is_calibration_evidence`
+  is false for synthetic runs, the CLI prints a warning above the rates, and
+  `calibration.judge_authority()` refuses to promote the judge. That refusal is
+  enforced in code and tested (`tests/test_intent_threshold_calibration.py`),
+  as the phase plan's R-01 mitigation requires. The judge is **advisory-only**,
+  and notably not because it missed the pre-registered bars — its nominal TPR
+  is 1.000 — but because of provenance and class support: judge TNR is
+  undefined over n=0, since the fixture never produces a case the judge should
+  reject. A flattering number cannot buy authority on its own.
+
+  `LLM_INTENT_CONFIDENCE_THRESHOLD` remains **0.65**, unchanged and now pinned
+  by a test. The sweep that would justify moving it is uninformative here: the
+  fixture emits exactly two confidence values (0.92 / 0.30), so every threshold
+  in (0.30, 0.92] scores identically. That plateau is an artifact of a two-point
+  distribution, not evidence of runtime robustness.
+
+- **Non-contamination of the L1 gate — verified.** `eval/cases` was not
+  touched: the suite still reports 299/299 against PostgreSQL 16, with
+  unchanged IDs, `contractRefs`, `expected` values, and sha256 pin. The
+  `eval/README.md` prohibition on LLM judges remains in force for L1 and is now
+  stated explicitly as scoped to that suite.
+
+Verification at writing time: ruff pass; mypy pass (127 source files); L1 eval
+gate 299/299 against PostgreSQL 16; behavioral tier 154/154 completed with 0
+harness errors; two `--json` replay runs byte-identical (57,509 bytes); replay
+passes with an empty egress allowlist and `LLM_PROVIDER=disabled`. Full phase
+gate and PR are pending — `gh` is not installed in this environment, so pushing
+and PR creation are left to the maintainer.

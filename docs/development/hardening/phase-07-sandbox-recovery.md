@@ -9,13 +9,13 @@ plan y, durante la ejecución, las decisiones y evidencia de la fase.
 | Campo | Valor |
 |---|---|
 | Fase | `07 — sandbox de egreso y recuperación de proceso` |
-| Estado | `IN_PROGRESS` |
+| Estado | `MERGED` |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `kimi/phase-7-sandbox-recovery` |
 | Commit base | `96a8ccacec39e795564e16c38aacd0c8ffc29a70` (2026-07-28T18:06:28-05:00, confirmado con `git rev-parse HEAD` al abrir la fase; `main` sincronizado con `origin/main` por fast-forward) |
 | Fecha de inicio | `2026-07-30` |
-| PR | `<pendiente>` |
-| Merge commit | `<pendiente>` |
+| PR | `#15` |
+| Merge commit | `739ccb9d212a8d2b983f88e9b10b0fdcdddcf55d` (2026-07-30) |
 
 ## Contexto y justificación
 
@@ -94,9 +94,9 @@ dejando evidencia suficiente para su re-evaluación.
 
 | Ola | Slot | Objetivo | Rama / worktree | Rutas autorizadas | Dependencias | Estado |
 |---|---|---|---|---|---|---|
-| 1 | A1 | Implementar allowlist de egreso (capa A de ADR-004) | `kimi/phase-7-a1-egress-allowlist` | `src/personal_assistant/adapters/outbound/**`, `src/personal_assistant/infrastructure/config.py`, `.env.example`, `tests/test_egress_allowlist.py` (nuevo), `tests/test_persistence_config.py` solo si la validación de arranque lo exige | `ninguna` | `PENDING` |
-| 1 | A2 | Automatizar ejercicio kill/restart del ciclo de vida | `kimi/phase-7-a2-kill-restart` | `scripts/**`, `tests/test_process_recovery_postgres.py` (nuevo), `.github/workflows/**` solo para el job postgres-integration | `ninguna` | `PENDING` |
-| 1 | A3 | Construir imagen de contenedor endurecida (capa B) | `kimi/phase-7-a3-container-image` | `Dockerfile` (nuevo), `deploy/**` o `scripts/**` para compose, `docs/runbook/hardened-local-deployment.md` (sección de egreso) | `ninguna` | `PENDING` |
+| 1 | A1 | Implementar allowlist de egreso (capa A de ADR-004) | `kimi/phase-7-a1-egress-allowlist` | `src/personal_assistant/adapters/outbound/**`, `src/personal_assistant/infrastructure/config.py`, `.env.example`, `tests/test_egress_allowlist.py` (nuevo), `tests/test_persistence_config.py` solo si la validación de arranque lo exige | `ninguna` | `ACCEPTED` (6f03ea1, integrado 3d4a03e) |
+| 1 | A2 | Automatizar ejercicio kill/restart del ciclo de vida | `kimi/phase-7-a2-kill-restart` | `scripts/**`, `tests/test_process_recovery_postgres.py` (nuevo), `.github/workflows/**` solo para el job postgres-integration | `ninguna` | `ACCEPTED` (d8214d2, integrado 8ddf6a4) |
+| 1 | A3 | Construir imagen de contenedor endurecida (capa B) | `kimi/phase-7-a3-container-image` | `Dockerfile` (nuevo), `deploy/**` o `scripts/**` para compose, `docs/runbook/hardened-local-deployment.md` (sección de egreso) | `ninguna` | `ACCEPTED` (8474522, integrado 3c58152) |
 | 2 | A4 | Integración: smoke de egreso en contenedor, ADR-004 a Accepted, actualizar README y runbooks | `kimi/phase-7-a4-integration-smoke` | `docs/adr/ADR-004-tool-execution-sandbox.md`, `README.md`, `docs/runbook/*.md`, `docs/development/production-readiness-v0.2.0-alpha.1.md` (addendum) | `A1, A2, A3 integrados` | `ACCEPTED` (946413b, integrado c84425c) |
 | 2 | A5 | Hardening: corregir aislamiento de `test_public_artifacts`, regresiones reveladas por ola 1, gates completos | `kimi/phase-7-a5-hardening` | `tests/test_public_artifacts.py`, rutas reveladas por la ola 1 previa aprobación | `A1, A2, A3 integrados` | `ACCEPTED` (f377e35, integrado 1b2433f) |
 
