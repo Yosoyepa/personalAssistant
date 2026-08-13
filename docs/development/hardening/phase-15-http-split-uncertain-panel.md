@@ -7,8 +7,8 @@
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `kimi/phase-15-http-split` (15a), `kimi/phase-15b-uncertain-panel` (15b) |
 | Fecha de inicio | `2026-08-13` |
-| PR | `#39` (15a), `<pendiente>` (15b) |
-| Merge commit | `9767f1f` (15a), `<pendiente>` (15b) |
+| PR | `#39` (15a), `#40` (15b) |
+| Merge commit | `9767f1f` (15a), `f29c58c` (15b) |
 
 ## Objetivo
 
@@ -71,5 +71,37 @@ discriminador solo especifica, ejecuta gates y triagia — cero líneas propias.
 - Renderizado de panel: `src/personal_assistant/infrastructure/admin_render_outbox.py` (65 sitios) con script JS para confirmación, envío bearer token y feedback inline.
 - Ensamblado: `admin_render.py` (80 sitios), `http_app.py` (36 sitios), `http.py` (49 sitios).
 - Suite de pruebas: `tests/test_admin_uncertain_resolution.py` (9 tests unitarios y de integración HTTP).
-- Verificación: 17/17 gates PASS en `wct gate --tier commit`, 970 tests pasando (386 subtests), 0 mutantes sobrevivientes.
+- Verificación: 17/17 gates PASS en `wct gate --tier commit`, 970 tests pasando (386 subtests), 0 mutantes sobrevivientes. PR #40 merged a main (`f29c58c`).
+
+---
+
+## Feedback Estructurado para el Well Code Template (WCT)
+
+La ejecución de la Fase 15 sirvió como laboratorio de medición del flujo agentic con gates estrictos de WCT. A continuación se detallan las lecciones aprendidas y oportunidades de mejora para el harness:
+
+### 1. Robustez del Flujo Coder-Verificador mediante Gates Objetivos
+- **Acierto**: La combinación de especificación Gherkin (`G-ACCEPT`), presupuesto estricto de mutación (`G-MUT-SITES`), tipado estricto (`G-TYPE`) y suite completa (`G-TEST`) operó como un oráculo determinista. El subagente pudo iterar y autocorregirse sin requerir inspección manual de código por parte del mantenedor para detectar errores sutiles (como validaciones de Pydantic de outbox o restricciones de reintentos).
+
+### 2. Puntos de Fricción y Mejoras Propuestas para WCT
+
+#### A. Identificación de Funciones en `G-MUT-SITES` (`nombre:línea`)
+- **Problema**: El manifiesto de mutación identifica funciones como `modulo.py::funcion:linea`. Cuando se añade un import o una línea arriba en un archivo, todas las líneas de funciones subsecuentes se desplazan, provocando que el hash del manifiesto no coincida y WCT considere que *todas* las funciones del archivo cambiaron, disparando `G-MUT-SITES` en archivos legacy que excedían el límite histórico.
+- **Propuesta de Mejora**: Identificar y hashear funciones basándose en su **AST normalizado / semantic fingerprint** (`ast.dump(func_node)`) en vez del número de línea físico. De esta forma, cambios que solo mueven de posición una función no invalidan su estado en el manifiesto.
+
+#### B. Diagnóstico de `G-ACCEPT` en `placeholder-variant`
+- **Problema**: Cuando dos escenarios contienen un paso que normaliza a la misma forma (`<value>`), `G-ACCEPT` reporta `features/x.feature:<linea>: placeholder-variant` sin imprimir qué paso colisionó con cuál otro escenario.
+- **Propuesta de Mejora**: Enriquecer el mensaje de error de `G-ACCEPT` mostrando el texto del paso normalizado y la referencia cruzada exacta: `Paso '<step>' en escenario A colisiona con paso en escenario B (línea Y)`.
+
+#### C. Aislamiento de Formato (`wct fmt` / `ruff format` diferencial)
+- **Problema**: Si un agente corre `ruff format` sobre todo el árbol cuando `G-FMT` está desactivado (en proyectos en transición), formatea archivos legacy intactos y dispara fallos de diff en cascada (`G-MUT-SITES`).
+- **Propuesta de Mejora**: Proveer un flag nativo `--staged` o `--diff-only` en las herramientas de formato de WCT (`wct fmt --staged`) para que los agentes sólo formateen las líneas o archivos involucrados en su cambio.
+
+#### D. Operación Atómica de `wct mutate update-manifest` con `integrity bless`
+- **Problema**: Tras actualizar el manifiesto con `wct mutate update-manifest`, el gate `G-META-1` falla de inmediato porque `integrity.lock` no está sincronizado, obligando a un paso manual adicional de `wct integrity bless`.
+- **Propuesta de Mejora**: Permitir que `wct mutate update-manifest --approved-by "..." --reason "..."` regenere automáticamente el lockfile de integridad de forma atómica y consistente con el log de gobernanza.
+
+#### E. Validación de Precondiciones de Entorno en `G-TEST`
+- **Problema**: Cuando `G-TEST` ejecuta `pytest -q`, si falta una variable como `TEST_POSTGRES_DSN`, las pruebas de integración pueden fallar o saltarse sin una advertencia explícita en el resumen del gate.
+- **Propuesta de Mejora**: Permitir declarar en `governance/policy.yaml → environment_required` las variables requeridas para cada tier de gates, emitiendo un mensaje claro de prerrequisito faltante antes de lanzar la suite.
+
 
