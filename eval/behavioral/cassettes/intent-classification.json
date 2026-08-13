@@ -1,0 +1,1567 @@
+{
+  "entries": [
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "005027e0be77f030ace33576b45f5f30c6a8f297c99d928f0d73f7aabf2e80fd",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "04733bfeeae0649994058e54e690e32b3f4382724358f7912179c29d7aa9b4e9",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "048340bc623df4cf1d2fcc91232e54da6a6eb17a69e2bae648d3b23a093fcf2b",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "04bc2a62adb641f6b79166d8dc621b9477173bc4bd6b95eab085b7e188291c39",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "05a97da65da96c7791057321a5cb846973ea318e2e12fc375e6fc6e428bc8c56",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "0b5fde6d5fe5efa40ae007b81dc67d557bf60f4ee49a08d9a2a26c26b3b6ac8c",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "1635c4973543d12d22522b69b14e2249149bd8f9eec5f00e28b7484b00ee30ba",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "1c862f09ae2abbc918ae8959566b41ffd08fcea01774ba29c1ad896b2d6919b5",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "1cd88293ade2116fc21791326c02afbc50ba9b707598d21cb2363cb79c6ea5f8",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "1cdf0a6a6e938f95eda3318e85fc805ff0444bdabcff70f64795b70b76cbbadb",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "1f0b3e9393a4fa79f5194481c3ec450fd4807792320d72562634fbc901b7e3d1",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "1f1752c7b02a088fe4d3126c65330db5744f477f64a1bd92f83d63362f3f00ba",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "2182d6eacf647fa9ca5c58ded943ac881ce589471bb6e4003f4baf5ff1782fca",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "2305fde34d24966b01f809dffd1f63d513516538d836f0b72a56869b26984f7a",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "23884026b4e953eec6a95960377cd1a3a178f4969d4096a48541647e67cfaf25",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "24554f647e6b3e4e04d921e233fd089e7319cb722a14467c2244b4e761ff3eec",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "27302cb0909f27d6faf94616ea0fea299146b7d843ed5ecff5ccba4040720dd3",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "2b7edc84630ccd38f9a7c01d4de91db3f5645752949238a6b2540f96f4306ff8",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "2cc17ee8c8a1f53fc82561f5f25a598959a7282da53b87c13ade2cbd30d1d6b6",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "2da4dd79d61c8345e83d6da041a1f5a2c4170914d32d9a65a52354501fd57b31",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "3213f6bb1a1dead82c618d4c8c41d67f3cea87c62df597fac000fcee1ff9c4d9",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "33c1b0a64760475eef83ffdeccc3dd3a1a5fac6ffafb10687640ebcecab43842",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "34fd96c69ec2862deb2a4972a92b721c9a5e5bc434793773c2939dfd208e575c",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "3698ac16cd264ca44ee49ab4c0fe505a9e10bcaa8b8612275a0d5db68f49a497",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "36fd68412cc52a7525ea51f11d201b7b23adf61aab6614f01a8e7b58b5038026",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "3708cdee7d95965c9852b458095222d412cb951b1eb622019e4b44008f1dabe1",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "37477348bf82ef1d84e9ef337465716fe9eccaa1916c5528d261b192d8098dba",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "37f7ad7044b38baa5c7e50b0d5fae412cb0e4ab68b2a5d8728bceb60ff3bc345",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "38c6fec09c44e6f63ee1e98278e1444e62e986949abe5bb9d6648496225798be",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "3ae6ec746393817e51ce378a727f56b17aebf7ecf7d756f205a47d5e929764ad",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "3e5c39abdff53cd50b2b7812e528b789414acd4b1f390ee5497334d5fd4a3842",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "3f89d4295d5cc1a666270e920ac884572d838c7836439a8977ee1f0120ebe44d",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "3f95f428449e12bc994d586612907f612a3463bb4868dff3902244d823ce51b3",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "403acc66f2aafd50f190d9eb75a3c48f7281e64887edaeae364813ac94fab98b",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "43659503f637fa27ed9d27d7526bd52773def1c3da557d4d6bfadb1de0c39794",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "470caf93373697c91ca944930eb87d450959f4ae46d52c6f9fd94d8ef5554615",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "4c26fdac193be3c83c576cbad25e607750422b0a0374b5c374c6b3a9de8f199f",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "4d491d5b055ebc82ecf72c96d5c0fed2ca38477309ac77169aea5b838546ddf1",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "566982ffc093bec66f8572e965539d3e19bc83a86bcd54fd50c6394e020c3ef4",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "567ab9f38ca9912fc6497e65b33c872e32fc8c81ca8d6ddc9ee3c2bd3b989602",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "5e7cd6c8a7e711c6d2dedf5263a8b34ed5937d8a2eba0716982f784e64b0ffd4",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "5fb1f9feac06599ff42a81989522b9b3449700abb9f07d806c7d1588c4d782b0",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "611bd7c5d68d1b4fcc4dc9154ea572f011afb01c287883e606fa8422cdc8b1b2",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "61449b46eec5671ddc893d40f7b6734d56abce624da45eac6b861b88ae02c1b3",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "624d0464010c14580e287f25eb5dbb36773056225344ddba0578e990af877add",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "63127ee602adc93cf7e1d55150f928daeecf1c30faa291b5171c024ebc9a4a34",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "65d135e9a2fd9c223b380900aa1a7c35ca9be962742ac7c9f68a3bae01b63ade",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "65fe1278983a78e78c5b42db9f7cbff2475ac7fc54da395a0cb5534aa95db5f1",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "66b2b4b832cc65960140460241804db4466db89df6213f2ad92f354e2843fb2a",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "6c0ae00e981b9ee99b58091ce650ba9efa8bcd3bfb5fda241a845e5941d84894",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "6d2ad645c1c92c780c8facbf78ec96e7d071c8ee81f2a5dbd60e8b036cef8324",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "6dfff640855e125531fdbf6cea13c829050bb3818053ec253e15e4dff8199332",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "734fdae8b26393a149f2b4a7fcf3feeec48c88f1b38240521534d37006c5089f",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "735ebfbbfcd12f58f30b17970bced8721e7a098973b71b1ac2bfad1b11a08fbe",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "7cbb7ecade1b535de85eae023206e8bba0492dabbcade14b3f8c8c3e275e7563",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "84276d1711403afad80ab189314456b0801c54fb4a0a8a74e76b00d79c416f01",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "88118359d914d5a08f8155ebf4e8296def002dd1c6a0b30ff430622bd79d6263",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "8aeadac1de0e8969c28b89c92defb22856b6491e56298c8e2a50e83984737006",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "8bcf373962eb4e7cb05d4585a26d8cab875e2df8d530dd85b0074ab01bfe558a",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "8c751aea6ccca47426e898502a384c6420b8fd1f27decb1ed3149aca528f722e",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "8cbbf83dede64b504b1a511357f67b3f7cf14ac5c2142ba1900ccdeb46fd7573",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "8d91b2c13f8c023ea9d7d711002aec6c635767aaa3849e1e39428a212c1fd9e2",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "8edb123e2958582003caf6980809aa8673a5b5ec1b20153a8ea69319afbb6861",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "92c2b7d97bfea1b3d51cab9c4214eb727a551af5f2f97049084ea3b42fe59695",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "92d2c2bfa495998135139dd2a305617df9f5e8d39acf90c692aea6fa193db996",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "930c4e7216d6da37e2ff18dad72679e3ce39aee72763c758dd624b134c52285e",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "9ead914a2b3bbe67a8dd168975a493217d8a9fca6167dd935d16b029f8328757",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "9ebe219535e5a6ed4c92d2d4658e0fba8238b08816279d77d9976e5fb21993ed",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "a3c9de0fb06ba99befa4872bba787c2b309bef25061da892921cc8f123ccf881",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "a57c77e43126fac253d8f1aa03368064cbf369999dd41829ad2564db4a7f0c61",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "a873d8d0427adeed4fd090dcd543d56b75ea4023633b9f03f3b815e1aeace989",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "ab65cdd1a75d76199df9dbbf56eec0265632fdd9b0a76b96720085cbd593ed96",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "ad2be5c89f06a2a5dbb4ae5e881b538e29d371176d584c87472f2205ac4ab547",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "ae005d37e967de070b1de4dc9e7d42ed74c296d950c6ac16fcefde5ad2fead73",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "aee6ce6127848f72941fbcf2314ba1b5436a9fa94abe1c51a52c1272b9d543ff",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "b400ec137c7857c632b4b39ffea849f94736e2ebb67df87ef0cb005a8ac0bf2f",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "b5e4e274ca1321f2a8ecb4cbcd0c1b41a929bce7b32d6fa78b1cf7ec48b3890e",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "b8d70da16eed623674490e0d087fd0006aba6b7cda556fec032636f3c12be8fe",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "baf62ee01655758a1996834bc49caddff3b7f97f6fc53cedb234be4ef2084567",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "bf7541e2d7960e9127a4e5ec454bfd165c1e547541b51fe66d21a9fc9d1e8769",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "c11fb67505b22745ed4501442ddb246a75a4a83420453879afcc59c97d91988d",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "c134d4431e4ba122a172d259bb350b6d8fcdd52f67c6b374156f73a619fcb60b",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "c35bc63ba9a72dce88b3c81e0b778a193f2cc2d21a9ccda355220c21d47bb03a",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "c4869a917e2d9d91cf9e78d2f89d7d80fcf86986506f2e363af1e7c2ad7d0daf",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "c496c433df637a2b3c4e5280f61ab8411b0ecfa99135fce95622b3174f21dd02",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "c4a73d68e39182c6e8429840ce13aadc34085520d812412629f6a1bb1a81a08b",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "c5db421d6d52529529bd735f5c5c5d35dea50abd57ea38d07eba70128a9be881",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "c7482ee0cbd8fb2a2906237d91e8a4d2dc6fddab2e3eabb88e5420a322d8ecb9",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "c9f5fa6d2e3a57359f21117bb0b627a341635697dc381f8926f1178b499f6a15",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "caf8bf920c23b99fafeb76ebe6cde493819877d62989baf858735a972910c2f6",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "cf2286cb9c6d6ee4ce18702e235825c0e5d4fd86c326c4d01fd8297d91cab4ed",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "d015e30ef02825ee2eb1dc841520c37fa7921dd5bdee65fa98ea7e6b2e0e8581",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "d1f5084776d1437cd433b811a3e0938b76e3c71f400557d7739ec4c8c25727ed",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "d2e6061369770e05596c5026697f8964e662a47f8908ad2f83aa4ba2fc052920",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "d3545ed053614de3531f39f80d3f96a9cffa3bbc28520178bfab1474c4a780f1",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "d3902d1ea43f2f5e5ea3ed4f42a0a5a7d86cd72b818030251528db7a0ba28123",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "d43a0bfa12a7a4e067898755eb61f55567cb149eaf47f7a9bb3ec0a6d9debb57",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "d62edbd780a6da0e8ef5f1eb797c62b6dc8bad60913cd7ac29604e477dd21dfc",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "d6f930c9e93ddbee876253b090863cd25dd3723f06720254bb57229a57bb5708",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "d7a474cf182f3ab52cc5e4ab3115c6d04ce1a940949ee3866b199741079062dd",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "dd4217baa3b86b81726d1b76a08d760d261b6d04328e6767f1a311b1b805ea95",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "de6b2be99a5630872e00d8171fc57e4e404856f0c2c88bea430d7ed6ea8bcac9",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "df8d4318da6dd4e378a32c324a366834c62a538c82cb20100047027cddb0547b",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "e30b81865d4ec112adf31fb56aa73d98c823cc9e3b59318e0c0bc1a886137ac5",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "e581189af5813208072c5649f78352a4bec743d2288d5ad641eb2f31d00e82d5",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "e6ccb0c8a6b32c29ef623da94ee0c34a64b5bbd77c305304ae5a3e3462ea4c67",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "e722de2d67ddbc958e62e257d3a986a4e85001a7cce386a89e30028b22e2c94b",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "e9295d3cd3b73232a209f973af139cba9053e6d608f271ebd1e0325ae42ee49b",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "e92ef154ba66a05fafbac99722df7f7de55bce7bae8bcf82c2d93025887da49b",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "eb84edb0a7053ea3978b35dd41c0f979231b410332ad16ef26dd6d0a1acbb6c6",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "eb867723521878df48aa3741394876e8dde7ed79fc3d674eb5f3bd3d5e9fe915",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "f151b0b4abc2013fdc7188eafaef6866f531131fdef1480016f5e171b0368472",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "f162b1f073a95c474ac9144c672b60b4ab21686792a6b0e5a19ae0ed54e2bc7e",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "f18c0e2abdb07f7d758108acc1b16a3b3dc95303199a2fe875aa12512c943978",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "f3e6a94a64defbf524ce016a34957d089365a972ccf3740c129ea03a648cb388",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.3,
+        "kind": "unsupported",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "f5d8062609978768b4b350f89202e5e4707250e76436482b46ea430d90fd9b02",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "f77683ce7bf56c46304dc342538348d85797a407ecf8a0cda38afae6cb53736e",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "f78f6e4fb727728f7419916cd0d1a29db8200b055b49ddd7c000126729ed5e19",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "fb3934474b6cb943d658403d7ebeaab431da543cf79a1a7657779a4c3c3095e5",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    },
+    {
+      "data": {
+        "confidence": 0.92,
+        "kind": "reminder.create",
+        "reminder_text": null
+      },
+      "inputTokens": 0,
+      "key": "ffb62ccea4c51e95e73d1eeef30278fa858d1ae4aa4fd4911d85ce59ad29233e",
+      "model": "synthetic-fixture-v1",
+      "outputTokens": 0,
+      "provider": "synthetic",
+      "schemaName": "conversation_intent"
+    }
+  ],
+  "provenance": "synthetic",
+  "recordedAt": "1970-01-01T00:00:00+00:00",
+  "schemaVersion": 1
+}

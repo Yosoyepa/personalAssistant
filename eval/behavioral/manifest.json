@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "corpusId": "behavioral",
+  "labelFiles": [
+    "intent-classification.v1.json",
+    "reminder-extraction.v1.json"
+  ]
+}

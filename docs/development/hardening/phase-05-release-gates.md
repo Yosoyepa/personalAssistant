@@ -4,16 +4,16 @@
 
 | Field | Value |
 |---|---|
-| Status | `PULL REQUEST OPEN; REMOTE ACCEPTANCE PENDING` |
+| Status | `MERGED` |
 | Maintainer | `Yosoyepa <jandradeu@unal.edu.co>` |
 | Phase branch | `codex/phase-5-release-gates` |
 | Remote base commit | `23fc2b4` |
 | Local starting commit | `58a5d22` |
 | Accepted implementation head | `bb503c9` |
 | Local acceptance records | `40f82c0`, `c1c00ec` |
-| Pull request | `#12` open; protected checks rerunning |
-| Merge commit | pending pull request |
-| Release | pending pull request, tag, and prerelease |
+| Pull request | `#12` merged |
+| Merge commit | `ac1278dcc91ab721a0aeb00d9494ca0ac3bb2db2` (2026-07-27) |
+| Release | `v0.2.0-alpha.1`, tagged at `ac1278d` |
 | Date | `2026-07-27` |
 
 ## Objective and current decision
@@ -24,10 +24,10 @@ metadata-only delivery metrics, and prepare `v0.2.0-alpha.1` without claiming
 general availability.
 
 All deterministic, local infrastructure, and controlled Telegram delivery
-gates have passed. The phase is accepted locally and may proceed to its
-protected pull request. Hosted CI, the merge commit, annotated tag, and GitHub
-prerelease remain pending and must not be represented as complete until their
-separate evidence exists.
+gates have passed. The phase was accepted locally and proceeded to its
+protected pull request. Hosted CI, the merge commit `ac1278d`, and the
+annotated `v0.2.0-alpha.1` tag (pointing at `ac1278d`) are now on record. The
+GitHub prerelease was not verified from this checkout and is not claimed here.
 
 The launch classification remains **hardened alpha, not GA**. The accompanying
 12-point production-readiness audit records unresolved context, compaction,
@@ -187,8 +187,10 @@ but exposed one cross-platform defect: the immutable legacy inventory hash was
 calculated from CRLF bytes on Windows while Git's Linux checkout contained the
 same JSON with LF bytes. Commit `bb503c9` now hashes repository-canonical LF
 line endings, retains rejection of every tested non-line-ending mutation, and
-passes the complete local gate. All five protected checks must rerun and pass
-before merge.
+passes the complete local gate. Pull request `#12` subsequently merged at
+`ac1278d`; because `main` requires those five checks with administrator
+enforcement enabled (see the governance evidence above), the merge itself is
+the record that they reran and passed.
 
 ## Data and privacy review
 
