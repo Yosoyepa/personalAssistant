@@ -945,7 +945,7 @@ provides-extras = ["api", "test", "postgres"]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "build", specifier = ">=1.2" },
+    { name = "build", specifier = ">=1.5.0" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.15.2" },
     { name = "diff-cover", specifier = ">=9.2" },
     { name = "fastapi", specifier = ">=0.141.1" },
