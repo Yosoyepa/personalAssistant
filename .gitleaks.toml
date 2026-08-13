@@ -3,12 +3,28 @@ title = "personal-assistant gitleaks config"
 [extend]
 useDefault = true
 
-# Behavioral-eval cassettes are synthetic fixtures whose "key" fields are
-# SHA-256 hashes of the LLM request (see evals/behavioral/replay.py:
-# request_key). They trip the generic-api-key rule but are not credentials.
-# Scoped to the cassette directory and to 64-char hex matches only.
+# Allowlist entries (a finding is skipped if its path matches any `paths`
+# entry or its match matches any `regexes` entry):
+#
+# 1. Behavioral-eval cassettes are synthetic fixtures whose "key" fields are
+#    SHA-256 hashes of the LLM request (see evals/behavioral/replay.py:
+#    request_key). They trip generic-api-key but are not credentials.
+# 2. `.secrets.baseline` records detect-secrets triage as double hashes
+#    (hashed_secret = hash of an audited fixture marked is_secret:false),
+#    never the raw value. Entries are 32- or 64-char hex.
+# 3. `quality/redteam/cases.yaml` carries a deliberate canary payload used by
+#    the WCT redteam selftest to verify G-SECRET detects planted secrets in a
+#    temp copy. "abcd1234secret" is a fake fixture, not a real AWS key.
 [allowlist]
-description = "Synthetic eval cassettes: request-hash keys, not secrets"
+description = "Synthetic fixtures and triaged hashes, not credentials"
 regexTarget = "match"
-regexes = ['''"[0-9a-f]{64}"''']
-paths = ['''^eval/behavioral/cassettes/''']
+regexes = [
+  '''"[0-9a-f]{64}"''',
+  '''hashed_secret": "[0-9a-f]{32,64}"''',
+  '''AWS_SECRET_ACCESS_KEY=abcd1234secret''',
+]
+paths = [
+  '''^eval/behavioral/cassettes/''',
+  '''^\.secrets\.baseline$''',
+  '''^quality/redteam/cases\.yaml$''',
+]
