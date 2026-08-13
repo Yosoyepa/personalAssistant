@@ -14,6 +14,7 @@ from personal_assistant.infrastructure.admin_render_errors import _render_errors
 from personal_assistant.infrastructure.admin_render_header import _render_header
 from personal_assistant.infrastructure.admin_render_health import _render_health
 from personal_assistant.infrastructure.admin_render_helpers import _render_table_section
+from personal_assistant.infrastructure.admin_render_outbox import _render_outbox
 from personal_assistant.infrastructure.admin_render_tables import _render_context
 
 
@@ -48,12 +49,7 @@ def render_dashboard_html(snapshot: dict[str, Any]) -> str:
                 snapshot["traces"]["items"],
             ),
             _render_context(snapshot["context"]),
-            _render_table_section(
-                "outbox",
-                "Outbox",
-                ["created_at", "id", "event_type", "status", "attempts", "idempotency_key", "claim_owner", "event_data"],
-                snapshot["outbox"]["items"],
-            ),
+            _render_outbox(snapshot["outbox"]),
             _render_table_section(
                 "scheduler",
                 "Scheduler",

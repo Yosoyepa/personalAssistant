@@ -16,3 +16,9 @@
 - Approved by: Yosoyepa
 - Reason: split http.py into sub-100-site modules
 - Commit: c3762a9d6ddebbafdf76f5959b8e1a3b8e0ed586
+
+## 2026-08-13T22:57:27.945968+00:00
+
+- Approved by: Yosoyepa
+- Reason: admin uncertain resolution feature (phase 15b)
+- Commit: 9767f1f95ce8627b610f7a0680714de766bb7932

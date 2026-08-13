@@ -171,3 +171,18 @@ class TelegramWebhookResponse(BaseModel):
     audio_sent: bool = False
     approval_id: str | None = None
     command: str | None = None
+
+
+class OutboxResolveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    resolution: Literal["delivered", "retry"]
+
+
+class OutboxResolveResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message_id: str
+    status: str
+    attempts: int
+
