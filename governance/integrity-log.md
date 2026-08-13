@@ -10,3 +10,9 @@
 - Approved by: Yosoyepa
 - Reason: Fase 14: manifest de mutación rebaselineado por la herramienta tras el split aprobado de admin.py en módulos <100 sitios
 - Commit: 35f9b417d94e95ba1f7cbf39641f977111ba85ca
+
+## 2026-08-13T22:40:53.338731+00:00
+
+- Approved by: Yosoyepa
+- Reason: split http.py into sub-100-site modules
+- Commit: c3762a9d6ddebbafdf76f5959b8e1a3b8e0ed586
