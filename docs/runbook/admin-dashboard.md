@@ -38,7 +38,12 @@ ignored: they cannot filter, impersonate, or otherwise change authority.
 
 ## Available Endpoints
 
-All routes are `GET`, local-only, and read-only:
+All `/admin` routes are `GET`, local-only, and read-only. The dashboard HTML
+itself renders Approve/Reject buttons on pending approval rows; those buttons
+call the pre-existing runtime endpoints (`POST /v1/runtime/approvals/{id}/approve`
+and `.../reject`) from the browser with the bearer token the operator pastes
+into the page's token field (kept in memory only, never persisted). The admin
+surface adds no new mutation endpoints of its own:
 
 | Route | Purpose |
 |---|---|
@@ -138,9 +143,12 @@ user content. Caveats for operators:
 - Server authority is fixed by `ASSISTANT_TENANT_ID`,
   `LOCAL_AUTH_PRINCIPAL_ID`, and `LOCAL_AUTH_PERMISSION_TIER`. Identity headers
   and `tenant_id`/`principal_id` query parameters cannot impersonate it.
-- The dashboard is read-only. Approve or reject runtime approvals through the
-  runtime API (`/v1/runtime/approvals/...`) or the Telegram command flow, not
-  through admin endpoints.
+- The dashboard's own routes stay read-only. Approve/Reject buttons in the
+  Approvals section POST to the runtime API (`/v1/runtime/approvals/{id}/...`)
+  with the same loopback + bearer rules; every action requires a literal
+  browser confirmation, and conflict responses (already approved/rejected) are
+  surfaced inline without side effects. Approvals can still be resolved through
+  the runtime API directly or the Telegram command flow.
 - Treat trace input/output summaries, memory previews, outbox payloads, and
   event data as potentially sensitive. Do not paste screenshots or JSON dumps
   into public issues.
