@@ -63,8 +63,8 @@ rama de fase parte de `origin/main` actualizado. El commit
 | 1 | A1 | Reconciliación: rebase de main a origin/main, descarte de duplicados | working tree | ninguna | `DELIVERED` |
 | 1 | A2 | ADR-005 + verificación de probes contra base phase-08 | `docs/adr/ADR-005-single-shot-llm-context.md` | A1 | `DELIVERED` |
 | 1 | A3 | Fix runbook telegram + `.gitattributes` (ya rebasado) | `docs/runbook/telegram.md`, `.gitattributes` | A1 | `DELIVERED` |
-| 2 | A4 | Familia eval `egress.allowlist.v1` (executor + 4 casos + suite.json) | `src/personal_assistant/evals/executors/egress_allowlist_v1.py`, `eval/cases/egress-allowlist.v1.json`, `eval/cases/suite.json` | A1 | `IN_PROGRESS` |
-| 2 | A5 | Bookkeeping: hardening log, addendum auditoría, gates, PR | `docs/development/hardening/phase-09-single-shot-context.md`, `docs/development/production-readiness-v0.2.0-alpha.1.md` | A2–A4 | `IN_PROGRESS` |
+| 2 | A4 | Familia eval `egress.allowlist.v1` (executor + 4 casos + suite.json) | `src/personal_assistant/evals/executors/egress_allowlist_v1.py`, `eval/cases/egress-allowlist.v1.json`, `eval/cases/suite.json` | A1 | `DELIVERED` (`db00846`, cobertura `362d577`) |
+| 2 | A5 | Bookkeeping: hardening log, addendum auditoría, gates, PR | `docs/development/hardening/phase-09-single-shot-context.md`, `docs/development/production-readiness-v0.2.0-alpha.1.md` | A2–A4 | `DELIVERED` (`1dc5443`) |
 
 Desviación del flujo 3 + 2 igual que se registró en fases previas orquestadas
 localmente: trabajo en checkout principal con subagentes sobre rutas
@@ -74,7 +74,11 @@ disjuntas, sin worktrees; revisión completa de diff antes de staging.
 
 - [x] Roles de ola 1 entregados con evidencia (probes rg verificados).
 - [x] El mantenedor revisó los diffs completos.
-- [ ] Los commits aceptados se integraron en la rama de fase.
+- [x] Los commits aceptados quedaron en la rama de fase. Sin merges de slot:
+      esta fase se orquestó en el checkout principal sobre rutas disjuntas, así
+      que cada commit aceptado se creó directamente sobre
+      `codex/phase-09-single-shot-context` (`a795e18`, `5640e86`, `27dcca0`,
+      `db00846`, `1dc5443`, `362d577`).
 - [x] No se crearon commits vacíos.
 - [x] Sin conflictos (rutas disjuntas).
 
@@ -188,7 +192,13 @@ scanner de tests/test_public_artifacts.py.
 | Gate posterior | secuencia completa de gates de fase |
 | Responsable | `jandradeu` |
 
-**Resultado del ensayo seguro:** `PENDING`
+**Resultado del ensayo seguro:** `PASS` (2026-08-03). Ensayo pre-merge, tal como
+consta en la fila `Rollback` de la sección de evidencia: rutas de fase
+enumeradas y descarte ejercido de verdad durante la reconciliación
+(`git restore --worktree` + borrado de los duplicados de las fases 07/08, con
+backup verificado). El camino post-merge (`git revert -m 1 73a1141`) queda
+documentado pero **no ensayado**: revertir un merge ya integrado en `main`
+protegido no es una operación ensayable sin coste.
 
 ## Ciclos de bloqueo
 
