@@ -25,7 +25,7 @@ def test_app_settings_repr_omits_sensitive_values() -> None:
         "public_base_url": "https://sentinel-public-edge.invalid/private",
     }
 
-    rendered = repr(AppSettings(**sentinels))  # type: ignore[arg-type]
+    rendered = repr(AppSettings(**sentinels))  # type: ignore[arg-type]  # reason: dict de valores centinela; pydantic valida los tipos en runtime
 
     for field_name, value in sentinels.items():
         assert field_name not in rendered

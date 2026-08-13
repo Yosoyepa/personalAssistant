@@ -1,0 +1,133 @@
+# governance/rules/30-style.yaml
+schema_version: 1
+group: style
+title: Estilo, complejidad y claridad
+order: 30
+
+rules:
+  - id: STYLE-001
+    text: >
+      `ruff` es el motor único de lint, formato y orden de imports. Corre
+      `ruff format` y `ruff check --fix` antes de entregar. No añadas
+      configuración de flake8, isort ni black: el perfil legacy existe en
+      governance/lint/legacy/ y se activa con `wct config --lint-profile legacy`.
+    rationale: >
+      Decisión ADR-002. El gate corre en PostToolUse con presupuesto de 2 s por
+      archivo: tres procesos separados por edición hace inviable el feedback
+      inmediato, y ese feedback es lo que evita que el error llegue al commit.
+    verified_by: [G-LINT, G-FMT, G-IMPORT-ORDER]
+    severity: hard
+    fails: []
+
+  - id: STYLE-002
+    text: >
+      CRAP ≤ 6 en toda función que escribas o modifiques.
+      CRAP = CC² × (1 − cobertura)³ + CC. En la práctica: funciones pequeñas Y
+      cobertura por rama casi total, simultáneamente.
+    rationale: >
+      Fuente del umbral: swarm-forge roles/cleaner.prompt. Es cinco veces más
+      estricto que la tabla publicada (30) y eso es el punto: con CC=6 exige
+      cobertura ~100 %, con CC=10 exige ~96 %. Hace imposibles F5 y F9 a la vez.
+      Decisión y aritmética completa en ADR-003.
+    verified_by: [G-CRAP]
+    severity: hard
+    fails: [F5, F9]
+
+  - id: STYLE-003
+    text: >
+      Si CRAP está alto, primero pregunta cuál de los dos factores lo causa. CC
+      alto → parte la función. Cobertura baja → añade tests. No apliques la
+      remediación equivocada.
+    rationale: >
+      La fórmula es multiplicativa, así que el mismo score sale de causas
+      opuestas. Partir una función bien cubierta no baja el CRAP; añadir tests a
+      una función de CC 20 tampoco lo baja lo suficiente.
+    verified_by: [G-CRAP]
+    severity: hard
+    fails: [F9]
+
+  - id: STYLE-004
+    text: >
+      Complejidad ciclomática máxima de 10 por función. Cuenta: `if`, `for`,
+      `while`, `except`, `with`, cláusulas de `match`, comprehensions con
+      condición, `and`, `or`, y expresiones ternarias.
+    rationale: >
+      Es el límite por encima del cual el número de caminos hace que la
+      cobertura total sea impracticable, lo que a su vez hace inalcanzable
+      STYLE-002.
+    verified_by: [G-CC]
+    severity: hard
+    fails: [F9]
+
+  - id: STYLE-005
+    text: >
+      Cero duplicación estructural nueva. `wct dry` compara la FORMA del código
+      ignorando nombres y literales: dos funciones con la misma estructura y
+      nombres distintos son duplicación, aunque ningún detector de tokens las
+      vea.
+    rationale: >
+      Es exactamente el patrón que produce un agente, y es el hueco que dejan
+      jscpd y pylint --duplicate-code, que trabajan sobre tokens.
+    verified_by: [G-DRY, G-DRY-TOK]
+    severity: ratchet
+    fails: [F1, F2]
+
+  - id: STYLE-006
+    text: >
+      Elimina el código muerto que introduzcas. Una función no alcanzada, una
+      rama imposible o un import sin uso son deuda inmediata, no futura.
+    rationale: >
+      El código muerto es la evidencia física de F1: se escribió algo que no se
+      necesitaba. Además envenena las métricas, porque baja cobertura sin que
+      haya nada que testear.
+    verified_by: [G-DEAD, G-LINT]
+    severity: ratchet
+    fails: [F11]
+
+  - id: STYLE-007
+    text: >
+      Anotaciones de tipo en toda función pública. `mypy` corre en modo estricto.
+    rationale: >
+      El tipado es el único chequeo que se propaga: un tipo mal puesto en el
+      dominio falla en todos sus llamadores, lo que convierte un error local en
+      una señal global.
+    verified_by: [G-TYPE]
+    severity: hard
+    fails: [F8]
+
+  - id: STYLE-008
+    text: >
+      Toda supresión (`# noqa`, `# type: ignore`, `# pragma: no cover`,
+      `# nosec`) debe llevar código de regla y justificación en la misma línea,
+      con al menos 12 caracteres de texto. El conteo total de supresiones tiene
+      ratchet: solo puede bajar.
+    rationale: >
+      F13. Un gate que se apaga con un comentario no es un gate. El ratchet es
+      lo que impide que la erosión sea el camino de menor resistencia.
+    verified_by: [G-SUPPRESS, G-LINT]
+    severity: hard
+    fails: [F13]
+
+  - id: STYLE-009
+    text: >
+      Los nombres deben decir qué hace la cosa, no cómo está implementada ni de
+      qué tipo es. `usuarios` en vez de `lista_usuarios`; `pendientes` en vez de
+      `filtrar_resultado_2`.
+    rationale: >
+      No es automatizable y se declara así deliberadamente: aparece en
+      `wct report` bajo NO AUTOMATIZADO en vez de fingir cobertura.
+    verified_by: [human]
+    severity: human
+    fails: []
+
+  - id: STYLE-010
+    text: >
+      Docstring en toda función y clase pública, consistente con la firma
+      (parámetros, retorno, excepciones). La cobertura de docstrings es un
+      ratchet.
+    rationale: >
+      pydoclint verifica la CONSISTENCIA, no la existencia: un docstring que
+      documenta un parámetro que ya no existe es peor que no tener docstring.
+    verified_by: [G-DOC]
+    severity: ratchet
+    fails: []

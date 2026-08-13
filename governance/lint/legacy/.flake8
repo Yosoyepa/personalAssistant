@@ -1,0 +1,51 @@
+# governance/lint/legacy/.flake8
+#
+# PERFIL DE COMPATIBILIDAD — inactivo por defecto.
+# Activar con: wct config --lint-profile legacy
+#
+# Existe porque flake8 e isort fueron pedidos explícitamente y hay equipos y
+# pipelines que los exigen. El umbral es el mismo que con ruff (0 findings);
+# lo que cambia es el comando que ejecuta G-LINT.
+#
+# COSTE MEDIDO de activar este perfil:
+#   ruff check   ~20 ms por archivo   → viable en PostToolUse (anillo 3)
+#   flake8       ~700 ms por archivo
+#   isort        ~400 ms por archivo
+#   black        ~500 ms por archivo
+#   ------------------------------------------------------------------
+#   total        ~1.6 s por archivo   → excede el presupuesto de 2 s cuando
+#                                       hay más de un archivo por edición
+# Consecuencia: con este perfil, `wct` mueve el lint del anillo 3 al anillo 4
+# automáticamente (se pierde el feedback inmediato por archivo).
+
+[flake8]
+max-line-length = 100
+max-complexity = 10
+extend-exclude =
+    build,
+    .venv,
+    governance/generated,
+    quality/redteam
+
+# Equivalencias con los `ignore` del perfil ruff.
+extend-ignore =
+    E203,
+    W503,
+    D203,
+    D213
+
+per-file-ignores =
+    tests/*:S101,D100,D101,D102,D103
+    __init__.py:D104,F401
+
+# Plugins necesarios para paridad aproximada con el perfil ruff:
+#   flake8-bugbear flake8-comprehensions flake8-simplify flake8-bandit
+#   flake8-annotations flake8-pytest-style pep8-naming flake8-datetimez
+#   flake8-boolean-trap flake8-return flake8-use-pathlib flake8-docstrings
+#   flake8-eradicate
+# Nota honesta: la paridad NO es exacta. ruff implementa reglas que ningún
+# plugin de flake8 cubre (todo el grupo RUF, y parte de SIM y TRY).
+require-plugins =
+    flake8-bugbear,
+    flake8-comprehensions,
+    flake8-docstrings

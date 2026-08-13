@@ -1,27 +1,13 @@
-"""Validation helpers for PostgreSQL migration identifiers."""
+"""Backward-compatible re-exports; the implementation lives in
+`personal_assistant.infrastructure.validation` so that `config.py` does not
+depend on the migrations package.
+"""
 
 from __future__ import annotations
 
-import re
+from personal_assistant.infrastructure.validation import (
+    quote_identifier,
+    validate_identifier,
+)
 
-_POSTGRES_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-_POSTGRES_IDENTIFIER_MAX_BYTES = 63
-
-
-def validate_identifier(value: str, *, field: str = "identifier") -> str:
-    """Return a PostgreSQL identifier after strict, ASCII-only validation."""
-
-    if not isinstance(value, str) or not _POSTGRES_IDENTIFIER_RE.fullmatch(value):
-        raise ValueError(f"invalid PostgreSQL {field}: {value!r}")
-    if len(value.encode("utf-8")) > _POSTGRES_IDENTIFIER_MAX_BYTES:
-        raise ValueError(
-            f"invalid PostgreSQL {field}: identifiers are limited to "
-            f"{_POSTGRES_IDENTIFIER_MAX_BYTES} bytes"
-        )
-    return value
-
-
-def quote_identifier(value: str, *, field: str = "identifier") -> str:
-    """Quote an already constrained identifier without unsafe interpolation."""
-
-    return f'"{validate_identifier(value, field=field)}"'
+__all__ = ["quote_identifier", "validate_identifier"]

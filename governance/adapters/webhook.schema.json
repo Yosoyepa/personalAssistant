@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-code.dev/schemas/webhook-v1.json",
+  "title": "Well Code webhook event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event", "project", "occurred_at", "data"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "event": {
+      "enum": ["gate.completed", "gate.failed", "hardening.completed", "integrity.changed"]
+    },
+    "project": {"type": "string", "minLength": 1},
+    "occurred_at": {"type": "string", "format": "date-time"},
+    "data": {"type": "object"}
+  }
+}
+

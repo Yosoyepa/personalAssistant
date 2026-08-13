@@ -138,7 +138,7 @@ class _DirectReminderTransaction:
         self,
         exc_type: type[BaseException] | None,
         exc_value: BaseException | None,
-        traceback: TracebackType | None,
+        exc_traceback: TracebackType | None,
     ) -> Literal[False]:
         return False
 
@@ -824,7 +824,7 @@ class ReminderWorkflow:
             rendered_prompt = _render_reminder_extraction_prompt(
                 request, prompt_catalog=self.prompt_catalog
             )
-            llm_result = self.llm.complete(  # type: ignore[union-attr]
+            llm_result = self.llm.complete(  # type: ignore[union-attr]  # reason: self.llm es Optional; esta vía solo se alcanza con proveedor habilitado
                 LLMRequest(
                     schema_name="reminder_extraction",
                     max_tokens=384,

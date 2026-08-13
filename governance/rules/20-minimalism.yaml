@@ -1,0 +1,138 @@
+# governance/rules/20-minimalism.yaml
+#
+# ATRIBUCIÓN
+# ----------
+# La escalera de 7 peldaños está adaptada de `ponytail`
+# (https://github.com/DietrichGebert/ponytail), licencia MIT.
+# Se versiona aquí en vez de instalar el plugin — razonamiento completo en
+# governance/decisions/ADR-001-ponytail.md.
+#
+# Los cuatro OVERRIDES marcados abajo no son opcionales: sin ellos la escalera
+# contradice las reglas de arquitectura (00) y de testing (10).
+
+schema_version: 1
+group: minimalism
+title: Minimalismo — la escalera
+order: 20
+attribution:
+  source: DietrichGebert/ponytail
+  license: MIT
+  adapted: true
+
+rules:
+  - id: MIN-001
+    text: >
+      Antes de escribir código nuevo, recorre esta escalera en orden y detente
+      en el primer peldaño que aplique:
+      (1) ¿Necesita construirse esto? Si no, no lo construyas.
+      (2) ¿Ya existe en este codebase? Reúsalo.
+      (3) ¿Lo hace la biblioteca estándar? Úsala.
+      (4) ¿Lo cubre una feature nativa de la plataforma? Úsala.
+      (5) ¿Lo resuelve una dependencia ya instalada? Úsala — sujeto a MIN-002.
+      (6) ¿Cabe en una línea? Escribe una línea.
+      (7) Solo entonces: escribe el mínimo que funciona.
+    rationale: >
+      F1 (boilerplate) y F2 (reimplementación) son los modos de fallo más
+      frecuentes de los agentes y los más difíciles de atrapar con gates: `dry`
+      y `vulture` los detectan DESPUÉS de escritos. Esta es la única
+      contramedida que actúa antes. Evidencia medida por ponytail: −54 % LOC
+      (n=4, metodología publicada en su README).
+    verified_by: [G-DRY, G-DEAD, G-DEPS, human]
+    severity: hard
+    fails: [F1, F2]
+
+  - id: MIN-002
+    text: >
+      OVERRIDE 1 — El peldaño 5 está subordinado a la Dependency Rule. "Usa la
+      dependencia ya instalada" NO aplica dentro de `domain/` ni
+      `application/`. En esas capas, úsala desde `adapters/`, detrás de un
+      puerto.
+    rationale: >
+      Sin este override, el peldaño 5 empuja exactamente hacia la violación que
+      ARCH-002 rechaza. La escalera optimiza líneas de código; la Dependency
+      Rule optimiza capacidad de cambio. Cuando chocan, gana la arquitectura.
+    verified_by: [G-ARCH]
+    severity: hard
+    fails: [F6]
+
+  - id: MIN-003
+    text: >
+      OVERRIDE 2 — Queda ANULADA la cláusula de ponytail que permite dejar "un
+      solo check ejecutable, sin frameworks ni fixtures" como verificación de
+      lógica no trivial. Rige TEST-001: tests que fallarían ante una
+      implementación plausiblemente incorrecta, con cero mutantes
+      sobrevivientes.
+    rationale: >
+      Un self-check basado en `assert` no sobrevive mutation testing ni
+      cobertura por rama. Es el conflicto C2 documentado en RESEARCH.md §1.5, y
+      se resuelve a favor de la verificación. Esta anulación se escribe
+      explícitamente, no se deja implícita, porque el texto original de la
+      escalera dice lo contrario.
+    verified_by: [G-MUT, G-COV-DIFF]
+    severity: hard
+    fails: [F3]
+
+  - id: MIN-004
+    text: >
+      OVERRIDE 3 — Si difieres trabajo, el marcador debe llevar owner e issue:
+      `# ponytail(owner=<usuario>, issue=#<n>): <texto>`. Un marcador sin ambos
+      es rechazado. El conteo total tiene ratchet.
+    rationale: >
+      Sin esto, "diferido" se convierte en un basurero: el trabajo desaparece
+      del radar sin que nadie lo haya decidido. El ratchet obliga a que la
+      deuda sea una cuenta que se paga, no una que se acumula.
+    verified_by: [G-TODO]
+    severity: hard
+    fails: [F1]
+
+  - id: MIN-005
+    text: >
+      OVERRIDE 4 — El modo `ultra` no está permitido. Solo `off`, `lite` y
+      `full` (governance/policy.yaml → minimalism_mode).
+    rationale: >
+      El modo agresivo de ponytail no tiene lugar en una plantilla de propósito
+      general: optimiza brevedad a costa de legibilidad, y esa es una decisión
+      que ningún proyecto debería heredar por defecto.
+    verified_by: [G-META-2]
+    severity: hard
+    fails: []
+
+  - id: MIN-006
+    text: >
+      Antes de crear cualquier función, clase o módulo nuevo, busca en el
+      codebase por comportamiento equivalente (no por nombre) y corre
+      `wct dry --against <archivo>` contra lo que propones.
+    rationale: >
+      El peldaño 2 solo funciona si se ejecuta con un comando. Buscar "por
+      nombre" no encuentra la función que hace lo mismo con otro nombre — y ese
+      es precisamente el caso que un agente genera.
+    verified_by: [G-DRY]
+    severity: hard
+    fails: [F2]
+
+  - id: MIN-007
+    text: >
+      No introduzcas una capa de abstracción con un solo implementador salvo
+      que exista un puerto real que cruzar. Una interfaz con una sola
+      implementación y sin frontera de IO es boilerplate.
+    rationale: >
+      Es la forma más común de F1 en código generado: el agente aplica un
+      patrón porque lo reconoce, no porque el problema lo pida. La Zona de
+      Inutilidad de archmetrics la detecta después; esta regla la evita antes.
+    verified_by: [G-ARCHMETRICS, human]
+    severity: ratchet
+    fails: [F1]
+
+  - id: MIN-008
+    text: >
+      Al deduplicar, NO colapses tablas de casos de test. Muchos ejemplos
+      pequeños y estructuralmente idénticos son una matriz de cobertura, no
+      duplicación dañina. `wct dry` los marca `LEAVE_ALONE`; respétalo.
+    rationale: >
+      Fuente: unclebob/scrap, que distingue explícitamente ambos casos. Un
+      agente lee mal esa diferencia y destruye cobertura creyendo que mejora el
+      código — un modo de fallo que empeora la calidad pasando todos los gates
+      de estilo.
+    verified_by: [G-DRY, G-COV-TOTAL]
+    severity: hard
+    fails: [F3]

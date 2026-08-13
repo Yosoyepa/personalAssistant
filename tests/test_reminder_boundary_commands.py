@@ -22,7 +22,7 @@ from personal_assistant.infrastructure.bootstrap import AppContainer, build_cont
 class _NoNetworkNotificationProvider:
     """A provider fake that proves these tests never send externally."""
 
-    def send(self, principal, request, *, approval=None):  # type: ignore[no-untyped-def]
+    def send(self, principal, request, *, approval=None):  # type: ignore[no-untyped-def]  # reason: fake de frontera sin anotaciones; solo debe explotar si se invoca
         raise AssertionError("boundary tests must not call a notification provider")
 
 

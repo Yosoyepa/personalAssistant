@@ -55,7 +55,7 @@ class ToolPort(Protocol):
     def definition(self) -> ToolDefinition:
         """Describe the tool contract, side effects, schemas, and tier."""
 
-    def execute(self, call: ToolCall, *, principal: Principal, approval: ApprovalGrant | None = None) -> ToolResult:
+    def execute(self, tool_call: ToolCall, *, principal: Principal, approval: ApprovalGrant | None = None) -> ToolResult:
         """Execute an allowlisted tool call."""
 
 

@@ -126,7 +126,7 @@ def test_apply_deletes_with_the_counted_cutoff() -> None:
 def test_retention_days_out_of_range_are_rejected(days: object) -> None:
     with pytest.raises(trace_retention.TraceRetentionError):
         trace_retention.prune_postgres_traces(
-            connection=_Connection(), retention_days=days  # type: ignore[arg-type]
+            connection=_Connection(), retention_days=days  # type: ignore[arg-type]  # reason: parametrize pasa valores fuera de rango y de tipo a propósito
         )
 
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import (
     BaseModel,
@@ -22,9 +22,6 @@ from pydantic import (
 )
 
 from personal_assistant.domain.common.exceptions import AssistantError, ErrorCode
-
-if TYPE_CHECKING:
-    from personal_assistant.domain.common.identity import Principal
 
 
 class PermissionTier(str, Enum):
@@ -130,7 +127,7 @@ class ApprovalGrant(BaseModel):
     request_hash: str | None = None
     _trusted_source: str | None = PrivateAttr(default=None)
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]  # reason: pydantic v2 lo expone como property; mypy no modela ese descriptor
     @property
     def is_trusted(self) -> bool:
         return self._trusted_source is not None
@@ -323,16 +320,6 @@ def require_approval(
     return decision
 
 
-def __getattr__(name: str) -> Any:
-    """Provide backward-compatible lazy access to Principal without a cycle."""
-
-    if name == "Principal":
-        from personal_assistant.domain.common.identity import Principal
-
-        return Principal
-    raise AttributeError(name)
-
-
 __all__ = [
     "TIER_DESCRIPTIONS",
     "ApprovalGrant",
@@ -340,7 +327,6 @@ __all__ = [
     "PermissionGrant",
     "PermissionRequest",
     "PermissionTier",
-    "Principal",
     "coerce_tier",
     "evaluate_permission",
     "max_tier",

@@ -221,7 +221,7 @@ def test_forwarding_headers_cannot_override_a_direct_loopback_peer() -> None:
 def test_legacy_headers_and_impersonation_query_never_change_authority() -> None:
     container = build_container()
     recording_workflow = _RecordingWorkflow(container.reminder_workflow)
-    container.reminder_workflow = recording_workflow  # type: ignore[assignment]
+    container.reminder_workflow = recording_workflow  # type: ignore[assignment]  # reason: wrapper de grabación no declara el protocolo del workflow
     client = _client(container)
     forged_headers = {
         **AUTHORIZATION,

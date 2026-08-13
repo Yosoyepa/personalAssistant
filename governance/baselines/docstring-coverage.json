@@ -1,0 +1,10 @@
+{
+  "metric": "docstring-coverage",
+  "recorded_at": "2026-08-11T00:00:00Z",
+  "commit": null,
+  "recorded_by": "seed",
+  "value": 0.0,
+  "unit": "percent",
+  "direction": "higher_is_better",
+  "note": "interrogate sobre src/."
+}

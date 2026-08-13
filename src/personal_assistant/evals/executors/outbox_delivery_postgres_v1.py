@@ -397,7 +397,7 @@ class _Provider:
             notification_id="telegram:101" if success else None,
             channel=request.channel,
             idempotency_key=request.idempotency_key,
-            outcome=self.outcome,  # type: ignore[arg-type]
+            outcome=self.outcome,  # type: ignore[arg-type]  # reason: el fake guarda outcome como str; los casos de eval solo usan valores del Literal
             provider_code=self.provider_code,
             retry_after=self.retry_after,
             provider_message_id=101 if success else None,

@@ -130,7 +130,7 @@ def test_context_window_tokens_env_rejects_non_int(
 @pytest.mark.parametrize("invalid", [0, -1, "200000", 200000.5, True])
 def test_context_window_tokens_construction_rejects_invalid(invalid: object) -> None:
     with pytest.raises(ValueError, match="LLM_CONTEXT_WINDOW_TOKENS"):
-        AppSettings(llm_context_window_tokens=invalid)  # type: ignore[arg-type]
+        AppSettings(llm_context_window_tokens=invalid)  # type: ignore[arg-type]  # reason: parametrize pasa valores inválidos a propósito para probar el rechazo
 
 
 def test_context_window_tokens_is_repr_safe() -> None:

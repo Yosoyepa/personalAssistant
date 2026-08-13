@@ -145,5 +145,5 @@ class ShippedRunAuthorityTests(unittest.TestCase):
         self.assertFalse(run.is_calibration_evidence)
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover  # reason: entrada directa de unittest; no se ejecuta bajo pytest
     unittest.main()

@@ -346,7 +346,7 @@ class ConversationCommandService:
                 source_event_id=approval.source_event_id,
                 conversation_id=approval.conversation_id,
                 text=approval.request_text,
-                channel=approval.channel,  # type: ignore[arg-type]
+                channel=approval.channel,  # type: ignore[arg-type]  # reason: llega como str del estado durable; el DTO del workflow lo revalida
                 recipient=approval.recipient,
                 now=approval.request_now,
                 timezone=approval.timezone,

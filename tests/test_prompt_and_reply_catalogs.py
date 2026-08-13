@@ -515,6 +515,6 @@ def test_filesystem_reply_catalog_loads_versioned_reply_files(tmp_path: Path) ->
         encoding="utf-8",
     )
 
-    replies = AssistantReplies.from_catalog(build_reply_catalog(tmp_path))  # type: ignore[attr-defined]
+    replies = AssistantReplies.from_catalog(build_reply_catalog(tmp_path))  # type: ignore[attr-defined]  # reason: from_catalog existe como classmethod; el ignore es residual sin efecto
 
     assert replies.help() == "HELP_FROM_VERSIONED_REPLY_FILE"

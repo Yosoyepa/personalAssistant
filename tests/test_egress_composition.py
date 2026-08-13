@@ -48,7 +48,7 @@ def _full_settings(**overrides: object) -> AppSettings:
         "telegram_bot_token": "123456789:sentinel-telegram-token",
     }
     base.update(overrides)
-    return AppSettings(**base)  # type: ignore[arg-type]
+    return AppSettings(**base)  # type: ignore[arg-type]  # reason: dict de settings centinela; AppSettings valida los tipos en runtime
 
 
 class CompositionEgressWiringTests(unittest.TestCase):

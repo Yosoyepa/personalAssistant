@@ -39,7 +39,7 @@ class StubProvider:
         return LLMResult(
             provider="stub",
             model="stub-judge-1",
-            data=self.data,  # type: ignore[arg-type]
+            data=self.data,  # type: ignore[arg-type]  # reason: el stub guarda data como object; LLMResult exige dict
             input_tokens=10,
             output_tokens=5,
         )
@@ -57,8 +57,8 @@ def _judge(provider: StubProvider, *, catalog: object | None = None):
         extraction=EXTRACTION,
         now=NOW,
         timezone="America/Bogota",
-        llm=provider,  # type: ignore[arg-type]
-        prompt_catalog=catalog or DefaultPromptCatalog(),  # type: ignore[arg-type]
+        llm=provider,  # type: ignore[arg-type]  # reason: se inyecta StubProvider, un fake que emula el protocolo LLMProvider
+        prompt_catalog=catalog or DefaultPromptCatalog(),  # type: ignore[arg-type]  # reason: catalog se recibe como object; los fakes cumplen el puerto en runtime
     )
 
 
@@ -150,7 +150,7 @@ class RefusalTests(unittest.TestCase):
     """Every failure path must land on not-accepted and not-usable."""
 
     def assert_refused(self, provider: StubProvider, **kwargs: object) -> None:
-        verdict = _judge(provider, **kwargs)  # type: ignore[arg-type]
+        verdict = _judge(provider, **kwargs)  # type: ignore[arg-type]  # reason: los tests inyectan fakes vía kwargs tipados como object
         self.assertFalse(verdict.accepted)
         self.assertFalse(verdict.usable)
         self.assertIsNotNone(verdict.error)

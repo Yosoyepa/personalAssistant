@@ -83,12 +83,12 @@ class Principal(DomainModel):
             return frozenset()
         return frozenset(PermissionGrant.model_validate(item) for item in value)
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]  # reason: pydantic v2 lo expone como property; mypy no modela ese descriptor
     @property
     def actor_id(self) -> str:
         return self.principal_id
 
-    @computed_field  # type: ignore[prop-decorator]
+    @computed_field  # type: ignore[prop-decorator]  # reason: pydantic v2 lo expone como property; mypy no modela ese descriptor
     @property
     def is_trusted(self) -> bool:
         return self._trusted_source is not None

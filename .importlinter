@@ -1,0 +1,55 @@
+[importlinter]
+root_package = personal_assistant
+
+# Contratos derivados de ADR-003 (docs/adr/ADR-003-hexagonal-boundaries.md):
+#   infrastructure -> adapters -> contracts -> application -> domain
+# `evals` es el harness de evaluación: puede tocar el runtime, pero ningún
+# paquete del runtime puede importarlo.
+
+[importlinter:contract:domain-independence]
+name = Domain has no project dependencies
+type = forbidden
+source_modules = personal_assistant.domain
+forbidden_modules =
+    personal_assistant.application
+    personal_assistant.adapters
+    personal_assistant.contracts
+    personal_assistant.infrastructure
+    personal_assistant.evals
+
+[importlinter:contract:application-independence]
+name = Application does not depend on outer layers
+type = forbidden
+source_modules = personal_assistant.application
+forbidden_modules =
+    personal_assistant.adapters
+    personal_assistant.contracts
+    personal_assistant.infrastructure
+    personal_assistant.evals
+
+[importlinter:contract:contracts-independence]
+name = Contracts do not depend on adapters or runtime wiring
+type = forbidden
+source_modules = personal_assistant.contracts
+forbidden_modules =
+    personal_assistant.adapters
+    personal_assistant.infrastructure
+    personal_assistant.evals
+
+[importlinter:contract:adapter-independence]
+name = Adapters do not depend on the composition root or evals
+type = forbidden
+source_modules = personal_assistant.adapters
+forbidden_modules =
+    personal_assistant.infrastructure
+    personal_assistant.evals
+
+[importlinter:contract:layer-independence]
+name = Architectural layers are acyclic siblings
+type = acyclic_siblings
+ancestors = personal_assistant
+# Arista diferida intencional (espejo de governance/thresholds.yaml ->
+# architecture.cycle_allowlist): worker._runtime importa bootstrap dentro del
+# CLI; bootstrap cablea ReminderWorker a nivel de módulo.
+ignore_imports =
+    personal_assistant.infrastructure.worker -> personal_assistant.infrastructure.bootstrap

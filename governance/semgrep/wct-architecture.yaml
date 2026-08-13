@@ -1,0 +1,102 @@
+# governance/semgrep/wct-architecture.yaml
+#
+# Reglas semgrep propias del harness. Cubren lo que import-linter NO puede ver:
+# import-linter razona sobre el GRAFO de imports; estas reglas razonan sobre el
+# USO de tipos y valores dentro del archivo.
+#
+# Ejecutadas por G-SAST-SEMGREP. Requieren `semgrep` instalado (opcional: si
+# falta, el gate reporta SKIPPED y aparece como no cubierto en `wct report`).
+
+rules:
+  # ARCH-004 — filtración de tipos de infraestructura por los límites.
+  # import-linter no lo atrapa cuando el tipo entra por un `TYPE_CHECKING` o
+  # cuando se retorna un objeto sin anotarlo.
+  - id: wct-orm-row-leaked-from-application
+    languages: [python]
+    severity: ERROR
+    message: >
+      ARCH-004: este módulo de `application/` retorna o expone un objeto de
+      ORM/framework. Convierte a un tipo del dominio antes de cruzar el límite.
+    paths:
+      include:
+        - "src/*/application/**"
+    patterns:
+      - pattern-either:
+          - pattern: |
+              def $F(...) -> $T: ...
+          - pattern: |
+              async def $F(...) -> $T: ...
+      - metavariable-regex:
+          metavariable: $T
+          regex: '(?i).*(Row|RowProxy|ResultProxy|Session|Query|Model|Response|Request|Cursor|Connection|DataFrame).*'
+
+  # ARCH-002 reforzado: import dinámico que esquiva el análisis estático.
+  - id: wct-dynamic-import-in-core
+    languages: [python]
+    severity: ERROR
+    message: >
+      ARCH-002: import dinámico en el core. `importlib.import_module` y
+      `__import__` son invisibles para import-linter, así que aquí equivalen a
+      esquivar el gate de arquitectura.
+    paths:
+      include:
+        - "src/*/domain/**"
+        - "src/*/application/**"
+    pattern-either:
+      - pattern: importlib.import_module(...)
+      - pattern: __import__(...)
+
+  # ARCH-002 — IO directo desde el core.
+  - id: wct-io-in-domain
+    languages: [python]
+    severity: ERROR
+    message: >
+      ARCH-002: IO directo en `domain/`. El dominio no lee archivos, no abre
+      sockets y no toca el reloj del sistema: recibe esos valores como
+      argumentos, lo que además lo hace testeable sin mocks.
+    paths:
+      include:
+        - "src/*/domain/**"
+    pattern-either:
+      - pattern: open(...)
+      - pattern: pathlib.Path(...).read_text(...)
+      - pattern: pathlib.Path(...).write_text(...)
+      - pattern: os.environ
+      - pattern: os.getenv(...)
+      - pattern: socket.$ANY(...)
+      - pattern: subprocess.$ANY(...)
+
+  # SEC-001 refuerzo: secreto con forma de placeholder realista. detect-secrets
+  # usa entropía y falla con constantes de forma reconocible.
+  - id: wct-hardcoded-credential-shape
+    languages: [python]
+    severity: ERROR
+    message: >
+      SEC-001: credencial embebida en el código. Léela de una variable de
+      entorno en la capa de entrypoints, incluso si este valor es de ejemplo:
+      un secreto committeado queda en el historial para siempre.
+    patterns:
+      - pattern: $VAR = "..."
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: '(?i).*(password|passwd|secret|token|api_key|apikey|private_key|access_key|client_secret).*'
+
+  # TEST-003 — el caso Python del test introvertido. Es un pre-filtro rápido;
+  # el análisis real lo hace `wct introvert` (G-INTROVERT).
+  - id: wct-mock-only-assertion
+    languages: [python]
+    severity: WARNING
+    message: >
+      TEST-003: este test asevera únicamente sobre el mock. Añade una aserción
+      sobre el valor que retorna el SUT, o el test verifica su propio
+      andamiaje. Confirma con `wct introvert`.
+    paths:
+      include:
+        - "tests/**"
+    patterns:
+      - pattern-either:
+          - pattern: $M.assert_called_once(...)
+          - pattern: $M.assert_called_once_with(...)
+          - pattern: $M.assert_called_with(...)
+          - pattern: $M.assert_awaited_once(...)
+          - pattern: $M.assert_awaited_once_with(...)

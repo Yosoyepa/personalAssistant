@@ -1,0 +1,157 @@
+# governance/rules/50-process.yaml
+schema_version: 1
+group: process
+title: Proceso, entrega y roles
+order: 50
+
+rules:
+  - id: PROC-001
+    text: >
+      No termines un turno con el árbol en rojo. Corre `wct gate --tier fast`
+      antes de entregar; el hook de Stop lo corre de todas formas y te devolverá
+      el fallo.
+    rationale: >
+      Es el anillo 4. Mueve el descubrimiento del fallo al momento de escribirlo,
+      cuando el contexto de por qué se escribió así todavía existe.
+    verified_by: [G-LINT, G-TYPE, G-TEST-FAST]
+    severity: hard
+    fails: []
+
+  - id: PROC-002
+    text: >
+      Trabaja en incrementos pequeños y revisables. Prefiere el diseño más
+      simple que soporte el comportamiento actual y deje opciones claras para el
+      siguiente paso.
+    rationale: >
+      Fuente: swarm-forge engineering.prompt. Un diff pequeño es la única forma
+      de que la revisión humana —el eslabón que cubre F15— sea viable.
+    verified_by: [human]
+    severity: human
+    fails: [F1]
+
+  - id: PROC-003
+    text: >
+      Para features no triviales: especifica primero en Gherkin, obtén
+      aprobación humana explícita del escenario, y solo entonces implementa.
+    rationale: >
+      F15 (deriva semántica) es el único modo de fallo que ninguna herramienta
+      puede atrapar. Si la especificación está mal, el harness verifica con
+      precisión el error equivocado. La aprobación humana del Gherkin es el
+      eslabón, y no es opcional.
+    verified_by: [G-ACCEPT, human]
+    severity: hard
+    fails: [F15]
+
+  - id: PROC-004
+    text: >
+      El orden de verificación pesada es: mutación → mutación de Gherkin →
+      CRAP → DRY. Arregla lo que cada herramienta encuentre antes de correr la
+      siguiente.
+    rationale: >
+      Fuente: swarm-forge roles/hardender.prompt. No es arbitrario: matar
+      survivors añade tests, lo que cambia la cobertura, lo que cambia el CRAP.
+      Correr CRAP primero obliga a recalcularlo.
+    verified_by: [G-MUT, G-ACCEPT-MUT, G-CRAP, G-DRY]
+    severity: hard
+    fails: []
+
+  - id: PROC-005
+    text: >
+      El que escribe no verifica. Si ejecutas un gate sobre código que tú
+      escribiste en este mismo turno, no eres el verificador: pide el subagente
+      `verifier`, que no tiene permiso de escritura.
+    rationale: >
+      Es el principio estructural de swarm-forge: cada rol tiene una sección
+      "Does Not Own". Un verificador con permiso de escritura puede aflojar el
+      gate que ejecuta, así que el mecanismo no es la instrucción sino la
+      ausencia de las herramientas Edit y Write.
+    verified_by: [G-REDTEAM, human]
+    severity: hard
+    fails: [F14]
+
+  - id: PROC-006
+    text: >
+      Mensajes de commit en formato conventional commits (`feat:`, `fix:`,
+      `refactor:`, `test:`, `chore:`…). Cuando trabajes en un rol de la pipeline,
+      incluye el byline `By <rol>.` al final del mensaje.
+    rationale: >
+      El byline viene de swarm-forge workflow.prompt y hace auditable quién
+      produjo qué en una pipeline multi-agente, lo que es la precondición para
+      diagnosticar qué rol está fallando.
+    verified_by: [G-COMMIT-MSG]
+    severity: hard
+    fails: []
+
+  - id: PROC-007
+    text: >
+      Usa `./build/tmp/` dentro del repo para archivos temporales. No uses
+      `/tmp`.
+    rationale: >
+      Fuente: swarm-forge workflow.prompt. En ejecuciones paralelas (worktrees,
+      varios agentes, jobs concurrentes) los procesos se pisan los archivos en
+      /tmp, y el fallo resultante parece un bug del código.
+    verified_by: [G-LINT, human]
+    severity: hard
+    fails: []
+
+  - id: PROC-008
+    text: >
+      Si un ratchet te bloquea, mejora la métrica. No subas el umbral. Subirlo
+      requiere `wct ratchet raise --reason ... --approved-by <humano>` y queda
+      registrado en governance/ratchet-log.md.
+    rationale: >
+      Un ratchet que se sube cuando molesta es un baseline, y un baseline que
+      solo sube es una métrica decorativa. El registro hace que el estancamiento
+      sea visible en `wct report`.
+    verified_by: [G-META-1]
+    severity: hard
+    fails: [F13, F14]
+
+  - id: PROC-009
+    text: >
+      Si difieres trabajo, regístralo con owner e issue
+      (`# TODO(owner=<usuario>, issue=#<n>): <texto>`). Un marcador sin ambos es
+      rechazado por el gate.
+    rationale: >
+      Ver MIN-004. Sin owner ni issue, el marcador es una nota privada que nadie
+      volverá a leer.
+    verified_by: [G-TODO]
+    severity: hard
+    fails: [F1]
+
+  - id: PROC-010
+    text: >
+      No edites CLAUDE.md, AGENTS.md ni nada bajo governance/generated/. Edita
+      governance/rules/*.yaml y corre `wct rules build`.
+    rationale: >
+      Es F14 aplicado a las reglas mismas: mantener 6 copias a mano garantiza
+      deriva, y la deriva significa que cada proveedor obedece una versión
+      distinta. `wct rules check` falla si divergen.
+    verified_by: [G-RULES-SYNC]
+    severity: hard
+    fails: [F14]
+
+  - id: PROC-011
+    text: >
+      Al arrancar en un rol de la pipeline, lee tu sección "Owns" y "Does Not
+      Own" y respétala. No hagas el trabajo de otro rol aunque lo veas roto:
+      repórtalo en el handoff.
+    rationale: >
+      Fuente: swarm-forge roles/*.prompt. Un cleaner que empieza a añadir
+      features es un modo de fallo silencioso, porque el trabajo pasa todos los
+      gates del cleaner y nadie verifica el comportamiento nuevo.
+    verified_by: [human]
+    severity: human
+    fails: [F15]
+
+  - id: PROC-012
+    text: >
+      Reporta el resultado real. Si un gate falló, dilo con su salida. Si
+      saltaste un paso, dilo. No describas como verificado lo que no corriste.
+    rationale: >
+      Todo el harness produce evidencia; un reporte que la contradice destruye
+      el valor de haberla producido. Es la única regla cuyo incumplimiento hace
+      inútil a todas las demás.
+    verified_by: [human]
+    severity: human
+    fails: [F15]
