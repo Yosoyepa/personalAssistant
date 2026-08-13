@@ -3,12 +3,12 @@
 | Campo | Valor |
 |---|---|
 | Fase | `13 — adopción piloto WCT` |
-| Estado | `IN_PROGRESS` |
+| Estado | `MERGED` |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `kimi/phase-13-wct-pilot` |
 | Fecha de inicio | `2026-08-13` |
-| PR | `<pendiente>` |
-| Merge commit | `<pendiente>` |
+| PR | `#35` |
+| Merge commit | `bada028` |
 
 ## Objetivo
 
