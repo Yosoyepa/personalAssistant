@@ -73,6 +73,10 @@ New production failures become permanent executable regression cases. Do not
 add placeholders, skips, generated expected values, or LLM judges for behavior
 that code can verify.
 
+That prohibition is about **this suite**, and it is unchanged. A separate
+Level-2 behavioral tier exists for the two surfaces code cannot verify; see
+"Behavioral tier (Level 2)" below.
+
 ## PostgreSQL reliability corpus
 
 The `atomicity-recovery` and `delivery-concurrency` categories are blocking
@@ -86,3 +90,59 @@ runs the repository migrations against it, executes production UoW/outbox
 contracts, and drops only that validated schema. These cases never contact an
 LLM or Telegram; deterministic finite provider scripts stand in only for the
 external I/O boundary, while all critical persistence is real PostgreSQL.
+
+## Behavioral tier (Level 2)
+
+The 299 cases above are deterministic and **none of them exercises an LLM**. The
+runtime has two real LLM call sites, and the Level-2 tier is where they get
+measured:
+
+| Surface | Call site |
+|---|---|
+| `intent-classification` | `_infer_intent` (`use_cases/commands.py`) |
+| `reminder-extraction` | `_extract_with_llm` (`use_cases/reminders.py`) |
+
+It is a separate package (`src/personal_assistant/evals/behavioral/`) and a
+separate corpus (`eval/behavioral/`) on purpose. L1 decides by exact equality,
+which is right for a release gate and wrong for graded human judgement. Rather
+than loosen L1, the tiers stay apart — see
+`docs/adr/ADR-006-behavioral-eval-tier-and-judge.md`.
+
+```bash
+# Replay committed cassettes. No network, no provider, deterministic.
+uv run python -m personal_assistant.evals.behavioral \
+  --corpus eval/behavioral --mode replay
+
+# Filters
+--surface intent-classification   --split holdout   --tag relative-time   --json
+```
+
+### What blocks and what does not
+
+Exit 1 means a **harness** failure: a cassette that cannot answer a request, a
+payload the runtime's own parser rejects, a judge that broke. A missing cassette
+entry in replay mode is an explicit sanitized failure, never a skip and never an
+empty pass — the same policy this file applies to a missing `TEST_POSTGRES_DSN`.
+
+Model disagreement with a human label exits **0**. Disagreement is the
+measurement this tier publishes; gating on it would make CI depend on a provider
+matching one person's judgement.
+
+CI runs `--mode replay` only.
+
+### Provenance
+
+`Cassette.provenance` is required and has no default. `recorded` means a real
+provider answered; `synthetic` means the payloads came from a fixture. Only
+`recorded` runs count as calibration evidence — `--mode replay` prints a warning
+above the rates otherwise, and `judge_authority()` refuses to promote the judge.
+
+**The cassettes committed today are `synthetic`.** No live pass has run, so the
+rates they produce measure the harness rather than any model. See
+`docs/development/judge-calibration-v1.md`.
+
+### Changing a prompt invalidates the cassettes
+
+The cassette key is a sha256 of the rendered prompt, so editing anything under
+`prompts/` (or `CORPUS_NOW`) makes every entry miss and replay fail. That alarm
+is intended: re-record with `--mode record` against a configured provider.

@@ -5,6 +5,11 @@
       "path": "conversation_intent/v1.md",
       "required_variables": ["allowed_intents", "now", "timezone", "text"]
     },
+    "judge_reminder_extraction": {
+      "version": "v1",
+      "path": "judge_reminder_extraction/v1.md",
+      "required_variables": ["now", "timezone", "text", "extraction"]
+    },
     "llm_json_system": {
       "version": "v1",
       "path": "llm_json_system/v1.md",
