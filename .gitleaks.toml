@@ -1,0 +1,14 @@
+title = "personal-assistant gitleaks config"
+
+[extend]
+useDefault = true
+
+# Behavioral-eval cassettes are synthetic fixtures whose "key" fields are
+# SHA-256 hashes of the LLM request (see evals/behavioral/replay.py:
+# request_key). They trip the generic-api-key rule but are not credentials.
+# Scoped to the cassette directory and to 64-char hex matches only.
+[allowlist]
+description = "Synthetic eval cassettes: request-hash keys, not secrets"
+regexTarget = "match"
+regexes = ['''"[0-9a-f]{64}"''']
+paths = ['''^eval/behavioral/cassettes/''']
