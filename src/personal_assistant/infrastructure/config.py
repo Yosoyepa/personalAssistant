@@ -26,6 +26,7 @@ from personal_assistant.infrastructure.config_persistence import (
     load_persistence_settings_from_env,
 )
 from personal_assistant.infrastructure.config_settings import AppSettings
+from personal_assistant.infrastructure.config_whatsapp import WhatsAppSettings
 
 __all__ = [
     "DEFAULT_DATABASE_SCHEMA",
@@ -37,6 +38,7 @@ __all__ = [
     "DEFAULT_TRACE_RETENTION_DAYS",
     "_DISABLED_PROVIDERS",
     "AppSettings",
+    "WhatsAppSettings",
     "_env",
     "_env_bool",
     "_env_permission_tier",

@@ -20,6 +20,9 @@ from personal_assistant.infrastructure.config_env import (
 )
 from personal_assistant.infrastructure.config_loader_llm import _load_llm_kwargs
 from personal_assistant.infrastructure.config_loader_media import _load_media_kwargs
+from personal_assistant.infrastructure.config_loader_whatsapp import (
+    _load_whatsapp_kwargs,
+)
 
 if TYPE_CHECKING:
     from personal_assistant.infrastructure.config_settings import AppSettings
@@ -95,6 +98,7 @@ def load_app_settings_from_env(cls: type[T]) -> T:
         egress_allowed_hosts=_parse_csv(
             _env("EGRESS_ALLOWED_HOSTS", file_values)
         ),
+        whatsapp=_load_whatsapp_kwargs(file_values),
         **llm_kwargs,
         **media_kwargs,
     )

@@ -11,6 +11,7 @@ from personal_assistant.infrastructure.config_constants import (
     DEFAULT_TRACE_RETENTION_DAYS,
 )
 from personal_assistant.infrastructure.config_validation import validate_app_settings
+from personal_assistant.infrastructure.config_whatsapp import WhatsAppSettings
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +25,7 @@ class AppSettings:
     telegram_webhook_secret: str = field(default="", repr=False)
     telegram_bot_token: str | None = field(default=None, repr=False)
     telegram_allowed_user_ids: frozenset[str] = field(default=frozenset(), repr=False)
+    whatsapp: WhatsAppSettings = field(default_factory=WhatsAppSettings)
     llm_provider: str = "disabled"
     llm_api_key: str | None = field(default=None, repr=False)
     llm_base_url: str | None = field(default=None, repr=False)
