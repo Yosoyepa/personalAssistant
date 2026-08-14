@@ -3,11 +3,12 @@
 | Campo | Valor |
 |---|---|
 | Fase | `16 — whatsapp inbound webhook` |
-| Estado | `SPEC_APPROVED` |
+| Estado | `COMPLETED` |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `gemini/phase-16-config-split` (16a), `gemini/phase-16-whatsapp-inbound` (16b) |
-| Fecha de inicio | `2026-08-1| PR | `#43` (16a), pendiente (16b) |
-| Merge commit | `a4d7e36` (16a), pendiente (16b) |
+| Fecha de inicio | `2026-08-14` |
+| PR | `#43` (16a), `#44` (16b) |
+| Merge commit | `a4d7e36` (16a), `c2f4d99` (16b) |
 
 ## Objetivo
 
