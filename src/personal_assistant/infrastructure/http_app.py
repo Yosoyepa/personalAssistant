@@ -38,6 +38,9 @@ from personal_assistant.infrastructure.http_routes_runtime import (
 from personal_assistant.infrastructure.http_routes_telegram import (
     register_telegram_routes,
 )
+from personal_assistant.infrastructure.http_routes_whatsapp import (
+    register_whatsapp_routes,
+)
 from personal_assistant.infrastructure.http_worker import (
     _run_reminder_worker_loop,
     _utcnow,
@@ -125,6 +128,11 @@ def create_app(
         clock=clock,
     )
     register_telegram_routes(
+        app,
+        container=runtime_container,
+        settings=runtime_settings,
+    )
+    register_whatsapp_routes(
         app,
         container=runtime_container,
         settings=runtime_settings,

@@ -26,6 +26,10 @@ from personal_assistant.infrastructure.http_auth import (
     current_principal,
     telegram_principal,
 )
+from personal_assistant.infrastructure.http_auth_whatsapp import (
+    verify_whatsapp_signature,
+    whatsapp_principal,
+)
 from personal_assistant.infrastructure.http_container import (
     build_runtime_container,
 )
@@ -56,6 +60,9 @@ from personal_assistant.infrastructure.http_models import (
     ReminderCommandRequest,
     ReminderCommandResponse,
     TelegramWebhookResponse,
+)
+from personal_assistant.infrastructure.http_models_whatsapp import (
+    WhatsAppWebhookResponse,
 )
 from personal_assistant.infrastructure.http_telegram_replies import (
     _send_telegram_audio_reply,
@@ -95,6 +102,7 @@ __all__ = [
     "ReminderCommandResponse",
     "TelegramBotApiClient",
     "TelegramWebhookResponse",
+    "WhatsAppWebhookResponse",
     "_approval_id",
     "_approval_status_from_pending",
     "_approval_view_from_pending",
@@ -123,6 +131,8 @@ __all__ = [
     "normalize_telegram_webhook",
     "secrets",
     "telegram_principal",
+    "verify_whatsapp_signature",
+    "whatsapp_principal",
 ]
 
 app = create_app()

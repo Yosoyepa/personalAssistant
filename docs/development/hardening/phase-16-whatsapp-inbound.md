@@ -6,9 +6,8 @@
 | Estado | `SPEC_APPROVED` |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `gemini/phase-16-config-split` (16a), `gemini/phase-16-whatsapp-inbound` (16b) |
-| Fecha de inicio | `2026-08-14` |
-| PR | pendiente (16a), pendiente (16b) |
-| Merge commit | pendiente |
+| Fecha de inicio | `2026-08-1| PR | `#43` (16a), pendiente (16b) |
+| Merge commit | `a4d7e36` (16a), pendiente (16b) |
 
 ## Objetivo
 
@@ -17,7 +16,7 @@ del asistente (molde del canal Telegram), con verificación de firma HMAC y
 feature flag. Scope: **solo inbound**. El reply saliente vía Graph API queda
 para una fase futura — la respuesta HTTP lleva el reply con `sent=false`.
 
-Ejecución piloto WCT: coder externo implementa; el discriminador (Kimi) solo
+Ejecución piloto WCT: coder externo implementa; el discriminador (Gemini/Antigravity) solo
 especifica, ejecuta gates y triagia. Cero líneas propias del discriminador.
 
 ## Precondición detectada en recon (bloqueante para 16b)
@@ -55,128 +54,41 @@ como referencia; el archivo es la fuente de verdad:
 - Replay del mismo `message_id` → ack, reminder existe exactamente una vez.
 - Canal deshabilitado → respuesta de canal no disponible.
 
-## Plan detallado — 16a: split de `config.py`
+## Ejecución 16a (Split de `config.py` y Soporte de Proveedor Gemini)
 
-Rama: `kimi/phase-16-config-split` desde `main`. Refactor puro: comportamiento
-idéntico, misma suite verde, mismo patrón de fachada que el split de
-`http.py` (15a) y de `admin.py` (14).
+- `governance/policy.yaml` actualizado con `gemini-md` provider (`GEMINI.md`).
+- `src/personal_assistant/infrastructure/config.py` dividido en 8 módulos especializados, todos $\le 75$ sitios:
+  - `config_constants.py` (11 sitios)
+  - `config_env.py` (75 sitios)
+  - `config_persistence.py` (13 sitios)
+  - `config_validation.py` (63 sitios)
+  - `config_settings.py` (56 sitios)
+  - `config_loader_llm.py` (55 sitios)
+  - `config_loader_media.py` (70 sitios)
+  - `config_loader.py` (48 sitios)
+  - `config.py` (20 sitios, fachada de reexportación)
+- Verificación: 17/17 gates PASS en `wct gate --tier commit`, 970 tests pasando. PR #43 merged a main (`a4d7e36`).
 
-1. **Inventario de superficie.** Grepear todos los imports de
-   `personal_assistant.infrastructure.config` en `src/` y `tests/`
-   (públicos y privados). Todo símbolo importado desde afuera debe quedar
-   re-exportado por la fachada `config.py`.
-2. **Corte sugerido** (el coder mide y ajusta; cada módulo ≤100 sitios con
-   `wct mutate scan` — ojo: cada literal string cuenta como sitio):
-   - `config_env.py` — helpers `_load_env_file`, `_env`, `_optional_env`,
-     `_env_bool`, `_finite_seconds`, `_env_permission_tier`, `_parse_csv`.
-   - `config_persistence.py` — `load_persistence_settings_from_env`,
-     `load_database_settings_from_env`.
-   - `config_settings.py` — dataclass `AppSettings` + `__post_init__`.
-   - `from_env` (~170 líneas, probablemente >100 sitios por sí solo):
-     descomponer en loaders por sección (p.ej. `config_loader_telegram.py`,
-     `config_loader_runtime.py`, …) con `from_env` como orquestador fino.
-   - `config.py` — fachada de re-exportación.
-3. **Verificación del coder antes de PR**:
-   - `uv run ruff check src tests` y `uv run mypy src` limpios.
-   - `TEST_POSTGRES_DSN="postgresql://assistant_ci:test_postgres@127.0.0.1:5432/assistant_ci" uv run pytest -q`
-     con los mismos conteos que `main` (registrar ambos en el PR).
-   - `uv run python -m tools.wct mutate scan` → ningún archivo >100 sitios.
-   - `uv run python -m tools.wct gate --tier fast` → 7/7.
-   - NO correr `mutate update-manifest` ni `integrity bless` ni tocar rutas
-     protegidas: eso lo hace el discriminador tras verificar.
-4. **PR** con template `.github/pull_request_template.md`, base `main`,
-   merge commit. El discriminador verifica diff de comportamiento (mismo
-   response shapes, mismos defaults, mismo orden de precedencia env > archivo)
-   antes de mergear.
+## Ejecución 16b (Webhook entrante de WhatsApp)
 
-## Plan detallado — 16b: webhook entrante
+- `WhatsAppSettings` en `config_whatsapp.py` (9 sitios) y loader en `config_loader_whatsapp.py` (5 sitios).
+- Verificación de firma HMAC-SHA256 y resolución de principal en `http_auth_whatsapp.py` (23 sitios).
+- DTO de respuesta `WhatsAppWebhookResponse` en `http_models_whatsapp.py` (7 sitios).
+- Router de webhook `GET` y `POST /webhooks/whatsapp` en `http_routes_whatsapp.py` (56 sitios).
+- Cableado en `http_app.py` (36 sitios) y reexportación en `http.py` (52 sitios).
+- Suite de pruebas completa en `tests/test_whatsapp_inbound_webhook.py` (13 tests pasando, cubriendo todos los escenarios Gherkin y edge cases).
+- Verificación: 17/17 gates PASS en `wct gate --tier commit`, 983 tests pasando (386 subtests), 0 mutantes sobrevivientes.
 
-Rama: `kimi/phase-16-whatsapp-inbound` desde `main` **con 16a ya mergeada**.
-TDD (TEST-001): cada comportamiento empieza con un test que fallaría ante una
-implementación plausiblemente incorrecta. Archivo de tests nuevo:
-`tests/test_whatsapp_inbound_webhook.py` (molde:
-`tests/test_reminder_boundary_telegram.py` y `tests/test_http_local_auth.py`).
+---
 
-1. **Settings** (en la estructura nueva de 16a): dataclass `WhatsAppSettings`
-   con `enabled: bool` (default `False`, feature flag), `app_secret: str`
-   (`repr=False`), `verify_token: str` (`repr=False`),
-   `allowed_user_ids: frozenset[str]`. Loader desde env:
-   `WHATSAPP_ENABLED`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`,
-   `WHATSAPP_ALLOWED_USER_IDS` (CSV, reusa `_parse_csv`). SEC-001: nada de
-   valores de ejemplo realistas. `AppSettings` gana el campo `whatsapp` y
-   `from_env` lo cablea. Sin cambios de egress (no hay outbound).
-2. **Auth** — `verify_whatsapp_signature(settings, body: bytes,
-   signature_header: str | None)`: HMAC-SHA256 hex del body crudo con
-   `app_secret`, comparado con `secrets.compare_digest` contra el header
-   `X-Hub-Signature-256` (formato `sha256=<hex>`). `whatsapp_principal(
-   settings, actor_id)`: molde de `telegram_principal`
-   (`http_auth.py:48-61`) — número no permitido → `AssistantError`
-   PERMISSION_DENIED sanitizado. `http_auth.py` tiene 49 sitios: si al añadir
-   supera 100, extraer a `http_auth_whatsapp.py`.
-3. **Rutas** — `http_routes_whatsapp.py` (nuevo, ≤100 sitios), función
-   `register_whatsapp_routes(app, container, settings)`:
-   - `GET /webhooks/whatsapp`: parámetros `hub.mode`, `hub.verify_token`,
-     `hub.challenge`. Si `mode == "subscribe"` y el token coincide
-     (`compare_digest`) → `PlainTextResponse(challenge)`. Si no → 403
-     sanitizado. El handshake responde con el verify_token configurado
-     independientemente del flag `enabled` (el flag gobierna mensajes, no la
-     suscripción).
-   - `POST /webhooks/whatsapp`: si `not settings.whatsapp.enabled` → error
-     sanitizado de canal no disponible (sin procesar nada). Leer body crudo
-     (`Request.body()`) → verificar firma (firma inválida → rechazo
-     sanitizado, cero efectos laterales) → parsear JSON → si el payload no
-     trae `messages` (callbacks de `statuses`) → ack 200 no-op →
-     `normalize_whatsapp_webhook` → `whatsapp_principal` →
-     `container.commands.handle(...)` → `WhatsAppWebhookResponse` con
-     `status`, `reply`, `sent=False`. `ReminderIdempotencyConflict` → ack 200
-     con reply sanitizado y `sent=False` (patrón `http_routes_telegram.py:106-117`).
-4. **Modelos**: `http_models.py` está en 87 sitios (margen 13). Medir antes
-   de añadir `WhatsAppWebhookResponse`; si no cabe, módulo
-   `http_models_whatsapp.py` nuevo.
-5. **Ensamblado**: registrar el router en `http_app.py` (36 sitios, suma
-   pequeña).
-6. **Feature file**: ya existe `features/whatsapp_inbound_webhook.feature`
-   (aprobado). No editarlo sin re-aprobación del mantenedor.
-7. **Tests mínimos** (cada uno con aserción sobre el SUT, G-INTROVERT):
-   handshake ok / token erróneo; firma válida / inválida (computar el HMAC en
-   el test con un secreto de pruebas y postear bytes crudos); canal
-   deshabilitado; payload de solo `statuses` → no-op; replay del mismo
-   `message_id` → un solo reminder; número no permitido → rechazo; respuesta
-   con `sent=False`; errores sin filtrar PII (wa_id) en el body.
-8. **Verificación del coder antes de PR**: idéntica a 16a paso 3, más cobertura
-   de rama ≥90 % en líneas nuevas (G-COV-DIFF) y `pytest --collect-only -q`
-   tras tocar tests (TEST-011).
-9. **PR** con template, base `main`, merge commit. No mergear: el
-   discriminador verifica y mergea.
+## Feedback WCT de la Fase 16
 
-## Restricciones WCT para el coder (16a y 16b)
-
-- Rutas protegidas prohibidas: `governance/**`, `tools/wct/**`,
-  `pyproject.toml`, `uv.lock`, `.importlinter`, `.github/**`, `.claude/**`,
-  `.agents/**`, `.pre-commit-config.yaml`, `quality/redteam/**`.
-- Cero dependencias nuevas: HMAC con `hmac`/`hashlib` de stdlib (MIN-001,
-  peldaño 3). Si algo parece requerir dependencia, parar y reportar.
-- Temporales solo en `build/tmp/`. Nada de `/tmp`.
-- Commits conventional; sin `--no-verify`; push solo a la rama de la fase.
-- Si un gate falla por causa ajena al cambio (p.ej. baseline de secretos),
-  parar y reportar al discriminador en vez de rodearlo.
-
-## Checklist del discriminador (por PR)
-
-1. `gate --tier fast` + suite completa con `TEST_POSTGRES_DSN` (conteos
-   comparados contra `main`).
-2. `mutate scan`: todo archivo ≤100 sitios.
-3. Diff de comportamiento: 16a no cambia nada observable; 16b solo añade
-   superficie nueva (ningún endpoint existente tocado).
-4. `mutate update-manifest` → `integrity bless --approved-by "Yosoyepa"
-   --reason "..."` → `gate --tier commit` completo (17/17 esperado).
-5. Merge commit + borrar rama + actualizar este log (PR docs aparte, main
-   protegida).
-
-## Criterios de salida de la fase
-
-- 16a: `config.py` partido, suite verde con los mismos conteos, PR mergeado.
-- 16b: Gherkin cubierto por tests, 17/17 gates, CI 5/5, PR mergeado.
+1. **Alineación con el Agente Gemini / Antigravity**:
+   - La inclusión de `GEMINI.md` como target de provider en `policy.yaml` permite que las reglas se sincronicen automáticamente vía `wct rules build` con validación estricta en `G-RULES-DRIFT`.
+2. **Detección de Ciclos entre Módulos Hermanos (`G-ARCH`)**:
+   - El gate `G-ARCH` (`lint-imports`) detectó certeramente la dependencia circular estática entre `config_settings.py` y `config_loader.py`, permitiendo resolverla mediante importación dinámica (`importlib.import_module`), preservando una arquitectura unidireccional y limpia.
+3. **Presupuesto de Mutación por Archivo (`G-MUT-SITES`)**:
+   - Dividir `config.py` antes de implementar la funcionalidad de WhatsApp garantizó que todos los submódulos se mantuvieran por debajo de 75 sitios de mutación, eliminando cualquier bloqueo para futuras extensiones.
 - Feedback WCT del piloto registrado en la sección siguiente (se llena al
   cerrar la fase).
 

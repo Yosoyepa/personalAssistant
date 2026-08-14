@@ -40,3 +40,15 @@
 - Approved by: Yosoyepa
 - Reason: split config.py and add gemini provider
 - Commit: 39c847dfb470368163c40c8ebe71a6366450c111
+
+## 2026-08-14T16:18:48.183311+00:00
+
+- Approved by: Yosoyepa
+- Reason: implement whatsapp inbound webhook (phase 16b)
+- Commit: a4d7e36f395380ce3daef361bed0eb77ce05c7fd
+
+## 2026-08-14T16:20:48.154525+00:00
+
+- Approved by: Yosoyepa
+- Reason: update phase 16 documentation and feedback
+- Commit: a4d7e36f395380ce3daef361bed0eb77ce05c7fd
