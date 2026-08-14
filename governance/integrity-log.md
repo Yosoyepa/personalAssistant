@@ -52,3 +52,9 @@
 - Approved by: Yosoyepa
 - Reason: update phase 16 documentation and feedback
 - Commit: a4d7e36f395380ce3daef361bed0eb77ce05c7fd
+
+## 2026-08-14T21:02:58.406332+00:00
+
+- Approved by: Yosoyepa
+- Reason: regenerate mutation manifest after worker.py split (phase 17a), PR verified by discriminator
+- Commit: e92bf3b95f2a366560e0a9d6d80d9a5828192439
