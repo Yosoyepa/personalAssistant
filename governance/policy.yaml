@@ -70,6 +70,7 @@ paths:
   generated:
     - governance/generated/**
     - AGENTS.md
+    - GEMINI.md
 
 # ---------------------------------------------------------------------------
 # Capas arquitectónicas — la definición vive aquí; los contratos ejecutables
@@ -139,6 +140,8 @@ architecture:
 providers:
   - id: agents-md
     target: AGENTS.md
+  - id: gemini-md
+    target: GEMINI.md
 
 # ---------------------------------------------------------------------------
 # Flags de gates. Un gate desactivado aparece en `wct report` como NO CUBIERTO

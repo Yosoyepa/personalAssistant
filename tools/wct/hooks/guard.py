@@ -100,11 +100,15 @@ def _dispatch_unsafe(event: str) -> int:
     if normalized == "config-change":
         return _run_gate(root, "fast")
     if normalized in {"session-start", "subagent-start", "post-compact"}:
-        rules = (
-            (root / "CLAUDE.md").read_text(encoding="utf-8")
-            if (root / "CLAUDE.md").is_file()
-            else "Run `wct rules build`."
+        rules_path = next(
+            (
+                root / name
+                for name in ("GEMINI.md", "CLAUDE.md", "AGENTS.md")
+                if (root / name).is_file()
+            ),
+            None,
         )
+        rules = rules_path.read_text(encoding="utf-8") if rules_path else "Run `wct rules build`."
         print(json.dumps({"hookSpecificOutput": {"additionalContext": rules[:12000]}}))
     return 0
 
