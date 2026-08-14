@@ -157,3 +157,21 @@ Rama desde `main` con 17a mergeada. TDD estricto.
 ## Feedback WCT de la fase
 
 (pendiente — se llena al cierre por el discriminador)
+
+## Ejecución 17a — Split de `worker.py` (Coder)
+
+- **Fecha**: 2026-08-14
+- **Rama**: `gemini/phase-17-worker-split`
+- **Resultados**:
+  - `src/personal_assistant/infrastructure/worker.py` original (148 sitios) descompuesto en 3 módulos acotados:
+    - `worker_runtime.py`: 52 sitios (loop de ejecución, ticks y approval policy).
+    - `worker_cli.py`: 38 sitios (parser de argumentos CLI y formateo seguro de mensajes).
+    - `worker.py` (fachada y ensamblado CLI): 73 sitios (reexportaciones, ensamblado runtime y entrypoint `main`).
+  - **Presupuesto de mutación**: Todos los módulos ≤100 sitios (ningún archivo en infracción de `G-MUT-SITES`).
+  - **Superficie de importación**: 100% preservada para consumidores externos y tests (`Clock`, `ReminderWorker`, `ReminderWorkerTick`, `RuntimeNotificationApprovalPolicy`, `Sleeper`, `StopPredicate`, `_parser`, `_print_rows`, `_runtime`, `_safe_message`, `_timestamp`, `main`, `utc_now`).
+  - **Verificación**:
+    - `ruff check src tests`: PASS
+    - `mypy src`: PASS
+    - `pytest -q`: 983 passed, 3 skipped, 386 subtests passed
+    - `wct mutate scan`: 0 archivos modificados >100 sitios
+    - `wct gate --tier commit`: 17/17 gates PASS
