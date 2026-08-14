@@ -5,7 +5,7 @@
 | Fase | `16 — whatsapp inbound webhook` |
 | Estado | `SPEC_APPROVED` |
 | Mantenedor | `Yosoyepa` |
-| Rama de fase | `kimi/phase-16-config-split` (16a), `kimi/phase-16-whatsapp-inbound` (16b) |
+| Rama de fase | `gemini/phase-16-config-split` (16a), `gemini/phase-16-whatsapp-inbound` (16b) |
 | Fecha de inicio | `2026-08-14` |
 | PR | pendiente (16a), pendiente (16b) |
 | Merge commit | pendiente |

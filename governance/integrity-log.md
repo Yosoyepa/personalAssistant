@@ -22,3 +22,21 @@
 - Approved by: Yosoyepa
 - Reason: admin uncertain resolution feature (phase 15b)
 - Commit: 9767f1f95ce8627b610f7a0680714de766bb7932
+
+## 2026-08-14T15:58:07.258567+00:00
+
+- Approved by: Yosoyepa
+- Reason: add gemini provider to WCT and policy.yaml
+- Commit: 39c847dfb470368163c40c8ebe71a6366450c111
+
+## 2026-08-14T16:01:34.597657+00:00
+
+- Approved by: Yosoyepa
+- Reason: split config.py into submodules <=100 mutation sites
+- Commit: 39c847dfb470368163c40c8ebe71a6366450c111
+
+## 2026-08-14T16:07:27.571404+00:00
+
+- Approved by: Yosoyepa
+- Reason: split config.py and add gemini provider
+- Commit: 39c847dfb470368163c40c8ebe71a6366450c111
