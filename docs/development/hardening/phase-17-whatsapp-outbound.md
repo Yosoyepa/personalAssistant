@@ -3,12 +3,12 @@
 | Campo | Valor |
 |---|---|
 | Fase | `17 — whatsapp outbound` |
-| Estado | `SPEC_APPROVED` |
+| Estado | `IN_PROGRESS` (17a `MERGED`, 17b pendiente) |
 | Mantenedor | `Yosoyepa` |
-| Rama de fase | `kimi/phase-17-worker-split` (17a), rama coder 17b pendiente |
+| Rama de fase | `gemini/phase-17-worker-split` (17a), rama coder 17b pendiente |
 | Fecha de inicio | `2026-08-14` |
-| PR | pendiente (17a), pendiente (17b) |
-| Merge commit | pendiente |
+| PR | `#48` (17a), pendiente (17b) |
+| Merge commit | `60ed511` (17a), pendiente (17b) |
 
 ## Objetivo
 
@@ -117,6 +117,22 @@ Rama desde `main` con 17a mergeada. TDD estricto.
    Aserciones sobre el SUT (G-INTROVERT); cobertura de rama ≥90 % en líneas
    nuevas; `pytest --collect-only -q` tras tocar tests (TEST-011).
 7. **Verificación del coder antes de PR**: igual que 17a paso 3.
+
+## Ejecución 17a (Split de `worker.py`) — MERGED
+
+- `worker.py` (148 sitios) partido en: `worker_runtime.py` (52 sitios:
+  `ReminderWorker`, `ReminderWorkerTick`, `RuntimeNotificationApprovalPolicy`,
+  tipos `Clock`/`Sleeper`/`StopPredicate`), `worker_cli.py` (38 sitios: parser y
+  helpers de formato), fachada `worker.py` (73 sitios: conserva `_runtime` y
+  `main`, reexporta la superficie completa con `__all__`).
+- Verificación del discriminador sobre la PR #48: ruff/mypy limpios; suite
+  completa con postgres **983 passed, 3 skipped, 386 subtests** — conteo
+  idéntico a `main`; `mutate scan` sin archivos nuevos sobre el límite;
+  `worker.py` fuera de la lista de sobre-límite. Manifest regenerado y bless
+  por el discriminador (`15c1d52`); gate `--tier commit` **17/17 PASS**; CI
+  5/5. Merge commit `60ed511`.
+- Cumplimiento del coder: cero rutas protegidas tocadas, cero bless, phase log
+  append-only. Las restricciones derivadas de la brecha de fase 16 funcionaron.
 
 ## Restricciones WCT para el coder (17a y 17b) — incluye lecciones de fase 16
 
