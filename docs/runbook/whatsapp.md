@@ -12,7 +12,7 @@ El canal de WhatsApp se configura a través de las siguientes variables de entor
 |---|---|---|---|
 | `WHATSAPP_ENABLED` | Booleano (`true`/`false`) | No (default: `false`) | Habilita el procesamiento de webhooks y envíos de WhatsApp. |
 | `WHATSAPP_APP_SECRET` | String | Sí (si `ENABLED=true`) | App Secret de Meta utilizado para validar la firma HMAC SHA-256 (`X-Hub-Signature-256`). |
-| `WHATSAPP_VERIFY_TOKEN` | String | Sí (si `ENABLED=true`) | Token secreto configurado en el portal de Meta para validar el challenge del webhook (`GET /webhook/whatsapp`). |
+| `WHATSAPP_VERIFY_TOKEN` | String | Sí (si `ENABLED=true`) | Token secreto configurado en el portal de Meta para validar el challenge del webhook (`GET /webhooks/whatsapp`). |
 | `WHATSAPP_ALLOWED_USER_IDS` | String (separado por comas) | Sí (si `ENABLED=true`) | Lista blanca de números telefónicos (E.164 sin `+`, ej. `573000000000`) autorizados para interactuar con el asistente. |
 | `WHATSAPP_ACCESS_TOKEN` | String | No (opcional) | Access Token de Meta Graph API con permisos `whatsapp_business_messaging` para enviar replies y recordatorios. |
 | `WHATSAPP_PHONE_NUMBER_ID` | String | Sí (si `ACCESS_TOKEN` configurado) | Identificador del número de teléfono en WhatsApp Business Cloud API. |
@@ -36,7 +36,7 @@ WHATSAPP_PHONE_NUMBER_ID=100000000000001
    - En [Meta for Developers](https://developers.facebook.com/), crea o selecciona una app de tipo **Business**.
    - Agrega el producto **WhatsApp**.
 2. **Configuración del Webhook**:
-   - URL de devolución de llamada: `https://<tu-dominio>/webhook/whatsapp`
+   - URL de devolución de llamada: `https://<tu-dominio>/webhooks/whatsapp`
    - Identificador de verificación: El valor exacto configurado en `WHATSAPP_VERIFY_TOKEN`.
    - En **Campos de webhook**, suscríbete a `messages`.
 3. **Credenciales de API**:
@@ -48,7 +48,7 @@ WHATSAPP_PHONE_NUMBER_ID=100000000000001
 
 ## 3. Seguridad y Verificación Criptográfica
 
-- **Verificación Inbound (HMAC-SHA256)**: Cada petición `POST /webhook/whatsapp` debe incluir la cabecera `X-Hub-Signature-256: sha256=<hex_digest>`. El digest se calcula usando `WHATSAPP_APP_SECRET` como clave sobre el cuerpo crudo en bytes de la petición.
+- **Verificación Inbound (HMAC-SHA256)**: Cada petición `POST /webhooks/whatsapp` debe incluir la cabecera `X-Hub-Signature-256: sha256=<hex_digest>`. El digest se calcula usando `WHATSAPP_APP_SECRET` como clave sobre el cuerpo crudo en bytes de la petición.
 - **Protección contra Replay**: Los identificadores de mensaje (`wamid...`) se almacenan en caché; mensajes duplicados devuelven respuesta inmediata `status: duplicate` sin reejecutar lógica de negocio.
 - **Aislamiento de Remitentes**: Remitentes fuera de `WHATSAPP_ALLOWED_USER_IDS` son rechazados silenciosamente (`status: skipped`, HTTP 200) para no filtrar metadatos ni permitir ataques de amplificación.
 - **Egress Allowlist**: Si `WHATSAPP_ACCESS_TOKEN` está presente, el servidor valida que el host `graph.facebook.com` esté autorizado en el allowlist de salida antes de iniciar conexiones de red.
@@ -76,7 +76,7 @@ uv run uvicorn personal_assistant.infrastructure.http:app --port 8000
 ### Paso 2: Verificar el Challenge (GET)
 
 ```bash
-curl -X GET "http://127.0.0.1:8000/webhook/whatsapp?hub.mode=subscribe&hub.verify_token=test_verify_token_value&hub.challenge=1158201444"
+curl -X GET "http://127.0.0.1:8000/webhooks/whatsapp?hub.mode=subscribe&hub.verify_token=test_verify_token_value&hub.challenge=1158201444"
 ```
 
 *Respuesta esperada:* `1158201444` (HTTP 200).
@@ -109,7 +109,7 @@ PAYLOAD='{
 SECRET="test_app_secret_value"
 SIGNATURE=$(printf '%s' "$PAYLOAD" | openssl dgst -sha256 -hmac "$SECRET" | sed 's/^.* //')
 
-curl -s -X POST "http://127.0.0.1:8000/webhook/whatsapp" \
+curl -s -X POST "http://127.0.0.1:8000/webhooks/whatsapp" \
   -H "Content-Type: application/json" \
   -H "X-Hub-Signature-256: sha256=$SIGNATURE" \
   -d "$PAYLOAD"
@@ -123,8 +123,8 @@ curl -s -X POST "http://127.0.0.1:8000/webhook/whatsapp" \
 
 | Síntoma | Causa Probable | Solución |
 |---|---|---|
-| `GET /webhook/whatsapp` retorna 403 | `hub.verify_token` no coincide con `WHATSAPP_VERIFY_TOKEN` o `hub.mode != "subscribe"`. | Verificar el token configurado en Meta y en la variable de entorno. |
-| `POST /webhook/whatsapp` retorna 401 | Cabecera `X-Hub-Signature-256` ausente o firma HMAC no coincide con `WHATSAPP_APP_SECRET`. | Asegurarse de que el secret en Meta coincide exactamente con la variable de entorno. |
-| `POST /webhook/whatsapp` retorna `status: skipped` con HTTP 200 | El número remitente (`from`) no está en `WHATSAPP_ALLOWED_USER_IDS` o `WHATSAPP_ENABLED=false`. | Añadir el número en formato E.164 (sin signos `+`) a la lista blanca. |
+| `GET /webhooks/whatsapp` retorna 403 | `hub.verify_token` no coincide con `WHATSAPP_VERIFY_TOKEN` o `hub.mode != "subscribe"`. | Verificar el token configurado en Meta y en la variable de entorno. |
+| `POST /webhooks/whatsapp` retorna 401 | Cabecera `X-Hub-Signature-256` ausente o firma HMAC no coincide con `WHATSAPP_APP_SECRET`. | Asegurarse de que el secret en Meta coincide exactamente con la variable de entorno. |
+| `POST /webhooks/whatsapp` retorna `status: skipped` con HTTP 200 | El número remitente (`from`) no está en `WHATSAPP_ALLOWED_USER_IDS` o `WHATSAPP_ENABLED=false`. | Añadir el número en formato E.164 (sin signos `+`) a la lista blanca. |
 | El webhook responde `sent: false` | `WHATSAPP_ACCESS_TOKEN` no está definido, o Graph API rechazó el envío (4xx/5xx/rate limit). | Revisar los logs del servidor y verificar permisos del token en el Business Manager de Meta. |
 | Recordatorios quedan en estado `uncertain` en Outbox | Caída de conexión o respuesta ambigua de Graph API durante el envío en el worker. | Reconciliar la entrega desde el panel `/admin/dashboard` o mediante `personal-assistant-worker --resolve <id>`. |
