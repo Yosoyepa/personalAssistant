@@ -1,5 +1,5 @@
 {
-  "commit": "bd784b079a46091f03da89e7a0380130999f4baa",
+  "commit": "92bc9f4d73b4d0a4c4b03802dcea84972df3ff2b",
   "files": {
     ".agents/skills/agent-builder/AGENT_STANDARD.md": "a7ae77ca64fb62644462fbf35d7c56ad0f1fd2fb7c50095714ba3e9f03ce76f1",
     ".agents/skills/agent-builder/SKILL.md": "0e6052c9f6fbed98d5aee8ee14734d1beb907c6885a8e484e74cd14ec501cfbb",
@@ -93,7 +93,7 @@
     "governance/decisions/ADR-002-ruff.md": "db1c65720c305b0572482d8fd76311c48b2f52fc8dc900de79c764a21c80d298",
     "governance/decisions/ADR-003-crap-threshold.md": "3c604d392cce1098e943cb2c68198784899cf018b105fe3acb078c1331f5288f",
     "governance/generated/mutation-manifest.json": "467b19d805dde8e535c504b95d664d5d4ec4ea814d2ccf041698bb12ebdb0258",
-    "governance/integrity-log.md": "8dee6ccc31584a6f70750edc1ccfc50567d6916e5bb38a315196a744ee1d6a38",
+    "governance/integrity-log.md": "0c7042217c35befd8df2031c0f1468773ad889f24d37145b2044e2f754df10af",
     "governance/lint/legacy/.flake8": "aabe4353c6dac04f085a8cf44a91b104344ea61f4c49bd1b44a1a26c5b6bea11",
     "governance/lint/legacy/.isort.cfg": "dd606fb2bece67d3ffdd19410cd70c709e904ff7fd385fcbb3a1042274663665",
     "governance/lint/legacy/black.toml": "40b9ad163b0956f87d1d8a30e965ac59b433b28a72a871763c6799cbbb88937c",
@@ -108,7 +108,7 @@
     "governance/rules/50-process.yaml": "b102fc2f44f2af9c0bd410107be89c8a7c4a9d16534a86d03cfeddfe3af34892",
     "governance/semgrep/wct-architecture.yaml": "f91c20787035c6d45f90350dba37386051beea70a4ebffac8785e4ac718b0411",
     "governance/thresholds.yaml": "3657bb7ba87931866d90d204b8dff389a15f0f72a0d960338f0daee094253081",
-    "pyproject.toml": "87865fe8c8697bbf4ac897a1de199a4d44a6727157a2ac116c60a9c032057172",
+    "pyproject.toml": "3f5b4593b2efd28f11fa611dc9a13e78e3dc3ed14a02a598ba5be5e59dd1131b",
     "quality/redteam/README.md": "0ef17aa920317fcae4fb7e189dcc3e0f821c093635611d6257c1a6f2ee7bf72f",
     "quality/redteam/cases.yaml": "656ff374e4b4b1d03c52f064e7f18afa45a73f36e5722fee65f33d859a5e310e",
     "tools/wct/__init__.py": "3ba3ba80efd7f7cfc75d969639025d983c41eb53c1c993c42c116444260f9c31",
@@ -148,7 +148,7 @@
     "tools/wct/util/__init__.py": "01be94ffc05db0b8ed34a4723466fa53af4dcd58d08d6c4c69eecd9af2d26d79",
     "tools/wct/util/git.py": "ff25f91fcbe74c23d35b96cfb73d1f9be6013b75dee8f3c1c2cab0ee84636667",
     "tools/wct/webhook.py": "e7ce446e596b4fc6bcfd62e67a9dcb1a528dd438c06413e17811c59bb273350d",
-    "uv.lock": "6542e41720059faac3dcc2af7482c3b6fbcee337e61fa9532e899fdfe8a3f7ad"
+    "uv.lock": "b7e159fa56c6985bb2c7dfabe3b20a81b274e323aa25d589e97431a357c3b0f1"
   },
   "schema_version": 1
 }

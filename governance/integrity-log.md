@@ -64,3 +64,9 @@
 - Approved by: Yosoyepa
 - Reason: regenerate mutation manifest after whatsapp outbound (phase 17b), verified by discriminator
 - Commit: bd784b079a46091f03da89e7a0380130999f4baa
+
+## 2026-08-18T17:38:42.714205+00:00
+
+- Approved by: Yosoyepa
+- Reason: version bump v0.2.0-alpha.2 release
+- Commit: 92bc9f4d73b4d0a4c4b03802dcea84972df3ff2b
