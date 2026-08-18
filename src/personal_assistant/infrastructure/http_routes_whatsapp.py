@@ -24,6 +24,9 @@ from personal_assistant.infrastructure.http_dynamic import get_http_attribute
 from personal_assistant.infrastructure.http_models_whatsapp import (
     WhatsAppWebhookResponse,
 )
+from personal_assistant.infrastructure.http_whatsapp_replies import (
+    _send_whatsapp_reply,
+)
 
 
 def _is_status_only_or_empty_callback(payload: dict[str, Any]) -> bool:
@@ -56,9 +59,7 @@ def register_whatsapp_routes(
             hub_mode == "subscribe"
             and hub_verify_token
             and settings.whatsapp.verify_token
-            and secrets.compare_digest(
-                hub_verify_token, settings.whatsapp.verify_token
-            )
+            and secrets.compare_digest(hub_verify_token, settings.whatsapp.verify_token)
         ):
             return PlainTextResponse(content=hub_challenge or "")
 
@@ -87,9 +88,7 @@ def register_whatsapp_routes(
         signature_header = request.headers.get(
             "x-hub-signature-256"
         ) or request.headers.get("X-Hub-Signature-256")
-        if not verify_whatsapp_signature(
-            settings.whatsapp, raw_body, signature_header
-        ):
+        if not verify_whatsapp_signature(settings.whatsapp, raw_body, signature_header):
             raise AssistantError(
                 ErrorCode.AUTHENTICATION_REQUIRED,
                 "invalid signature",
@@ -105,9 +104,7 @@ def register_whatsapp_routes(
                 tenant_id=settings.tenant_id,
             ) from exc
 
-        if not isinstance(payload, dict) or _is_status_only_or_empty_callback(
-            payload
-        ):
+        if not isinstance(payload, dict) or _is_status_only_or_empty_callback(payload):
             return WhatsAppWebhookResponse(
                 status=AgentStatus.completed,
                 reply=None,
@@ -151,10 +148,25 @@ def register_whatsapp_routes(
                 command=message.command,
             )
 
+        sent = False
+        if settings.whatsapp.access_token and result.reply:
+            reply_sender = get_http_attribute(
+                "_send_whatsapp_reply", _send_whatsapp_reply
+            )
+            sent = reply_sender(
+                container,
+                principal,
+                settings.whatsapp,
+                recipient=message.actor_id,
+                text=result.reply,
+                idempotency_key=message.idempotency_key
+                or f"whatsapp:{message.actor_id}:{message.message_id}",
+            )
+
         return WhatsAppWebhookResponse(
             status=result.status,
             reply=result.reply,
-            sent=False,
+            sent=sent,
             approval_id=result.approval_id,
             command=message.command,
         )

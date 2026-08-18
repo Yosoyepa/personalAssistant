@@ -1,5 +1,5 @@
 {
-  "commit": "e92bf3b95f2a366560e0a9d6d80d9a5828192439",
+  "commit": "bd784b079a46091f03da89e7a0380130999f4baa",
   "files": {
     ".agents/skills/agent-builder/AGENT_STANDARD.md": "a7ae77ca64fb62644462fbf35d7c56ad0f1fd2fb7c50095714ba3e9f03ce76f1",
     ".agents/skills/agent-builder/SKILL.md": "0e6052c9f6fbed98d5aee8ee14734d1beb907c6885a8e484e74cd14ec501cfbb",
@@ -92,8 +92,8 @@
     "governance/decisions/ADR-001-ponytail.md": "6c03fe60f11015040234ef82e16b84ee2668718cdf9d32c435c8d1c503e9d1ad",
     "governance/decisions/ADR-002-ruff.md": "db1c65720c305b0572482d8fd76311c48b2f52fc8dc900de79c764a21c80d298",
     "governance/decisions/ADR-003-crap-threshold.md": "3c604d392cce1098e943cb2c68198784899cf018b105fe3acb078c1331f5288f",
-    "governance/generated/mutation-manifest.json": "a2e00714dee8d777c569b979642a42241417895a031f40791ead3e718434859f",
-    "governance/integrity-log.md": "ed0be5b7751957949ff183374b45735f7c02bd9c08cf5635228e12506bf08402",
+    "governance/generated/mutation-manifest.json": "467b19d805dde8e535c504b95d664d5d4ec4ea814d2ccf041698bb12ebdb0258",
+    "governance/integrity-log.md": "8dee6ccc31584a6f70750edc1ccfc50567d6916e5bb38a315196a744ee1d6a38",
     "governance/lint/legacy/.flake8": "aabe4353c6dac04f085a8cf44a91b104344ea61f4c49bd1b44a1a26c5b6bea11",
     "governance/lint/legacy/.isort.cfg": "dd606fb2bece67d3ffdd19410cd70c709e904ff7fd385fcbb3a1042274663665",
     "governance/lint/legacy/black.toml": "40b9ad163b0956f87d1d8a30e965ac59b433b28a72a871763c6799cbbb88937c",

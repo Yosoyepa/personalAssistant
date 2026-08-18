@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from personal_assistant.domain.common.exceptions import AssistantError
+from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 from personal_assistant.infrastructure.bootstrap import build_container
 from personal_assistant.infrastructure.config import AppSettings
@@ -235,7 +236,9 @@ def test_whatsapp_webhook_post_missing_signature(test_client: TestClient) -> Non
     assert response.status_code == 401
 
 
-def test_whatsapp_webhook_post_status_only_callback(test_client: TestClient, whatsapp_settings: AppSettings) -> None:
+def test_whatsapp_webhook_post_status_only_callback(
+    test_client: TestClient, whatsapp_settings: AppSettings
+) -> None:
     payload = _make_status_payload()
     body = json.dumps(payload).encode("utf-8")
     sig = _sign_payload(body, whatsapp_settings.whatsapp.app_secret)
@@ -251,7 +254,9 @@ def test_whatsapp_webhook_post_status_only_callback(test_client: TestClient, wha
     assert data["sent"] is False
 
 
-def test_whatsapp_webhook_post_valid_command(test_client: TestClient, whatsapp_settings: AppSettings) -> None:
+def test_whatsapp_webhook_post_valid_command(
+    test_client: TestClient, whatsapp_settings: AppSettings
+) -> None:
     payload = _make_whatsapp_payload(
         "573001112233",
         "remind me to call Ana at 5 pm",
@@ -271,7 +276,9 @@ def test_whatsapp_webhook_post_valid_command(test_client: TestClient, whatsapp_s
     assert len(data["reply"]) > 0
 
 
-def test_whatsapp_webhook_post_unauthorized_sender(test_client: TestClient, whatsapp_settings: AppSettings) -> None:
+def test_whatsapp_webhook_post_unauthorized_sender(
+    test_client: TestClient, whatsapp_settings: AppSettings
+) -> None:
     payload = _make_whatsapp_payload(
         "573009999999",
         "remind me to call Bob tomorrow",
@@ -289,7 +296,9 @@ def test_whatsapp_webhook_post_unauthorized_sender(test_client: TestClient, what
     assert "573009999999" not in response.text
 
 
-def test_whatsapp_webhook_post_replayed_message_id(test_client: TestClient, whatsapp_settings: AppSettings) -> None:
+def test_whatsapp_webhook_post_replayed_message_id(
+    test_client: TestClient, whatsapp_settings: AppSettings
+) -> None:
     payload = _make_whatsapp_payload(
         "573001112233",
         "remind me to pay bills tomorrow at 10 am",
@@ -344,3 +353,147 @@ def test_whatsapp_principal_resolution() -> None:
 
     with pytest.raises(AssistantError):
         whatsapp_principal(settings, "disallowed_user", tenant_id="tenant-1")
+
+
+def test_whatsapp_webhook_post_with_access_token_delivers_reply() -> None:
+    from personal_assistant.adapters.outbound.notifications.whatsapp import (
+        WhatsAppNotificationTool,
+    )
+    from tests.test_whatsapp_outbound import FakeWhatsAppClient
+
+    settings = AppSettings(
+        tenant_id="personal",
+        timezone="America/Bogota",
+        reply_locale="es",
+        persistence_backend="memory",
+        whatsapp=WhatsAppSettings(
+            enabled=True,
+            app_secret="test-secret",
+            verify_token="test-token",
+            allowed_user_ids=frozenset({"573001112233"}),
+            access_token="test-access-token",
+            phone_number_id="100000000000002",
+        ),
+    )
+    client = FakeWhatsAppClient()
+    tool = WhatsAppNotificationTool(client)
+    container = build_container(settings=settings, notifications=tool)
+    app = create_app(container=container, settings=settings)
+    test_client = TestClient(app)
+
+    payload = _make_whatsapp_payload(
+        "573001112233",
+        "remind me to call Ana at 5 pm",
+        message_id="wamid.outbound001",
+    )
+    body = json.dumps(payload).encode("utf-8")
+    sig = _sign_payload(body, settings.whatsapp.app_secret)
+    response = test_client.post(
+        "/webhooks/whatsapp",
+        content=body,
+        headers={"x-hub-signature-256": sig, "content-type": "application/json"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["sent"] is True
+    assert data["reply"] is not None
+    assert len(client.sent) == 1
+    assert client.sent[0]["recipient"] == "573001112233"
+
+
+def test_whatsapp_webhook_post_reply_failure_still_returns_200_with_sent_false() -> (
+    None
+):
+    from personal_assistant.adapters.outbound.notifications.whatsapp import (
+        WhatsAppNotificationTool,
+        WhatsAppProviderResult,
+    )
+    from tests.test_whatsapp_outbound import OutcomeWhatsAppClient
+
+    settings = AppSettings(
+        tenant_id="personal",
+        timezone="America/Bogota",
+        reply_locale="es",
+        persistence_backend="memory",
+        whatsapp=WhatsAppSettings(
+            enabled=True,
+            app_secret="test-secret",
+            verify_token="test-token",
+            allowed_user_ids=frozenset({"573001112233"}),
+            access_token="test-access-token",
+            phone_number_id="100000000000002",
+        ),
+    )
+    client = OutcomeWhatsAppClient(
+        WhatsAppProviderResult(outcome="known-transient", provider_code=500)
+    )
+    tool = WhatsAppNotificationTool(client)
+    container = build_container(settings=settings, notifications=tool)
+    app = create_app(container=container, settings=settings)
+    test_client = TestClient(app)
+
+    payload = _make_whatsapp_payload(
+        "573001112233",
+        "remind me to call Ana at 5 pm",
+        message_id="wamid.outbound002",
+    )
+    body = json.dumps(payload).encode("utf-8")
+    sig = _sign_payload(body, settings.whatsapp.app_secret)
+    response = test_client.post(
+        "/webhooks/whatsapp",
+        content=body,
+        headers={"x-hub-signature-256": sig, "content-type": "application/json"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["sent"] is False
+    assert data["reply"] is not None
+
+
+def test_send_whatsapp_reply_helper_cases() -> None:
+    from personal_assistant.infrastructure.http_whatsapp_replies import (
+        _send_whatsapp_reply,
+    )
+
+    settings_no_token = WhatsAppSettings(enabled=True, access_token=None)
+    container_no_notif = build_container()
+    object.__setattr__(container_no_notif, "notifications", None)
+    p = Principal.for_test(
+        principal_id="p1", tenant_id="t1", permission_tier=PermissionTier.P5
+    )
+
+    assert (
+        _send_whatsapp_reply(
+            container_no_notif,
+            p,
+            settings_no_token,
+            recipient="123",
+            text="hi",
+            idempotency_key="k1",
+        )
+        is False
+    )
+
+    settings_with_token = WhatsAppSettings(enabled=True, access_token="tok")
+    assert (
+        _send_whatsapp_reply(
+            container_no_notif,
+            p,
+            settings_with_token,
+            recipient="123",
+            text="",
+            idempotency_key="k1",
+        )
+        is False
+    )
+    assert (
+        _send_whatsapp_reply(
+            container_no_notif,
+            p,
+            settings_with_token,
+            recipient="123",
+            text="hi",
+            idempotency_key="k1",
+        )
+        is False
+    )

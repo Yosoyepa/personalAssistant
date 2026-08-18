@@ -11,6 +11,7 @@ from personal_assistant.infrastructure.config_constants import (
     DEFAULT_MINIMAX_TTS_BASE_URL,
     DEFAULT_MINIMAX_TTS_MODEL,
     DEFAULT_TRACE_RETENTION_DAYS,
+    DEFAULT_WHATSAPP_API_URL,
 )
 from personal_assistant.infrastructure.config_env import (
     _env,
@@ -36,6 +37,7 @@ __all__ = [
     "DEFAULT_MINIMAX_TTS_BASE_URL",
     "DEFAULT_MINIMAX_TTS_MODEL",
     "DEFAULT_TRACE_RETENTION_DAYS",
+    "DEFAULT_WHATSAPP_API_URL",
     "_DISABLED_PROVIDERS",
     "AppSettings",
     "WhatsAppSettings",

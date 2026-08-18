@@ -59,22 +59,47 @@ def _runtime(*, require_provider: bool) -> tuple[Any, Principal, Any]:
     settings = AppSettings.from_env()
     if settings.persistence_backend != "postgres":
         raise RuntimeError("postgres_required")
-    if require_provider and not settings.telegram_bot_token:
+    has_provider = bool(
+        settings.telegram_bot_token
+        or (settings.whatsapp.access_token and settings.whatsapp.phone_number_id)
+    )
+    if require_provider and not has_provider:
         raise RuntimeError("telegram_not_configured")
     log_egress_audit(settings)
-    notifications = None
+    egress = build_egress_allowlist(settings)
+    channel_tools: dict[str, Any] = {}
     if settings.telegram_bot_token:
         from personal_assistant.adapters.outbound.notifications.telegram import (
             TelegramBotApiClient,
             TelegramNotificationTool,
         )
 
-        notifications = TelegramNotificationTool(
+        channel_tools["telegram"] = TelegramNotificationTool(
             TelegramBotApiClient(
                 token=settings.telegram_bot_token,
-                egress_allowlist=build_egress_allowlist(settings),
+                egress_allowlist=egress,
             )
         )
+    if settings.whatsapp.access_token and settings.whatsapp.phone_number_id:
+        from personal_assistant.adapters.outbound.notifications.whatsapp import (
+            WhatsAppGraphApiClient,
+            WhatsAppNotificationTool,
+        )
+
+        channel_tools["whatsapp"] = WhatsAppNotificationTool(
+            WhatsAppGraphApiClient(
+                access_token=settings.whatsapp.access_token,
+                phone_number_id=settings.whatsapp.phone_number_id,
+                egress_allowlist=egress,
+            )
+        )
+    notifications = None
+    if channel_tools:
+        from personal_assistant.adapters.outbound.notifications.router import (
+            ChannelNotificationRouter,
+        )
+
+        notifications = ChannelNotificationRouter(channel_tools)
     container = build_container(
         settings=settings,
         notifications=notifications,

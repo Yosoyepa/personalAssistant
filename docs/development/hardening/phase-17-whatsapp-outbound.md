@@ -191,3 +191,33 @@ Rama desde `main` con 17a mergeada. TDD estricto.
     - `pytest -q`: 983 passed, 3 skipped, 386 subtests passed
     - `wct mutate scan`: 0 archivos modificados >100 sitios
     - `wct gate --tier commit`: 17/17 gates PASS
+
+## Ejecución 17b — WhatsApp outbound (Coder)
+
+- **Fecha**: 2026-08-18
+- **Rama**: `gemini/phase-17-whatsapp-outbound`
+- **Resultados**:
+  - **Config & Egress**:
+    - `WhatsAppSettings` enriquecido con `access_token: str | None` (`repr=False`) y `phone_number_id: str`.
+    - Loader `config_loader_whatsapp.py` soporta `WHATSAPP_ACCESS_TOKEN` y `WHATSAPP_PHONE_NUMBER_ID`.
+    - Constante `DEFAULT_WHATSAPP_API_URL` registrada en `config_constants.py` y `config.py`.
+    - Egress allowlist en `config_validation.py` y `egress.py` validan Graph API cuando el token está presente.
+  - **Sender & Client (`adapters/outbound/notifications/whatsapp*.py`)**:
+    - `WhatsAppGraphApiClient` para envío HTTP autenticado a `https://graph.facebook.com/v21.0/{phone_number_id}/messages`.
+    - `WhatsAppNotificationTool` implementa `NotificationPort` con chequeos P5, deduplicación/idempotencia y mapeo riguroso de outcomes (`success`, `known-transient`, `permanent`, `unknown-outcome`).
+    - Descompuesto en módulos bajo el límite de sitios: `whatsapp_models.py` (34), `whatsapp_parsing.py` (75), `whatsapp_client.py` (41), `whatsapp_tool.py` (51), fachada `whatsapp.py` (5).
+  - **Router (`adapters/outbound/notifications/router.py`)**:
+    - `ChannelNotificationRouter` (9 sitios) implementa `NotificationPort` enrutando dinámicamente entre canales (`telegram`, `whatsapp`) y fallando limpiamente ante canales no registrados sin filtrar PII.
+  - **Outbound Replies & Webhook (`http_whatsapp_replies.py` & `http_routes_whatsapp.py`)**:
+    - `_send_whatsapp_reply` emite grant de servidor P5 y entrega respuestas directas al número remitente.
+    - Webhook responde status 200 con `sent=true` en entrega exitosa, o `sent=false` si el envío falla o no hay token configurado.
+  - **Use Case & Worker Delivery Wiring**:
+    - `reminder_notifications.py` modularizado en helpers (59 sitios), dispatch (77 sitios) y fachada (15 sitios), soportando `channel="whatsapp"` de forma transparente y segura.
+    - `http_container.py` y `worker.py` ensamblan `ChannelNotificationRouter` multi-canal.
+  - **Verificación**:
+    - `ruff check`: PASS
+    - `mypy src`: PASS (195 source files)
+    - `pytest -q`: **1015 passed, 3 skipped, 396 subtests passed**
+    - `wct mutate scan`: 0 archivos modificados >100 sitios
+    - `wct gate --tier fast`: 7/7 PASS
+    - `wct gate --tier commit`: 17/17 PASS

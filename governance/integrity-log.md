@@ -58,3 +58,9 @@
 - Approved by: Yosoyepa
 - Reason: regenerate mutation manifest after worker.py split (phase 17a), PR verified by discriminator
 - Commit: e92bf3b95f2a366560e0a9d6d80d9a5828192439
+
+## 2026-08-18T16:24:04.946046+00:00
+
+- Approved by: Yosoyepa
+- Reason: regenerate mutation manifest after whatsapp outbound (phase 17b), verified by discriminator
+- Commit: bd784b079a46091f03da89e7a0380130999f4baa
