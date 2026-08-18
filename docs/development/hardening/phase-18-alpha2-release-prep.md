@@ -85,3 +85,29 @@ generó.
 ## Feedback WCT de la fase
 
 (pendiente — se llena al cierre por el discriminador)
+
+## Ejecución Phase 18 — Release prep v0.2.0-alpha.2 (Coder)
+
+- **Fecha**: 2026-08-18
+- **Rama**: `gemini/phase-18-release-prep`
+- **Resultados**:
+  - **Notas de Release (`docs/releases/v0.2.0-alpha.2.md`)**:
+    - Estructura estándar completada con Highlights, Acceptance evidence, Database change y Compatibility/known gaps.
+    - Cifras reales y reproducibles con sus respectivos comandos documentados.
+    - Confirmada ausencia de migraciones nuevas (esquema `0005_worker_heartbeat.sql`).
+    - Confirmada persistencia de `/healthz` con cabecera `Deprecation: true`.
+  - **Runbook WhatsApp (`docs/runbook/whatsapp.md`)**:
+    - Documentadas variables de entorno (`WHATSAPP_ENABLED`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_ALLOWED_USER_IDS`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`).
+    - Guía de alta en Meta for Developers, verificación HMAC SHA-256 (`X-Hub-Signature-256`), prueba de humo con payload sintético firmado y troubleshooting.
+    - Cero secretos o credenciales reales utilizadas (SEC-001).
+  - **Construcción de Paquete (`uv build`)**:
+    - Generación exitosa de artefactos: `dist/personal_assistant-0.2.0a1.tar.gz` y `dist/personal_assistant-0.2.0a1-py3-none-any.whl`.
+  - **Verificación**:
+    - `ruff check src tests`: PASS
+    - `mypy src`: PASS (195 source files)
+    - `pytest -q`: **1015 passed, 3 skipped, 396 subtests passed**
+    - `personal_assistant.evals`: **299/299 passed, 0 failed**
+    - `pytest --cov`: **90% branch coverage**
+    - `wct mutate scan`: 0 archivos modificados >100 sitios
+    - `wct gate --tier fast`: 7/7 PASS
+    - `wct gate --tier commit`: 17/17 PASS

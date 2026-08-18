@@ -385,6 +385,8 @@ Forbidden by contract:
 - `docs/runbook/persistence.md` - memory/Postgres persistence guide.
 - `docs/runbook/v0.2.0-alpha.1.md` - installation, migration, startup,
   uncertain-delivery, rollback, and no-secret smoke procedure for this alpha.
+- `docs/runbook/whatsapp.md` - Meta app, webhook, HMAC signature, and WhatsApp
+  cloud API setup notes.
 - `docs/runbook/minimax.md` - MiniMax LLM and TTS provider notes.
 - `docs/adr/` - accepted architecture decisions.
 - `docs/architecture/` - architecture reviews and short design notes.
