@@ -52,6 +52,9 @@ jobs:
           uv run pre-commit validate-config
           uv run python -m json.tool eval/cases.json > /dev/null
 
+      - name: Verify protected-route integrity (WCT)
+        run: PYTHONPATH=. uv run python -m tools.wct integrity check
+
       - name: Test GitHub governance script without remote calls
         shell: pwsh
         run: ./tests/powershell/configure-github-governance.tests.ps1
