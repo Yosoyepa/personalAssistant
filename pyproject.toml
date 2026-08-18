@@ -44,7 +44,7 @@ dev = [
 # tiers fast/commit más cobertura con rama; semgrep/mutmut/cyclonedx quedan
 # como gates opcionales (SKIPPED si la herramienta no está instalada).
 quality = [
-  "PyYAML>=6.0.2",
+  "PyYAML>=6.0.3",
   "bandit>=1.8",
   "deptry>=0.23",
   "detect-secrets>=1.5",
