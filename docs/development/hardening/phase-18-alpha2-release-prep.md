@@ -3,12 +3,13 @@
 | Campo | Valor |
 |---|---|
 | Fase | `18 — alpha.2 release prep` |
-| Estado | `SPEC_APPROVED` |
+| Estado | `COMPLETED` |
 | Mantenedor | `Yosoyepa` |
-| Rama de fase | rama coder pendiente (docs/evidencia), rama mantenedor (bump+tag) |
+| Rama de fase | `gemini/phase-18-release-prep` (docs/evidencia), `yosoyepa/v0.2.0-alpha.2-bump` (bump protegido) |
 | Fecha de inicio | `2026-08-18` |
-| PR | pendiente |
-| Merge commit | pendiente |
+| PR | `#57` (docs/evidencia), `#58` (bump protegido) |
+| Merge commit | `50c7809` (#57), `7f9585e` (#58) |
+| Tag / Release | `v0.2.0-alpha.2` (prerelease, 2026-08-18, por el mantenedor) |
 
 ## Objetivo
 
@@ -84,7 +85,28 @@ generó.
 
 ## Feedback WCT de la fase
 
-(pendiente — se llena al cierre por el discriminador)
+1. **La versión vive en dos fuentes y el oráculo lo cazó.** El bump tocó solo
+   `pyproject.toml`; `src/personal_assistant/__init__.py` (`__version__`) quedó
+   en `0.2.0-alpha.1` y CI falló en
+   `test_runtime_and_package_versions_share_the_project_source`
+   (`tests/test_operational_readiness.py`). Fix de una línea (`cf6c7cc`) antes
+   del tag. Propuesta para WCT: el procedimiento de release debe (a) derivar
+   `__version__` de `importlib.metadata.version("personal_assistant")` para
+   tener fuente única, o (b) documentar el bump como cambio de DOS archivos.
+   Hallazgo clave: el test ya existía y funcionó como oráculo determinista —
+   el error no llegó al tag.
+2. **Comandos multilínea con backslash se rompen al pegarlos.** El primer
+   intento del mantenedor de correr `integrity bless` falló porque los `\` de
+   continuación no sobrevivieron al copy-paste. Propuesta: en runbooks y
+   prompts de WCT, los comandos críticos se dan en UNA sola línea.
+3. **La división coder/mantenedor por rutas protegidas no tuvo fricción.** El
+   coder hizo docs+evidencia (#57) sin tocar rutas protegidas; el mantenedor
+   hizo bump+bless+tag (#58) en su terminal. G-META-1 + bless documentado
+   cubrieron la ruta protegida sin excepciones.
+4. **Corrección del discriminador dentro de la PR del coder:** la ruta del
+   webhook se documentó en singular; la real es `/webhooks/whatsapp`. Fix
+   `8cd433b` en la misma PR. Refuerza la regla: toda ruta/comando documentado
+   se verifica contra el código, no contra la memoria.
 
 ## Ejecución Phase 18 — Release prep v0.2.0-alpha.2 (Coder)
 
@@ -111,3 +133,17 @@ generó.
     - `wct mutate scan`: 0 archivos modificados >100 sitios
     - `wct gate --tier fast`: 7/7 PASS
     - `wct gate --tier commit`: 17/17 PASS
+
+
+## Ejecución mantenedor + discriminador (cierre)
+
+- **PR #57 (docs/evidencia)**: verificada por el discriminador con números
+  reproducidos en local (suite 1015 passed / 3 skipped / 396 subtests, corpus
+  eval 299/299, gate commit 17/17); corrección de la ruta del webhook
+  (`8cd433b`); merge `50c7809`.
+- **PR #58 (bump protegido)**: bump + `uv lock` ejecutados por el mantenedor
+  en su terminal (`92bc9f4`); bless por el mantenedor (`dc5026b`, reason
+  "version bump v0.2.0-alpha.2 release"); fix de `__version__` por el
+  discriminador (`cf6c7cc`); merge `7f9585e`.
+- **Tag + prerelease**: tag anotado `v0.2.0-alpha.2` y prerelease en GitHub
+  creados por el mantenedor (2026-08-18).
