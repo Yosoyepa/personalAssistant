@@ -48,7 +48,7 @@ quality = [
   "bandit>=1.8",
   "deptry>=0.23",
   "detect-secrets>=1.5",
-  "import-linter>=2.3",
+  "import-linter>=2.13",
   "pytest-cov>=6.0",
   "vulture>=2.14",
 ]
