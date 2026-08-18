@@ -30,25 +30,25 @@ postgres = [
 [dependency-groups]
 dev = [
   "build>=1.5.0",
-  "coverage[toml]>=7.15.2",
-  "diff-cover>=10.4.2",
+  "coverage[toml]>=7.15.4",
+  "diff-cover>=10.5.0",
   "fastapi>=0.141.1",
   "httpx>=0.28.1",
   "mypy>=2.3.0",
   "pip-audit>=2.10.1",
   "pre-commit>=4.0",
   "pytest>=9.1.1",
-  "ruff>=0.16.2",
+  "ruff>=0.16.3",
 ]
 # Herramientas del harness WCT (fase 13, piloto). Solo las que necesitan los
 # tiers fast/commit más cobertura con rama; semgrep/mutmut/cyclonedx quedan
 # como gates opcionales (SKIPPED si la herramienta no está instalada).
 quality = [
-  "PyYAML>=6.0.2",
+  "PyYAML>=6.0.3",
   "bandit>=1.8",
   "deptry>=0.23",
   "detect-secrets>=1.5",
-  "import-linter>=2.3",
+  "import-linter>=2.13",
   "pytest-cov>=6.0",
   "vulture>=2.14",
 ]
