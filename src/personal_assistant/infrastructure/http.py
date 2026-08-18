@@ -74,6 +74,9 @@ from personal_assistant.infrastructure.http_telegram_transcription import (
     _transcribe_telegram_media,
     _transcription_filename,
 )
+from personal_assistant.infrastructure.http_whatsapp_replies import (
+    _send_whatsapp_reply,
+)
 from personal_assistant.infrastructure.http_worker import (
     _readiness_snapshot,
     _run_reminder_worker_loop,
@@ -115,6 +118,7 @@ __all__ = [
     "_run_reminder_worker_loop",
     "_send_telegram_audio_reply",
     "_send_telegram_reply",
+    "_send_whatsapp_reply",
     "_should_send_audio_reply",
     "_status_for_error",
     "_trace_telegram_audio_reply_failure",

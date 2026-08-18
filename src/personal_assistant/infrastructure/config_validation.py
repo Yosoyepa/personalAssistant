@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from personal_assistant.adapters.outbound.egress import (
     DEFAULT_TELEGRAM_API_URL,
+    DEFAULT_WHATSAPP_API_URL,
     EgressAllowlist,
     derive_egress_entries,
     require_startup_coverage,
@@ -89,7 +90,9 @@ def _validate_identity_and_timezone(settings: Any) -> None:
         local_auth_permission_tier = PermissionTier(settings.local_auth_permission_tier)
     except (TypeError, ValueError) as exc:
         raise ValueError("LOCAL_AUTH_PERMISSION_TIER must be one of P0-P6") from exc
-    object.__setattr__(settings, "local_auth_permission_tier", local_auth_permission_tier)
+    object.__setattr__(
+        settings, "local_auth_permission_tier", local_auth_permission_tier
+    )
 
 
 def _validate_egress(settings: Any) -> None:
@@ -98,6 +101,7 @@ def _validate_egress(settings: Any) -> None:
         transcription_base_url=settings.transcription_base_url,
         tts_base_url=settings.tts_base_url,
         telegram_bot_token_configured=bool(settings.telegram_bot_token),
+        whatsapp_access_token_configured=bool(settings.whatsapp.access_token),
     )
     explicit_egress = frozenset(
         entry.strip() for entry in settings.egress_allowed_hosts if entry.strip()
@@ -117,4 +121,6 @@ def _validate_egress(settings: Any) -> None:
         required_egress["TTS_PROVIDER"] = settings.tts_base_url
     if settings.telegram_bot_token:
         required_egress["TELEGRAM_BOT_TOKEN"] = DEFAULT_TELEGRAM_API_URL
+    if settings.whatsapp.access_token:
+        required_egress["WHATSAPP_ACCESS_TOKEN"] = DEFAULT_WHATSAPP_API_URL
     require_startup_coverage(egress_allowlist, required_egress)

@@ -13,6 +13,8 @@ DEFAULT_LLM_CONTEXT_WINDOW_TOKENS = 200_000
 # Default production trace retention window; the audit policy allows 30-90
 # days. Pruning itself is operator-invoked, never automatic at runtime.
 DEFAULT_TRACE_RETENTION_DAYS = 30
+DEFAULT_WHATSAPP_API_HOST = "graph.facebook.com"
+DEFAULT_WHATSAPP_API_URL = f"https://{DEFAULT_WHATSAPP_API_HOST}"
 
 # Provider selector values that leave the provider disabled; mirrors the
 # composition-root convention so startup egress validation stays in sync.

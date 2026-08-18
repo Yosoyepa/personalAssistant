@@ -11,3 +11,5 @@ class WhatsAppSettings:
     app_secret: str = field(default="", repr=False)
     verify_token: str = field(default="", repr=False)
     allowed_user_ids: frozenset[str] = field(default=frozenset(), repr=False)
+    access_token: str | None = field(default=None, repr=False)
+    phone_number_id: str = field(default="")
