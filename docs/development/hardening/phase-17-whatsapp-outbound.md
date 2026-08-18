@@ -3,12 +3,12 @@
 | Campo | Valor |
 |---|---|
 | Fase | `17 — whatsapp outbound` |
-| Estado | `IN_PROGRESS` (17a `MERGED`, 17b pendiente) |
+| Estado | `COMPLETED` |
 | Mantenedor | `Yosoyepa` |
-| Rama de fase | `gemini/phase-17-worker-split` (17a), rama coder 17b pendiente |
+| Rama de fase | `gemini/phase-17-worker-split` (17a), `gemini/phase-17-whatsapp-outbound` (17b) |
 | Fecha de inicio | `2026-08-14` |
-| PR | `#48` (17a), pendiente (17b) |
-| Merge commit | `60ed511` (17a), pendiente (17b) |
+| PR | `#48` (17a), `#55` (17b) |
+| Merge commit | `60ed511` (17a), `bf7ef1d` (17b) |
 
 ## Objetivo
 
@@ -161,6 +161,52 @@ Rama desde `main` con 17a mergeada. TDD estricto.
 4. `integrity-log.md`: verificar que NO haya entradas nuevas firmadas por el
    coder. Manifest/bless los corre el discriminador solo si son necesarios.
 5. Merge commit + borrar rama + actualizar este log por PR docs aparte.
+
+## Ejecución 17b (WhatsApp outbound) — MERGED
+
+- Sender nuevo `adapters/outbound/notifications/whatsapp_*` (cliente Graph API
+  stdlib con egress allowlist y timeout de 10 s; tool P5 con fingerprint de
+  idempotencia sha256 y memoización de terminales; parsing conservador:
+  respuesta sin `messages[0].id` → `unknown-outcome`).
+- `ChannelNotificationRouter` por canal; canal desconocido → `permanent`
+  sanitizado. Wiring en `http_container.py` y `worker.py`; Telegram intacto.
+- Reply inmediato en el webhook (`http_whatsapp_replies.py`): grant P5 del
+  servidor, fallo del proveedor → `sent=False` sin tumbar el webhook; sin
+  `access_token` no se intenta envío.
+- Split preventivo de `reminder_notifications.py` (134 sitios) en dispatch +
+  helpers: las 26 funciones movidas son AST-idénticas (verificado por hash
+  contra el manifest); único cambio semántico: guard de canal
+  `{"telegram", "whatsapp"}`.
+- Config: `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, constante
+  `DEFAULT_WHATSAPP_API_URL`, egress de Graph API en `required_egress`.
+- Verificación del discriminador: suite **1015 passed, 3 skipped, 396
+  subtests** (983 base + 32 nuevos); cero archivos sobre límite; manifest +
+  bless por el discriminador (`5d0d2ed`); gate `--tier commit` **17/17 PASS**;
+  CI 5/5. Merge commit `bf7ef1d`.
+- Cumplimiento del coder: cero rutas protegidas, cero bless, log append-only,
+  tests con trazabilidad literal a los 5 escenarios Gherkin.
+
+## Feedback WCT de la fase
+
+(por el discriminador, tras la verificación independiente)
+
+1. **El patrón "split preventivo" quedó internalizado por el coder**: ante un
+   archivo congelado por G-MUT-SITES, partió `reminder_notifications.py` antes
+   de tocarlo, sin que el spec lo pidiera. El gate enseña el comportamiento
+   que busca — señal fuerte de que el presupuesto de sitios funciona como
+   mecanismo de diseño.
+2. **Segunda fase consecutiva sin violaciones de gobernanza** tras las reglas
+   duras post-brecha (sin bless de agente, logs append-only). La disciplina de
+   proceso se sostiene por spec, no por supervisión.
+3. **Deuda cosmética detectada (no bloqueante)**: los errores
+   `"REMINDER_WORKER_ENABLED requires TELEGRAM_BOT_TOKEN"` y
+   `"telegram_not_configured"` quedaron desactualizados — WhatsApp solo ya
+   satisface el requisito. Candidato a micro-fix en una fase de higiene.
+4. **Pendiente estructural para la plantilla**: los splits por presupuesto de
+   sitios empiezan a ser predecibles (http → config → worker →
+   reminder_notifications). Conviene que WCT ofrezca `wct split-plan
+   <archivo>` como andamiaje sugerido, o al menos documentar el patrón de
+   fachada como receta oficial.
 
 ## Criterios de salida
 
