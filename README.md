@@ -1,63 +1,52 @@
 # Personal Assistant
 
-Local-first personal assistant runtime built as a deterministic L2 workflow:
-Python code owns routing, state, permissions, idempotency, and side effects;
-LLM calls are bounded provider activities used only when deterministic logic
-needs help.
+**Local-first personal assistant runtime, built as a deterministic L2 workflow.** Python code owns routing, state, permissions, idempotency, and side effects; LLM calls are bounded provider activities used only when deterministic logic needs help.
 
-The project is intentionally not a generic autonomous agent loop. It is a
-single assistant harness for personal productivity workflows with tenant-scoped
-memory, explicit approvals, local-first observability, Telegram integration,
-optional audio, and optional durable Postgres storage.
+[![CI](https://github.com/Yosoyepa/personalAssistant/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Yosoyepa/personalAssistant/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/Yosoyepa/personalAssistant?include_prereleases&sort=semver&label=release)](https://github.com/Yosoyepa/personalAssistant/releases)
+[![Python](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-## Current Status
+This is intentionally **not** a generic autonomous agent loop. It is a single-assistant harness for personal productivity workflows — reminders, calendar, and notifications — with tenant-scoped memory, explicit approval gates, local-first observability, and optional durable Postgres storage.
 
-The repository currently includes:
+> [!NOTE]
+> Current release: [`v0.2.0-alpha.2`](https://github.com/Yosoyepa/personalAssistant/releases/tag/v0.2.0-alpha.2) — hardened alpha (prerelease). Suitable for controlled single-operator deployments; not approved for unattended multi-tenant service. See the [release notes](docs/releases/v0.2.0-alpha.2.md).
 
-- A Python 3.11 package with domain, application, adapter, contract, and
-  infrastructure layers.
-- FastAPI runtime endpoints for health, readiness, reminders, approvals,
-  workflow state, traces, Telegram webhooks, and local admin views.
-- Telegram webhook normalization, command routing, text replies, reminder
-  approvals, due-reminder dispatch, and outbound Telegram notification
-  adapters.
-- Optional Telegram voice/audio transcription through an OpenAI-compatible
-  speech-to-text adapter.
-- Optional MiniMax text-to-speech for Telegram audio replies through
-  `sendAudio`.
-- Deterministic reminder and calendar workflows with P3/P5 approval gates,
-  idempotency keys, event-store writes, outbox records, workflow states, and
-  trace events.
-- In-memory stores by default, plus optional Postgres persistence for
-  approvals, events, outbox, workflow state, memory, local calendar, scheduler,
-  and traces.
-- A local-only read-only admin dashboard for tenant-scoped inspection.
-- MiniMax and generic Anthropic-compatible LLM adapters behind `LLMProvider`.
-- A deny-by-default outbound egress allowlist (ADR-004 layer A): exact
-  `scheme + hostname` entries derived from the configured provider base URLs
-  plus `api.telegram.org`, an explicit `EGRESS_ALLOWED_HOSTS` override,
-  fail-closed startup validation, and hostname-only startup audit records.
-- A hardened container profile (ADR-004 layer B): multi-stage `Dockerfile`
-  with a non-root user, plus `deploy/compose.yaml` with a read-only root
-  filesystem, dropped capabilities, and `no-new-privileges`.
-- An automated process kill/restart recovery exercise against PostgreSQL
-  proving exactly-once delivery and operator-reconciled ambiguous outcomes.
-- Deterministic tests for tenant isolation, idempotency, permissions,
-  prompt-injection handling, HTTP boundaries, admin visibility, Telegram
-  delivery, audio adapters, Postgres wiring, and architecture boundaries.
+## Features
 
-Current limits:
+### Channels
 
-- Notification delivery records are still adapter-local rather than persisted in
-  Postgres.
-- No production deployment hardening beyond the local container profile,
-  external calendar sync, OAuth token storage, semantic vector memory, active
-  MCP runtime path, or active A2A runtime path.
+- **WhatsApp** (inbound + outbound): webhook with Meta challenge validation and HMAC SHA-256 signature verification (`X-Hub-Signature-256`), immediate replies to allow-listed users via the Graph API, and proactive reminder delivery. Setup in `docs/runbook/whatsapp.md`.
+- **Telegram**: webhook normalization with secret-token verification and user allowlist, command routing, text replies, optional voice transcription (OpenAI-compatible speech-to-text) and MiniMax TTS audio replies. Setup in `docs/runbook/telegram.md`.
+- **Multi-channel routing**: `ChannelNotificationRouter` delivers scheduled reminders over Telegram or WhatsApp through one outbox pipeline.
+
+### Operations
+
+- **Admin panel** (`/admin`): loopback-only, Bearer-authenticated operations surface — snapshots, traces, outbox, scheduler, guardrail metrics — with explicit **P5 approve/deny actions** and **`uncertain` delivery reconciliation** (`delivered` / `retry`). Guide in `docs/runbook/admin-dashboard.md`.
+- **Durable delivery worker**: Postgres-backed outbox with `SKIP LOCKED` coordination, worker heartbeats, and ambiguous-outcome semantics that bias against duplicate sends. Notes in `docs/runbook/persistence.md`.
+- **Zero-downtime truth**: `/livez` and `/readyz` probes (`/healthz` remains as a deprecated alias emitting `Deprecation: true`).
+
+### Security model
+
+- The core invariant: `tenant_id` comes from the authenticated `Principal` — never from message text, tool arguments, LLM output, request bodies, or retrieved documents.
+- Bidirectional guardrails at every entry point: prompt-injection, PII, and content-policy scans on inputs and outputs, with sanitized `guardrail.checked` trace events.
+- Deny-by-default outbound egress allowlist (ADR-004 layer A) and a hardened container profile with read-only root filesystem and dropped capabilities (ADR-004 layer B).
+
+### Quality & governance (WCT)
+
+The repository is developed under the **Well Code Contract** harness (`tools/wct`), with 17 enforced gates covering architecture boundaries, strict typing, branch coverage, mutation budgets, dead code, DRY, SAST, secrets, and Gherkin acceptance — plus ratchets that can only tighten. `AGENTS.md` is generated from `governance/rules/*.yaml` by `wct rules build`; governance files are integrity-locked with an audited, human-approved bless procedure.
+
+Current evidence (reproducible, commands in the release notes):
+
+- **1015 tests passed**, 3 skipped, 396 subtests — full suite against PostgreSQL 16
+- **299/299** deterministic behavioral eval cases
+- **90% branch coverage** (10619 statements, 2492 branches)
+- **17/17** WCT commit-tier gates green
 
 ## Architecture
 
 ```text
-Telegram webhook / local runtime request
+WhatsApp / Telegram webhook or local runtime request
         -> Channel normalization
         -> Trusted principal + tenant resolution
         -> Conversation command service
@@ -65,385 +54,94 @@ Telegram webhook / local runtime request
         -> Ports for LLM, transcription, TTS, calendar, scheduler, events,
            outbox, approvals, memory, notifications, traces
         -> In-memory or Postgres adapters
-        -> Optional workers for due reminders and notification dispatch
+        -> Workers for due reminders and notification dispatch
 ```
 
-MVP autonomy is L2. Deterministic code owns the path and uses bounded LLM calls
-only for classification, extraction, or drafting where the route allows it.
-WhatsApp, A2A, MCP, and external integration contracts may exist, but they are
-not the active internal runtime for the MVP.
+The codebase follows a strict dependency rule (`entrypoints -> adapters -> application -> domain`, enforced by import-linter): frameworks, ORMs, and SDKs live only in `adapters/` and `infrastructure/`; ports are defined where they are used. The executable agent contract is in `agents/personal_assistant/contract.md`, and accepted decisions are recorded in `docs/adr/`.
 
-The executable contract is in `agents/personal_assistant/contract.md`. The core
-security invariant is that `tenant_id` comes from the authenticated `Principal`,
-never from Telegram text, tool arguments, LLM output, request JSON bodies, or
-retrieved documents.
+## Getting started
 
-Guardrails scan both directions at every entry point. Inputs (reminder text,
-runtime tasks, document content) are scanned for prompt injection, PII, and
-content-policy signals; blocking findings fail the request, and document
-content is treated as untrusted data, never as instructions. Outputs
-(assistant replies, notification bodies, document summaries) are scanned
-against the ratified content policy in `docs/policy/content-policy.md` —
-credential material, exfiltration instructions, hidden-instruction leaks, and
-destructive-action text are blocked before they reach the user. Every scan
-emits a sanitized `guardrail.checked` trace event (action, categories, and
-rule labels only — never excerpts or user content), and the admin surface
-aggregates them into hit-rate metrics at `GET /admin/guardrails/metrics`
-(see `docs/runbook/admin-dashboard.md`).
+### Prerequisites
 
-## Local Setup
+- Python 3.11+ and [uv](https://docs.astral.sh/uv/)
+- Optional: PostgreSQL 16 for the durable backend (memory mode is the default and disposable)
 
-Python 3.11 or newer is required.
+### Install
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e '.[test]'
+uv sync --all-extras --group dev
 ```
 
-Install optional API and Postgres dependencies when needed:
+### Configure
+
+Configuration comes from the process environment and an optional local `.env` file — copy `.env.example` as the template.
+
+| Variable | Purpose |
+|---|---|
+| `APP_ENV_FILE` | Env file path; set to `disabled` for hermetic tests |
+| `PERSISTENCE_BACKEND` | `memory` (default) or `postgres` |
+| `DATABASE_URL` | Postgres DSN, required when `PERSISTENCE_BACKEND=postgres` |
+| `ADMIN_TOKEN` | Bearer token for the loopback admin surface |
+| `ASSISTANT_TENANT_ID` / `ASSISTANT_TIMEZONE` | Default tenant and timezone |
+
+Channel variables (`TELEGRAM_*`, `WHATSAPP_*`, `TRANSCRIPTION_*`, `TTS_*`) are documented in their runbooks.
+
+> [!IMPORTANT]
+> Keep every credential out of git: tokens, webhook secrets, API keys, and `DATABASE_URL` live only in the environment or the git-ignored `.env`. Secret handling and rotation procedures are in `docs/runbook/hardened-local-deployment.md`.
+
+### Run
 
 ```bash
-python -m pip install -e '.[api,test]'
-python -m pip install -e '.[api,test,postgres]'
+uv run uvicorn personal_assistant.infrastructure.http:app --host 127.0.0.1 --port 8000
 ```
-
-Configuration is loaded from the process environment and, by default, an
-optional local `.env` file. Use `.env.example` as the template. Set
-`APP_ENV_FILE=disabled` for hermetic tests. Keep Telegram tokens, webhook
-secrets, MiniMax keys, speech provider keys, `ADMIN_TOKEN`, `DATABASE_URL`, OAuth
-tokens, and every other credential out of git. For the public webhook boundary,
-local secrets, and rotation procedure, follow
-`docs/runbook/hardened-local-deployment.md`.
-
-## Verify Locally
-
-The main local gate does not require Telegram, MiniMax, Groq, Postgres, or other
-network services:
-
-```bash
-APP_ENV_FILE=disabled PYTHONPATH=src python3 -B -m pytest -q
-PYTHONPATH=src python3 -B -m compileall -q src tests
-python3 -m json.tool eval/cases.json >/dev/null
-```
-
-For the focused API/persistence/admin gate used during this MVP:
-
-```bash
-APP_ENV_FILE=disabled PYTHONPATH=src python3 -B -m pytest -q \
-  tests/test_llm_adapters.py tests/test_telegram_notifications.py tests/test_http_runtime.py \
-  tests/test_postgres_persistence.py tests/test_persistence_config.py \
-  tests/test_admin_dashboard.py tests/test_prompt_and_reply_catalogs.py
-```
-
-Expected properties:
-
-- All tests pass and source/test files compile.
-- `eval/cases.json` parses as valid JSON.
-- User-supplied `tenant_id=...` remains inert text.
-- P3/P5 side effects require approval and are idempotent.
-- Duplicate Telegram webhook delivery does not duplicate calendar, reminder,
-  event-store, workflow-state, scheduler, or outbox records.
-- Cross-tenant canary data is not returned through memory or calendar paths.
-
-## Run The API
-
-Start the local runtime on loopback:
-
-```bash
-export APP_ENV_FILE=.env
-export PERSISTENCE_BACKEND=memory
-PYTHONPATH=src python3 -m uvicorn personal_assistant.infrastructure.http:app \
-  --host 127.0.0.1 \
-  --port 8000
-```
-
-Check the process:
 
 ```bash
 curl -sS http://127.0.0.1:8000/livez | python3 -m json.tool
 curl -sS http://127.0.0.1:8000/readyz | python3 -m json.tool
 ```
 
-`/healthz` is a deprecated compatibility alias for `/livez` in
-`0.2.0-alpha.1`.
+A hardened container profile is available via the multi-stage `Dockerfile` and `deploy/compose.yaml`.
 
-Create a reminder through the loopback-only trusted runtime API. It requires the
-server's fixed authority and an admin bearer token; request identity headers do
-not provide authority:
-
-```powershell
-# Read from ignored .env into this PowerShell process; do not print the value.
-$adminLines = @(Get-Content .env | Where-Object {
-  $_ -match '^ADMIN_TOKEN="[^"]+"$'
-})
-if ($adminLines.Count -ne 1) { throw 'Expected exactly one non-empty ADMIN_TOKEN.' }
-$adminLine = $adminLines[0]
-$adminToken = ([regex]::Match($adminLine, '^ADMIN_TOKEN="(?<value>[^"]+)"$')).Groups['value'].Value
-$headers = @{ Authorization = "Bearer $adminToken" }
-$body = @{
-  message_id = 'telegram-message-1'
-  source_event_id = 'api-request-1'
-  conversation_id = 'telegram-chat-1'
-  text = 'recuerdame clase el martes a las 5'
-  channel = 'telegram'
-  recipient = 'telegram-chat-1'
-  now = '2026-06-20T12:00:00+00:00'
-  timezone = 'America/Bogota'
-} | ConvertTo-Json
-Invoke-RestMethod -Method Post `
-  -Uri 'http://127.0.0.1:8000/v1/runtime/reminders' `
-  -Headers $headers -ContentType 'application/json' -Body $body |
-  ConvertTo-Json -Depth 10
-```
-
-The expected first response is an approval escalation. Approve it with:
-
-```powershell
-$approvalId = '<approval id>'
-Invoke-RestMethod -Method Post `
-  -Uri "http://127.0.0.1:8000/v1/runtime/approvals/$approvalId/approve" `
-  -Headers $headers -ContentType 'application/json' -Body '{}' |
-  ConvertTo-Json -Depth 10
-```
-
-After the local check, run `Remove-Variable adminToken, headers` in that
-PowerShell session.
-
-## Telegram
-
-The Telegram bridge is documented in `docs/runbook/telegram.md`. The active
-webhook path is:
-
-```text
-POST /webhooks/telegram
-```
-
-Minimum local environment:
+### Verify
 
 ```bash
-export TELEGRAM_BOT_TOKEN="<bot token>"
-export TELEGRAM_WEBHOOK_SECRET="<random webhook secret>"
-export TELEGRAM_ALLOWED_USER_IDS="<comma-separated Telegram user ids>"
-export ASSISTANT_TENANT_ID="personal"
-export ASSISTANT_TIMEZONE="America/Bogota"
+APP_ENV_FILE=disabled uv run pytest -q                 # full suite
+uv run python -m personal_assistant.evals --suite eval/cases   # behavioral corpus
+uv run python -m tools.wct gate --tier fast            # governance gates (needs PYTHONPATH=.)
 ```
 
-Run FastAPI on loopback and configure an HTTPS proxy/tunnel that forwards only
-`POST /webhooks/telegram`; it must deny health, runtime, and admin routes. Use
-the in-memory PowerShell Telegram helper in `docs/runbook/telegram.md` to set,
-inspect, or remove the webhook. It avoids putting the bot token or webhook
-secret in command arguments, process listings, or terminal output. Telegram's
-Bot API requires the bot token in its request URL, but the helper constructs
-that URL only inside the HTTP process; it never appears in the public webhook
-URL.
+## Documentation
 
-The webhook resolves tenant authority from runtime configuration and requires a
-constant-time match for the `X-Telegram-Bot-Api-Secret-Token` header. Telegram
-actors come only from Telegram user `from.id` data; `chat.id` is never an actor
-fallback. The user allowlist is default-deny, including when it is empty. All
-three checks run before command routing or any state, provider, or notification
-work. Telegram sends are owned by the notification adapter and remain
-P5/idempotent side effects.
+| Document | Contents |
+|---|---|
+| `docs/runbook/telegram.md` | BotFather, webhook, audio/TTS, local runtime notes |
+| `docs/runbook/whatsapp.md` | Meta app, webhook subscription, HMAC verification, smoke test, troubleshooting |
+| `docs/runbook/admin-dashboard.md` | Admin panel, P5 actions, uncertain reconciliation, JSON endpoints |
+| `docs/runbook/persistence.md` | Memory/Postgres backends, schema, idempotency, worker CLI |
+| `docs/runbook/hardened-local-deployment.md` | HTTPS webhook-only boundary, secrets, rotation, rollback |
+| `docs/runbook/minimax.md` | MiniMax LLM and TTS provider notes |
+| `docs/runbook/v0.2.0-alpha.1.md` | Installation, migration, and smoke procedure for the alpha line |
+| `docs/adr/` | Accepted architecture decisions (ADR-001 to ADR-006) |
+| `docs/architecture/` | Architecture reviews and design notes |
+| `docs/development/` | Maintainer workflow, hardening phase logs, governance setup |
+| `docs/policy/` | Ratified content policy |
+| `eval/README.md` | Behavioral eval harness and corpus format |
+| `agents/personal_assistant/contract.md` | Executable single-agent contract |
 
-## Audio And TTS
+## Project layout
 
-Incoming Telegram voice/audio messages can be transcribed before command
-routing. Configure an OpenAI-compatible transcription provider, for example
-Groq:
+- `src/personal_assistant/domain/` — models, policies, permissions, pure domain services
+- `src/personal_assistant/application/` — DTOs, use cases, ports, bounded orchestration
+- `src/personal_assistant/adapters/` — channel/API adapters, provider adapters, persistence
+- `src/personal_assistant/infrastructure/` — configuration, composition root, FastAPI app, admin, workers
+- `tests/`, `eval/`, `features/` — regression suite, golden corpus, Gherkin acceptance
+- `governance/`, `tools/wct/` — WCT policy, rules, integrity lock, and the gate harness
+- `docs/` — runbooks, ADRs, release notes, development logs
 
-```bash
-export TRANSCRIPTION_PROVIDER="openai_compatible"
-export GROQ_API_KEY="<speech provider key>"
-export TRANSCRIPTION_BASE_URL="https://api.groq.com/openai"
-export TRANSCRIPTION_MODEL="whisper-large-v3-turbo"
-```
+## Known limitations
 
-Optional Telegram audio replies use MiniMax TTS. Workflows still produce text;
-infrastructure may synthesize a short audio copy after the text reply is
-accepted:
-
-```bash
-export TTS_PROVIDER="minimax"
-export MINIMAX_API_KEY="<minimax token plan key>"
-export TTS_BASE_URL="https://api.minimax.io"
-export TTS_MODEL="speech-2.8-turbo"
-export TTS_VOICE_ID="male-qn-qingse"
-export TTS_AUDIO_FORMAT="mp3"
-export TTS_LANGUAGE_BOOST="Spanish"
-export TTS_MAX_REPLY_CHARACTERS="280"
-export TELEGRAM_AUDIO_REPLY_MODE="voice_only"
-```
-
-`TELEGRAM_AUDIO_REPLY_MODE=voice_only` sends audio only when the incoming
-message was voice/audio. Use `always` for every Telegram reply or `disabled` for
-text-only behavior. See `docs/runbook/minimax.md` for provider notes.
-
-## Admin Dashboard
-
-The admin dashboard is a local read-only inspection surface, not a production
-ops console. It is loopback-only and tenant-scoped; it always requires
-`Authorization: Bearer <ADMIN_TOKEN>`. Query parameters only filter the display
-where supported; they do not establish authority.
-
-Generate and store `ADMIN_TOKEN` in ignored `.env` with the PowerShell procedure
-in `docs/runbook/hardened-local-deployment.md`; do not export or print it.
-
-Open:
-
-```text
-http://127.0.0.1:8000/admin
-```
-
-Useful JSON endpoints include `/admin/snapshot`, `/admin/health`,
-`/admin/approvals`, `/admin/traces`, `/admin/outbox`, `/admin/scheduler`,
-`/admin/agenda`, `/admin/reminders`, `/admin/errors`, `/admin/events`,
-`/admin/states`, `/admin/memory`, and `/admin/guardrails/metrics`. The full
-guide is in `docs/runbook/admin-dashboard.md`.
-
-## Postgres
-
-Memory mode is the default and is disposable. Use Postgres when webhook retries,
-approval resumes, worker restarts, or admin inspection must survive process
-restarts.
-
-Install the optional extra and configure the backend:
-
-```bash
-python -m pip install -e '.[api,test,postgres]'
-
-export PERSISTENCE_BACKEND=postgres
-export DATABASE_URL="postgresql://personal_assistant:personal_assistant@127.0.0.1:5432/personal_assistant"
-PYTHONPATH=src python3 -m uvicorn personal_assistant.infrastructure.http:app \
-  --host 127.0.0.1 \
-  --port 8000
-```
-
-`PERSISTENCE_BACKEND=postgres` fails startup if `DATABASE_URL`, `psycopg`, or
-the database connection is unavailable. The current adapter initializes
-`assistant_*` tables for approvals, events, outbox, workflow states, memory,
-local calendar, scheduled reminders, and traces. See
-`docs/runbook/persistence.md` for schema notes, idempotency rules, worker lease
-expectations, and limitations.
-
-Durable reminder delivery requires PostgreSQL and a configured Telegram bot;
-memory remains a disposable development/test backend. The outbox is canonical
-and the scheduler is only a mirrored operational view. Operator commands are:
-
-```bash
-uv run python -m personal_assistant.infrastructure.worker run-once
-uv run python -m personal_assistant.infrastructure.worker list-uncertain
-uv run python -m personal_assistant.infrastructure.worker resolve-uncertain \
-  --message-id <id> --resolution delivered --confirm <id>
-```
-
-`retry` is also available as a resolution. It returns the message to `pending`
-only after exact confirmation and a runtime-owned P5 approval, and is rejected
-once the message has reached four attempts. Automatic retries apply only to
-known outcomes; ambiguous outcomes stop at `uncertain` for manual reconciliation
-to bias the system against duplicate sends.
-
-## Implementation Boundary
-
-Present:
-
-- `normalize_telegram_webhook(payload, tenant_id=...)`
-- `build_container()` and `personal_assistant.infrastructure.http:app`
-- `ConversationCommandService`, `ReminderWorkflow`, and `ReminderWorker`
-- Local-only admin dashboard and JSON admin endpoints
-- Telegram webhook bridge and outbound Telegram notification adapter
-- MiniMax LLM/TTS adapters and generic Anthropic/OpenAI-compatible provider
-  adapters where applicable
-- In-memory persistence and optional Postgres persistence for the main runtime
-  state stores
-
-Not present yet:
-
-- Persisted notification delivery ledger
-- Production auth/deploy hardening beyond the local container profile
-- OAuth credential storage
-- External calendar sync
-- Active MCP or A2A execution path
-
-Forbidden by contract:
-
-- Tenant authority from untrusted text, request bodies, LLM output, or retrieved
-  documents
-- Direct `telegram.send` from the agent workflow
-- MVP `mcp.*` or `a2a.*` tool calls
-- Third-party messaging, financial actions, destructive bulk deletion, and
-  secret reads
-
-## Project Docs
-
-- `docs/runbook/telegram.md` - BotFather, ngrok, webhook, Telegram command,
-  audio, and local runtime notes.
-- `docs/runbook/hardened-local-deployment.md` - HTTPS webhook-only boundary,
-  local secret handling, verification, rotation, and rollback.
-- `docs/runbook/admin-dashboard.md` - local admin dashboard and JSON endpoint
-  guide.
-- `docs/runbook/persistence.md` - memory/Postgres persistence guide.
-- `docs/runbook/v0.2.0-alpha.1.md` - installation, migration, startup,
-  uncertain-delivery, rollback, and no-secret smoke procedure for this alpha.
-- `docs/runbook/whatsapp.md` - Meta app, webhook, HMAC signature, and WhatsApp
-  cloud API setup notes.
-- `docs/runbook/minimax.md` - MiniMax LLM and TTS provider notes.
-- `docs/adr/` - accepted architecture decisions.
-- `docs/architecture/` - architecture reviews and short design notes.
-- `docs/architecture/build-vs-frameworks.md` - why the MVP uses a small local
-  harness instead of OpenClaw, HermeAgent/Hermes Agent, or OpenHands as the core
-  runtime.
-- `docs/development/maintainer-workflow.md` - executable single-maintainer
-  workflow for `codex/` branches, worktrees, review, commits, phase PRs,
-  rollback, gates, and Definition of Done;
-  `docs/development/hardening-log.md` is its evidence template.
-- `docs/development/github-governance.md` - stable CI checks, GitHub branch
-  protection, merge-method policy, and the read-only verification workflow.
-- `docs/public/` - public written artifacts.
-
-## Test Map
-
-- `tests/test_contracts.py` - A2A serialization, tool policy surface, and
-  inactive `mcp.*`/`a2a.*` fail-closed behavior.
-- `tests/test_command_router.py` - Telegram command routing, pending approvals,
-  approval commands, agenda, and status.
-- `tests/test_documents_and_channels.py` - Telegram/WhatsApp normalization and
-  document prompt-injection warning behavior.
-- `tests/test_reminder_workflow.py` - reminder extraction, approval gate,
-  idempotency, workflow state reuse, outbox/event/trace writes.
-- `tests/test_permissions_and_tenant.py` - tenant identity, P3/P5 approval,
-  idempotent side effects, and cross-tenant memory/calendar isolation.
-- `tests/test_durable_state.py` - terminal workflow state immutability.
-- `tests/test_events_outbox.py` - event and outbox tenant/idempotency behavior.
-- `tests/test_http_runtime.py` - runtime API health, readiness, tenant
-  authority, approval resume, structured errors, and tenant-scoped queries.
-- `tests/test_admin_dashboard.py` - local admin dashboard snapshots, local-only
-  guard, tenant-scoped visibility, and error categorization.
-- `tests/test_scheduler_worker.py` - reminder notification worker dispatch, P5
-  approval policy, bounded loop, and tenant scope.
-- `tests/test_telegram_notifications.py` - Telegram dispatcher P5 approval,
-  replay idempotency, audio sends, and conflict detection.
-- `tests/test_llm_adapters.py` - MiniMax LLM/TTS and OpenAI-compatible
-  transcription adapters.
-- `tests/test_persistence_config.py` and `tests/test_postgres_persistence.py` -
-  Postgres backend selection, optional dependency behavior, schema, and DTO
-  serialization.
-- `tests/test_architecture_boundaries.py` - hexagonal import boundaries.
-- `eval/cases.json` - curated golden, failure-mode, and regression fixtures
-  mapped to contract `AC-*` and `FM-*` references.
-
-## Layout
-
-- `agents/personal_assistant/contract.md` - single-agent contract.
-- `src/personal_assistant/domain/` - business models, policies, permissions,
-  pure domain services, and exceptions.
-- `src/personal_assistant/application/` - DTOs, use cases, service ports, and
-  bounded runtime orchestration.
-- `src/personal_assistant/adapters/` - inbound channel/API adapters, outbound
-  provider adapters, persistence adapters, and local observability.
-- `src/personal_assistant/contracts/` - A2A and future interoperability
-  contracts that are not the internal runtime.
-- `src/personal_assistant/infrastructure/` - configuration, composition root,
-  FastAPI app, prompts, replies, admin, and worker wiring.
-- `docs/`, `eval/`, and `tests/` - design records, public artifacts, runbooks,
-  golden cases, and regression checks.
+- WhatsApp supports plain text and proactive delivery only — no inbound voice transcription or media processing yet.
+- The admin surface is loopback-only (`127.0.0.1` / `::1`); there is no production auth beyond it.
+- The durable delivery worker requires PostgreSQL.
+- Ambiguous delivery outcomes stop at `uncertain` and require manual operator reconciliation by design.
+- No external calendar sync, OAuth credential storage, semantic vector memory, or active MCP/A2A runtime path yet.
