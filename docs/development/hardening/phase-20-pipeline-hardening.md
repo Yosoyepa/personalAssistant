@@ -3,12 +3,12 @@
 | Campo | Valor |
 |---|---|
 | Fase | `20 — pipeline hardening` |
-| Estado | `SPEC_APPROVED` |
+| Estado | `COMPLETED` |
 | Mantenedor | `Yosoyepa` |
-| Rama de fase | rama coder (20B), rama discriminador (20A) |
+| Rama de fase | `gemini/phase-20-single-version-source` (20B), `kimi/phase-20-integrity-ci` (20A), `kimi/phase-21-integrity-untracked` (21) |
 | Fecha de inicio | `2026-08-18` |
-| PR | pendiente |
-| Merge commit | pendiente |
+| PR | #63 (spec), #64 (20A), #65 (20B), #66 (21) |
+| Merge commit | `6907940` (20B), `84e8822` (21), `c7e3835` (20A) |
 
 ## Objetivo
 
@@ -68,4 +68,37 @@ Cerrar los dos hallazgos principales del feedback WCT de las fases 18–19:
 
 ## Feedback WCT de la fase
 
-(pendiente — se llena al cierre por el discriminador)
+Cerrado por el discriminador tras los merges de 20A/20B y la fase 21
+(prerrequisito descubierto en 20A). Blesses del mantenedor: `6f65993`
+(fase 21) y `95e57793` (20A).
+
+1. **integrity.lock cubría rutas no versionadas → check no ejecutable en CI**
+   (fase 21, PR #66). El lock incluía archivos bajo `.agents/skills/` que no
+   están trackeados por git; en un runner limpio el check los marcaba
+   `eliminado protegido` y fallaba siempre. Fix: `integrity review()` separa
+   problemas (bloquean) de avisos (`ausente no versionado (omitido)`), con
+   fail-closed si git no responde. **Llevar este comportamiento al template
+   WCT** (`~/Documents/well_code_template`): cualquier instalación nueva del
+   harness con rutas protegidas no versionadas heredará el falso positivo.
+2. **Propuesta (no implementada): hash de contenido normalizado.** El lock
+   hashea bytes en disco; una copia local con CRLF de
+   `.github/workflows/security.yml` exigió re-bless aunque el blob en git era
+   LF. Hashear con semántica `git hash-object` (o normalizando EOL) haría al
+   lock inmune a diferencias de checkout. Candidato para el template.
+3. **Flake `test_concurrent_sweepers_are_disjoint_idempotent_and_ignore_foreign_events`**
+   (`tests/test_delivery_adversarial_postgres.py`): falló dos veces seguidas en
+   `tests (3.12)` ("sweeper did not converge after conflicts") y pasó en 3.11
+   del mismo run; es sensible al timing bajo contención real de Postgres en CI.
+   Candidato a presupuesto de reintentos acotado o ajuste del presupuesto de
+   convergencia del test. Si reaparece, merece fase propia.
+4. **El hook de pre-commit aborta el primer commit de un bless**: regenera
+   `.secrets.baseline` (churn de timestamp `generated_at`) a mitad del commit.
+   Patrón operativo documentado: incluir `.secrets.baseline` en el `git add`
+   del bless desde el inicio.
+5. **Regla de worktree compartido aplica en ambas direcciones**: el
+   discriminador tampoco debe cambiar el checkout (`git checkout`) mientras el
+   coder trabaja; ya causó una carrera en fases anteriores. Operaciones
+   remotas (`gh pr ...`) son seguras; las de checkout, no.
+6. **Comandos de bless para el mantenedor, en una sola línea**: los backslashes
+   de continuación rompieron la primera entrega del comando (`wct: error:
+   unrecognized arguments`). Entregar comandos copy-paste sin continuaciones.
