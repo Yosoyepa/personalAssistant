@@ -77,3 +77,10 @@
 - Reason: phase 19 dev dependency  
    bumps (supersedes dependabot #50-#54)
 - Commit: 2b1ee261e89edb91e03afad8fda90da65dc67f5b
+
+## 2026-08-19T20:24:41.801602+00:00
+
+- Approved by: Yosoyepa
+- Reason: phase 21: integrity
+   check skips untracked missing protected paths; absorb security.yml LF renormalize
+- Commit: 587734feb434c3a97d03ed2b0cf9bee2d51b27ad
