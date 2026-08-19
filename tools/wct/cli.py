@@ -13,7 +13,7 @@ from tools.wct.doctor.checks import diagnose
 from tools.wct.dry.analyzer import analyze as analyze_dry
 from tools.wct.gate.runner import TIERS, run_tier
 from tools.wct.hooks.guard import dispatch as dispatch_hook
-from tools.wct.integrity.engine import bless, violations, write_lock
+from tools.wct.integrity.engine import bless, review, write_lock
 from tools.wct.introvert.analyzer import analyze as analyze_tests
 from tools.wct.mutate.engine import run as run_mutation
 from tools.wct.mutate.engine import scan as scan_mutation
@@ -127,7 +127,9 @@ def main(argv: list[str] | None = None) -> int:
                 print(write_lock(root).relative_to(root))
                 return 0
             if args.action == "check":
-                problems = violations(root)
+                problems, warnings = review(root)
+                for warning in warnings:
+                    print(f"aviso: {warning}")
                 print("\n".join(problems))
                 return bool(problems)
             if not args.reason or not args.approved_by:
