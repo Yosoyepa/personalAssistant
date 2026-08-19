@@ -84,3 +84,10 @@
 - Reason: phase 21: integrity
    check skips untracked missing protected paths; absorb security.yml LF renormalize
 - Commit: 587734feb434c3a97d03ed2b0cf9bee2d51b27ad
+
+## 2026-08-19T20:39:30.126923+00:00
+
+- Approved by: Yosoyepa
+- Reason: phase 20A: add   
+   wct integrity check to CI quality job
+- Commit: 7890837dfdf05fd64185e8dd206aa313269c55ff
