@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from tools.wct.config import load_config
-from tools.wct.util.git import head_sha
+from tools.wct.util.git import head_sha, tracked_files
 
 LOCK_PATH = Path("governance/integrity.lock")
 MIN_REASON = 12
@@ -52,24 +52,52 @@ def write_lock(root: Path, *, force: bool = False) -> Path:
     return path
 
 
-def violations(root: Path) -> list[str]:
-    path = root / LOCK_PATH
-    if not path.is_file():
-        return [f"falta {LOCK_PATH}; ejecuta `wct integrity lock` durante bootstrap"]
-    try:
-        expected = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return [f"lock ilegible: {exc}"]
-    actual = snapshot(root)["files"]
-    previous = expected.get("files", {})
-    messages = [
+def _classify(
+    previous: dict[str, str],
+    actual: dict[str, str],
+    tracked: set[str] | None,
+) -> tuple[list[str], list[str]]:
+    """Split lock drift into blocking violations and non-blocking warnings.
+
+    A pull request can only modify git-tracked files, so a protected path that
+    is missing from disk but is not versioned (e.g. git-ignored local skills
+    under .agents/skills/) cannot be attacked through a PR: it is reported as
+    a warning instead of a violation. Without git tracking information the
+    check fails closed: every missing protected path remains a violation.
+    """
+    problems = [
         f"modificado: {name}"
         for name in sorted(actual.keys() & previous.keys())
         if actual[name] != previous[name]
     ]
-    messages += [f"nuevo protegido: {name}" for name in sorted(actual.keys() - previous.keys())]
-    messages += [f"eliminado protegido: {name}" for name in sorted(previous.keys() - actual.keys())]
-    return messages
+    problems += [f"nuevo protegido: {name}" for name in sorted(actual.keys() - previous.keys())]
+    warnings: list[str] = []
+    for name in sorted(previous.keys() - actual.keys()):
+        if tracked is None or name in tracked:
+            problems.append(f"eliminado protegido: {name}")
+        else:
+            warnings.append(f"ausente no versionado (omitido): {name}")
+    return problems, warnings
+
+
+def review(root: Path) -> tuple[list[str], list[str]]:
+    """Return (violations, warnings) comparing integrity.lock with the tree."""
+    path = root / LOCK_PATH
+    if not path.is_file():
+        return [f"falta {LOCK_PATH}; ejecuta `wct integrity lock` durante bootstrap"], []
+    try:
+        expected = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"lock ilegible: {exc}"], []
+    actual = snapshot(root)["files"]
+    previous = expected.get("files", {})
+    return _classify(previous, actual, tracked_files(root))
+
+
+def violations(root: Path) -> list[str]:
+    """Return only blocking drift between integrity.lock and the tree."""
+    problems, _warnings = review(root)
+    return problems
 
 
 def bless(root: Path, reason: str, approved_by: str) -> Path:

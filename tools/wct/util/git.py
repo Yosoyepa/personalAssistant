@@ -27,3 +27,11 @@ def changed_files(root: Path, base: str | None = None) -> list[Path]:
 def head_sha(root: Path) -> str | None:
     result = run_git(root, "rev-parse", "HEAD", check=False)
     return result.stdout.strip() if result.returncode == 0 else None
+
+
+def tracked_files(root: Path) -> set[str] | None:
+    """Return git-tracked paths relative to root, or None if git is unavailable."""
+    result = run_git(root, "ls-files", check=False)
+    if result.returncode != 0:
+        return None
+    return {line for line in result.stdout.splitlines() if line}
