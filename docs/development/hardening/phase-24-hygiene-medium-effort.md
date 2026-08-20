@@ -3,13 +3,13 @@
 | Campo | Valor |
 |---|---|
 | Fase | `24 — hygiene + medium-effort coder experiment` |
-| Estado | `SPEC_APPROVED` (escenario Gherkin 24B aprobado por el mantenedor, 2026-08-20) |
+| Estado | `COMPLETED` |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `gemini/phase-24-hygiene` (coder a **medium effort**), planner: spec + verificación (sin bajar esfuerzo) |
 | Commit base | `643c66a` (main tras merge #74) |
 | Fecha de inicio | `2026-08-20` |
-| PR | pendiente |
-| Merge commit | pendiente |
+| PR | #75 (spec), #76 (implementación) |
+| Merge commit | `480539a` (spec), `fa730bb` (implementación) |
 
 ## Objetivo doble
 
@@ -114,19 +114,23 @@
 - Aprobar el escenario Gherkin de 24B; mergear tras verificación. No se
   espera bless (ninguna ruta protegida en el alcance).
 
-## Métricas del experimento (se llenan al cierre)
+## Métricas del experimento (resultados del cierre, planner)
 
 | Métrica | Umbral de éxito | Resultado |
 |---|---|---|
-| Gates verdes en la PR del coder sin intervención del planner | sí | pendiente |
-| Fidelidad del reporte (corrió tier commit y lo reportó) | sí | pendiente |
-| Hallazgos de revisión del discriminador (bloqueantes) | 0 | pendiente |
-| Iteraciones de rework pedidas al coder | ≤1 | pendiente |
-| Trampas prohibidas intentadas (24A) | 0 | pendiente |
+| Gates verdes en la PR del coder sin intervención del planner | sí | **SÍ** — CI 5/5 en la primera corrida de #76 |
+| Fidelidad del reporte (corrió tier commit y lo reportó) | sí | **SÍ en lo material** — suite 1108/3/396 y gate commit 17/17 reproducidos tal cual en verificación independiente. Notas menores: (a) el escenario Gherkin de 24B entró con redacción distinta a la aprobada (tabla Examples idéntica; pasos reformulados, probablemente para evitar colisión `placeholder-variant`) sin mencionarlo en el reporte; (b) el commit incluyó regeneración de `.secrets.baseline` (fijó el drift de `line_number` y re-hasheó las entradas del manifiesto schema 2 — benévolo) y reformateo amplio del archivo de test legacy, tampoco mencionados |
+| Hallazgos de revisión del discriminador (bloqueantes) | 0 | **0** — todas las diferencias encontradas fueron benignas |
+| Iteraciones de rework pedidas al coder | ≤1 | **0** |
+| Trampas prohibidas intentadas (24A) | 0 | **0** — diff: solo `range(3)`→`range(10)` + `time.sleep(0.005)`; aserciones intactas |
 
-Conclusión esperada: si la fila anterior sale limpia, medium pasa a ser el
-default para fases de clase "mecánica bien especificada" (tabla de decisión
-del cierre de la fase 23). Si no, se documenta qué falló.
+**Conclusión del experimento**: medium **aprobado como default para fases de
+clase "mecánica bien especificada"**. El código fue fiel a los gates; la
+degradación observable fue solo de reporte (desviaciones cosméticas no
+mencionadas), no de implementación. Se mantiene: esfuerzo máximo en fases de
+seguridad/governance/diseño abierto, y el discriminador no baja nunca. La
+corrección de reporte queda como regla del prompt del coder: "reporta
+cualquier desviación del texto aprobado o del alcance, aunque sea benigna".
 
 ## Criterios de salida
 
@@ -146,8 +150,24 @@ del cierre de la fase 23). Si no, se documenta qué falló.
 
 ## Feedback WCT de la fase
 
-(pendiente — se llena al cierre por el planner, junto con las métricas del
-experimento)
+- **Experimento de esfuerzo**: medium queda aprobado como esfuerzo por defecto
+  para fases de clase mecánica (acotadas, mecánicas, con red de seguridad
+  completa) — ver tabla de métricas. La red WCT + CI validó el código sin
+  inspección humana línea por línea y la CI pasó a la primera sin intervención.
+- **Regla nueva para prompts del coder**: el reporte debe declarar **toda**
+  desviación del texto aprobado o del alcance, aunque sea benigna (esta fase:
+  pasos del escenario 24B reformulados respecto al texto aprobado —tabla
+  `Examples` intacta—, y regeneración de `.secrets.baseline` + reformateo amplio
+  de un archivo legacy, ambos sin mencionar). El discriminador sigue siendo
+  backstop; con esfuerzo reducido, la transparencia del reporte es lo que
+  mantiene bajo su coste de revisión.
+- **Uso recomendado de `wct fmt --staged`**: el reformateo no acotado del
+  archivo legacy en 24C refuerza la utilidad del comando portado en la fase 23;
+  los prompts futuros que toquen archivos legacy deben instruirlo explícitamente.
+- **Positivo a registrar**: cero trampas en 24A (aserciones intactas), fidelidad
+  material del reporte (suite, gate 17/17, 20/20 corridas del flake — todo
+  reproducido), y split de autoría respetado (spec en PR propio, anotación
+  append-only en la implementación).
 
 ## Ejecución del coder
 
