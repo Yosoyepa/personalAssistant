@@ -3,13 +3,14 @@
 | Campo | Valor |
 |---|---|
 | Fase | `23 — wct template sync` |
-| Estado | `SPEC_APPROVED` (dirección aprobada por el mantenedor, 2026-08-20) |
+| Estado | `COMPLETED` |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `gemini/phase-23-wct-sync` (coder), planner: spec + verificación |
 | Commit base | `ac43954` (main tras merge #71) |
 | Fecha de inicio | `2026-08-20` |
-| PR | pendiente |
-| Merge commit | pendiente |
+| PR | #72 (spec), #73 (sync) |
+| Merge commit | `9a2fa34` (spec), `9d76384` (sync) |
+| Bless del mantenedor | `829f800` (re-bless EOL + manifiesto schema 2, reason con URL de PR) |
 
 ## Objetivo
 
@@ -188,7 +189,42 @@ de PR real en el handoff):
 
 ## Feedback WCT de la fase
 
-(pendiente — se llena al cierre por el planner)
+(cierre por el planner, tras verificación independiente y merge `9d76384`)
+
+1. **La definition of done del coder funcionó**: el prompt incluyó "push + PR
+   o handoff explícito" (lección de la fase 22) y el coder entregó con PR
+   abierta (#73). Primera fase sin commit mecánico del planner. Validada
+   como regla permanente del flujo.
+2. **El coder corrió `--tier fast` en vez del commit tier pedido por el
+   spec** y no detectó el fallo transitorio de `G-MUT-SITES`: con el
+   manifiesto legacy (schema 1), las 1113 funciones cuentan como cambiadas y
+   `telegram.py` (>100 sitios) bloquea hasta la regeneración. Era por diseño
+   (fuerza el `update-manifest`), pero el reporte debía incluirlo.
+   **Propuesta para el template**: cuando el manifiesto es schema legacy, el
+   mensaje de G-MUT-SITES debe decirlo explícitamente ("manifiesto schema 1:
+   regenera con `wct mutate update-manifest`") en vez de solo "excede
+   max_sites_per_file con funciones cambiadas" — el diagnóstico actual
+   induce a creer que hay que partir el archivo.
+3. **El guard se auto-demostró**: la salida del redteam (30/30) muestra los
+   `WCT BLOCK` actuando, y la regla de evidencia en `--reason` se aplicó al
+   primer bless real sin fricción (el mantenedor usó la URL de la PR).
+4. **Secuencia rojo→verde en CI como diseño**: `quality` FAIL 8s pre-bless
+   → PASS 27s post-bless, con el motor nuevo validando en CI sus propios
+   hashes EOL. G-META-1 remoto + integrity EOL + guard de agente = la
+   gobernanza del harness queda con enforcement en las tres capas (local,
+   agente, remoto).
+5. **Flujo "se arregla en el template, se porta al piloto" validado**: 54
+   tests netos nuevos (suite 1105), cero regresiones. La doble verificación
+   (template verde en su casa + suite del piloto) bastó; no hizo falta
+   revisión línea por línea de los módulos portados, solo de los puntos de
+   integración conocidos.
+6. **Matiz honesto sobre el churn de `.secrets.baseline`**: el fix
+   `_audited_secrets` cubre el GATE (G-SECRET ya no reescribe el baseline),
+   pero ningún hook del repo regeneraba el baseline en commits (`.git/hooks`
+   solo tiene samples y `.pre-commit-config.yaml` no incluye detect-secrets;
+   los abortos de fases 20–22 venían de ejecuciones manuales de agentes).
+   El runbook actualizado debe leerse como "el gate ya no lo ensucia", no
+   como garantía sobre herramientas externas al repo.
 
 ## Ejecución del coder
 
