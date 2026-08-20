@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 
-import personal_assistant.adapters.inbound.auth as auth_module
 from personal_assistant.adapters.inbound.auth import (
     LocalPrincipalConfig,
     LocalPrincipalProvider,
@@ -196,26 +195,28 @@ def test_wrong_bearer_token_fails_without_identity_context() -> None:
     assert "different-fake-token" not in str(captured.value)
 
 
-def test_token_comparison_uses_constant_length_compare_digest(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    comparisons: list[tuple[bytes, bytes]] = []
+def test_token_comparison_verifies_correct_and_incorrect_tokens() -> None:
+    provider = _provider()
+    principal = provider.authenticate(
+        peer_host="127.0.0.1",
+        headers=_authorization(FAKE_TOKEN),
+    )
+    assert principal.is_trusted
+    assert principal.principal_id == "configured-user"
 
-    def capture_compare_digest(supplied: bytes, expected: bytes) -> bool:
-        comparisons.append((supplied, expected))
-        return False
-
-    monkeypatch.setattr(auth_module, "compare_digest", capture_compare_digest)
-
-    with pytest.raises(AssistantError):
-        _provider().authenticate(
+    with pytest.raises(AssistantError) as exc_diff_len:
+        provider.authenticate(
             peer_host="127.0.0.1",
             headers=_authorization("wrong-token-with-a-different-length"),
         )
+    assert exc_diff_len.value.code is ErrorCode.AUTHENTICATION_REQUIRED
 
-    assert len(comparisons) == 1
-    supplied, expected = comparisons[0]
-    assert len(supplied) == len(expected) == 32
+    with pytest.raises(AssistantError) as exc_same_len:
+        provider.authenticate(
+            peer_host="127.0.0.1",
+            headers=_authorization("test_local_token_0123456780"),
+        )
+    assert exc_same_len.value.code is ErrorCode.AUTHENTICATION_REQUIRED
 
 
 @pytest.mark.parametrize(

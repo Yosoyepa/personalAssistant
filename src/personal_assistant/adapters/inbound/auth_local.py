@@ -22,15 +22,6 @@ from personal_assistant.domain.common.identity import Principal
 from personal_assistant.domain.common.permissions import PermissionTier
 
 
-def _active_compare_digest(supplied: bytes, expected: bytes) -> bool:
-    import sys
-
-    auth_mod = sys.modules.get("personal_assistant.adapters.inbound.auth")
-    if auth_mod is not None and hasattr(auth_mod, "compare_digest"):
-        return auth_mod.compare_digest(supplied, expected)
-    return compare_digest(supplied, expected)
-
-
 class LocalPrincipalSettings(Protocol):
     """Server-owned settings required by the local principal provider."""
 
@@ -139,7 +130,7 @@ class LocalPrincipalProvider:
             supplied_digest = sha256(token.encode("ascii")).digest()
         except UnicodeEncodeError:
             return False
-        return _active_compare_digest(supplied_digest, self._expected_token_digest)
+        return compare_digest(supplied_digest, self._expected_token_digest)
 
     def authenticate(
         self,

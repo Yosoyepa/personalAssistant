@@ -43,6 +43,17 @@ def register_admin_auth_routes(app: FastAPI) -> None:
                 "local authentication requires a loopback peer",
             )
 
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                if int(content_length) > 4096:
+                    raise AssistantError(
+                        ErrorCode.PAYLOAD_TOO_LARGE,
+                        "request payload exceeds maximum allowed size",
+                    )
+            except ValueError:
+                pass
+
         body = await request.body()
         try:
             parsed = parse_qs(body.decode("utf-8"))

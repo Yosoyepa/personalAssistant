@@ -322,3 +322,43 @@ def test_login_with_malformed_body_and_missing_field() -> None:
         headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert resp_bad_bytes.status_code == 401
+
+
+# ---------------------------------------------------------------------------
+# Gherkin Scenario Outline 6: Login rejects oversized bodies before reading them
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("size", "expected_status"),
+    [
+        (4096, 401),
+        (4097, 413),
+    ],
+)
+def test_scenario_login_rejects_oversized_bodies_before_reading_them(
+    size: int,
+    expected_status: int,
+) -> None:
+    app = _make_app(allow_remote=True)
+    client = TestClient(app, client=REMOTE_CLIENT)
+    content = b"x" * size
+    response = client.post(
+        "/admin/login",
+        content=content,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+    assert response.status_code == expected_status
+    assert "admin_token" not in response.cookies
+
+
+def test_login_with_invalid_content_length_header() -> None:
+    app = _make_app(allow_remote=True)
+    client = TestClient(app, client=REMOTE_CLIENT)
+    response = client.post(
+        "/admin/login",
+        data={"token": VALID_STRONG_TOKEN},
+        headers={"Content-Length": "not-a-number"},
+    )
+    assert response.status_code == 200
+    assert "admin_token" in response.cookies
