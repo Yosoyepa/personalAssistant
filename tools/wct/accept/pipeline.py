@@ -26,7 +26,12 @@ def parse_feature(path: Path) -> dict[str, Any]:
         if line.startswith("Feature:"):
             feature = line.split(":", 1)[1].strip()
         elif line.startswith("Background:"):
-            current = {"name": "Background", "line": number, "steps": background, "examples": []}
+            current = {
+                "name": "Background",
+                "line": number,
+                "steps": background,
+                "examples": [],
+            }
             in_examples = False
         elif line.startswith(("Scenario:", "Scenario Outline:")):
             current = {
@@ -49,7 +54,9 @@ def parse_feature(path: Path) -> dict[str, Any]:
                 headers = values
             else:
                 if len(values) != len(headers):
-                    raise ValueError(f"{path}:{number}: fila Examples de longitud incorrecta")
+                    raise ValueError(
+                        f"{path}:{number}: fila Examples de longitud incorrecta"
+                    )
                 if current is None:
                     raise ValueError(f"{path}:{number}: fila Examples sin escenario")
                 current["examples"].append(dict(zip(headers, values, strict=True)))
@@ -65,9 +72,13 @@ def parse_feature(path: Path) -> dict[str, Any]:
                 )
                 if target is None:
                     raise ValueError(f"{path}:{number}: step fuera de scenario")
-                target.append({"keyword": match.group(1), "text": match.group(2), "line": number})
+                target.append(
+                    {"keyword": match.group(1), "text": match.group(2), "line": number}
+                )
             elif line:
-                raise ValueError(f"{path}:{number}: sintaxis Gherkin no soportada: {line}")
+                raise ValueError(
+                    f"{path}:{number}: sintaxis Gherkin no soportada: {line}"
+                )
     if not feature or not scenarios:
         raise ValueError(f"{path}: Feature y al menos un Scenario son obligatorios")
     return {
@@ -81,7 +92,7 @@ def parse_feature(path: Path) -> dict[str, Any]:
 
 def ir_dry(ir: dict[str, Any]) -> dict[str, Any]:
     findings: list[dict[str, Any]] = []
-    global_steps: list[tuple[str, str, int]] = []
+    global_steps: list[tuple[str, str, str, int]] = []
     for scenario in ir["scenarios"]:
         seen: dict[str, int] = {}
         for step in scenario["steps"]:
@@ -95,12 +106,19 @@ def ir_dry(ir: dict[str, Any]) -> dict[str, Any]:
                         "scenario": scenario["name"],
                         "line": step["line"],
                         "other_line": seen[normalized],
+                        "step": step["text"],
+                        "message": (
+                            f"Paso '{step['text']}' repite la forma de la línea "
+                            f"{seen[normalized]} dentro del escenario '{scenario['name']}'"
+                        ),
                     }
                 )
             seen[normalized] = step["line"]
-            global_steps.append((normalized, scenario["name"], step["line"]))
-    for index, (left, left_scenario, left_line) in enumerate(global_steps):
-        for right, right_scenario, right_line in global_steps[index + 1 :]:
+            global_steps.append(
+                (normalized, step["text"], scenario["name"], step["line"])
+            )
+    for index, (left, left_text, left_scenario, left_line) in enumerate(global_steps):
+        for right, _right_text, right_scenario, right_line in global_steps[index + 1 :]:
             if left_scenario != right_scenario and left == right:
                 findings.append(
                     {
@@ -108,6 +126,13 @@ def ir_dry(ir: dict[str, Any]) -> dict[str, Any]:
                         "scenario": right_scenario,
                         "line": right_line,
                         "other_line": left_line,
+                        "other_scenario": left_scenario,
+                        "step": left_text,
+                        "message": (
+                            f"Paso '{left_text}' del escenario '{left_scenario}' (línea "
+                            f"{left_line}) colisiona con el escenario '{right_scenario}' "
+                            f"(línea {right_line}); parametriza uno de los dos"
+                        ),
                     }
                 )
     return {"findings": findings, "count": len(findings)}
@@ -138,9 +163,7 @@ def generate(ir: dict[str, Any], output: Path) -> Path:
     source += "\n"
     for index, scenario in enumerate(ir["scenarios"], 1):
         safe = re.sub(r"[^a-z0-9_]+", "_", scenario["name"].lower()).strip("_")
-        source += (
-            f"""\ndef test_{index:03d}_{safe}():\n    execute_scenario(_ir(), {index - 1})\n"""
-        )
+        source += f"""\ndef test_{index:03d}_{safe}():\n    execute_scenario(_ir(), {index - 1})\n"""
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(source, encoding="utf-8")
     return output
@@ -189,7 +212,9 @@ def run_mutations(ir: dict[str, Any], command: list[str]) -> dict[str, Any]:
                 }
             )
             if index % 10 == 0:
-                print(f"accept mutation progress: {index}/{len(results)}", file=sys.stderr)
+                print(
+                    f"accept mutation progress: {index}/{len(results)}", file=sys.stderr
+                )
     return {
         "results": results,
         "killed": sum(item["status"] == "killed" for item in results),

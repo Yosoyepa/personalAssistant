@@ -127,6 +127,16 @@ architecture:
         bootstrap cablea ReminderWorker a nivel de módulo. Wiring diferido
         intencional: romperlo exige mover el entry point público documentado
         `python -m personal_assistant.infrastructure.worker` y sus tests.
+    - modules:
+        - personal_assistant.infrastructure.config_settings
+      reason: >-
+        config_settings importa config_loader de forma diferida mediante
+        importlib.import_module para evitar ciclo con el loader de configuración (fase 16).
+    - modules:
+        - personal_assistant.evals.runner
+      reason: >-
+        evals.runner carga dinámicamente los módulos ejecutores de evaluación
+        (personal_assistant.evals.executors.*) según el manifiesto del caso de prueba.
 
 # ---------------------------------------------------------------------------
 # Aceptación (Gherkin)

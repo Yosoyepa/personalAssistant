@@ -189,3 +189,47 @@ de PR real en el handoff):
 ## Feedback WCT de la fase
 
 (pendiente — se llena al cierre por el planner)
+
+## Ejecución del coder
+
+### 1. Inventario de sincronización
+
+| Categoría | Archivo | Acción realizada |
+|---|---|---|
+| Reemplazo directo | `tools/wct/mutate/engine.py` | Sincronizado desde template: AST fingerprinting (`_fingerprint`), soporte schema 2, `update_manifest` atómico con `--approved-by/--reason`. |
+| Reemplazo directo | `tools/wct/accept/pipeline.py` | Sincronizado desde template: mensajes enriquecidos en `ir_dry` (`placeholder-variant` indicando paso y escenarios en colisión). |
+| Módulo nuevo | `tools/wct/fmt/engine.py`, `__init__.py` | Añadido módulo `fmt`: comando `wct fmt` con `--staged` / `--diff-only` restringido al changeset. |
+| Reemplazo directo | `tools/wct/util/git.py` | Sincronizado desde template: función `staged_files` añadida. |
+| Reemplazo directo | `tools/wct/integrity/engine.py` | Sincronizado desde template: algoritmo `sha256:eol-normalized`, validación `require_approval_evidence` (URL o #N obligatorios en `--reason`). |
+| Reemplazo directo | `tools/wct/archmetrics/analyzer.py` | Sincronizado desde template: `_dynamic_imports` detector anti-evasión de ciclos. |
+| Reemplazo directo | `tools/wct/hooks/guard.py` | Sincronizado desde template: extendida normalización de invocaciones de módulo (`python -m tools.wct`, `uv run python -m tools.wct`). |
+| Merge cuidadoso | `tools/wct/gate/runner.py` | Incorporada función `_audited_secrets` (lectura de `.secrets.baseline` en solo-lectura sin `--baseline`); conservado el cableado de gates del proyecto (`ruff`, `mypy src`, `pytest -q`, `deptry src`, whitelist `vulture`, etc.). |
+| Merge cuidadoso | `tools/wct/cli.py` | Añadido subcomando `fmt`, soporte de `--approved-by/--reason` en `mutate update-manifest`, conservados avisos de `integrity check`. |
+| Mantenido piloto | `tools/wct/selftest/redteam.py` | Conservado `SECRET_PATTERN` para evitar falsos positivos con el escáner de artefactos del proyecto. |
+| Mantenido piloto | `tools/wct/__init__.py` | Conservada versión local del piloto (`0.1.0`). |
+| Mantenido piloto | `doctor/checks.py`, `dry/analyzer.py`, `ratchet/*.py`, `report/render.py`, `webhook.py` | Conservadas versiones locales (diffs cosméticos no portados). |
+
+### 2. Tests del harness portados al layout del piloto
+
+Se adaptaron los tests del harness a `tests/test_wct_*.py`:
+- `tests/test_wct_hooks.py` (12 tests): validación de `pre_tool_use`, bloqueo de `--no-verify`, escrituras protegidas, intentos de auto-bless en todas sus variantes (`wct`, `python -m tools.wct`, `uv run python -m tools.wct`, `python3`), auto-aprobación en `update-manifest`, y permiso explícito a `integrity check` y `update-manifest` plano.
+- `tests/test_wct_integrity.py` (13 tests): clasificación de drift, comportamiento de rutas no versionadas (warnings vs violaciones), fail-closed sin git, inmunidad EOL a `\r\n`, compatibilidad con locks legacy, validación de evidencia en `--reason`, y salida CLI de `integrity check`.
+- `tests/test_wct_mutate.py` (11 tests): conteo de mutation sites, inmunidad de fingerprint AST ante desplazamientos de líneas y comentarios, invalidación por cambio de cuerpo, cualificación por clase, detección de manifiesto legacy (schema 1), `update_manifest` atómico con bless, y gate diferencial `G-MUT-SITES`.
+- `tests/test_wct_fmt.py` (4 tests): restricción de formateo a archivos staged, changeset de trabajo, omisión sin archivos python, y error ante ausencia de ruff.
+- `tests/test_wct_gate_secrets.py` (5 tests): parseo tolerante a `--slim`, lectura sin mutar `.secrets.baseline`, exclusión de hallazgos auditados y detección de secretos nuevos.
+- `tests/test_wct_archmetrics.py` (10 tests): validación de Dependency Rule, ciclos en runtime vs `TYPE_CHECKING`, allowlist de ciclos, y detección de imports dinámicos no permitidos u opacos.
+- `tests/test_wct_accept.py` (3 tests): parseo de IR canónico, detección de formas duplicadas, y mensajes enriquecidos de colisión `placeholder-variant`.
+
+### 3. Puntos de integración resueltos
+
+1. **Regex del guard y normalización de comandos**: `_normalize_module_invocation` en `tools/wct/hooks/guard.py` normaliza `python(3)? -m tools.wct ...` y `uv run python -m tools.wct ...` a `wct ...`, permitiendo que todos los patrones de `PROHIBITED_BASH` capturen intentos de auto-blessing sin importar cómo se invoque el módulo. Se verificó que `integrity check` y `update-manifest` sin `--approved-by` nunca son bloqueados.
+2. **Anti-evasión `importlib` en `archmetrics`**: La ejecución de `archmetrics` identificó los imports dinámicos deliberados en `personal_assistant.infrastructure.config_settings` (fase 16) y `personal_assistant.evals.runner`. Se añadieron las excepciones documentadas a `governance/thresholds.yaml → cycle_allowlist`. Con esto, `uv run python -m tools.wct archmetrics` pasa con 0 violaciones.
+3. **Wiring del hook en `.claude/settings.json`**: Se confirmó que `.claude/settings.json` ya apunta a `uv run --project "${CLAUDE_PROJECT_DIR}" python -m tools.wct hook ...`, activando directamente el nuevo guard. No requiere cambios.
+4. **Manifiesto Schema 2**: El motor de mutación genera manifiestos con schema 2. La regeneración atómica queda preparada para el bless del mantenedor.
+
+### 4. Actualización del manual del mantenedor
+
+Se añadió la sección `## 12. Operaciones del harness WCT (Mantenedor)` a `docs/development/maintainer-workflow.md`, detallando:
+- Requisito de evidencia explícita en `--reason` (URL o #N) para `integrity bless`.
+- Comando atómico `mutate update-manifest --approved-by ... --reason ...`.
+- Fin del churn de `.secrets.baseline` gracias a la lectura en solo-lectura de `G-SECRET`.

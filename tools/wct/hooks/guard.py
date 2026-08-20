@@ -11,7 +11,10 @@ from typing import Any
 from tools.wct.config import find_root, load_config
 
 PROHIBITED_BASH = [
-    (re.compile(r"(?:^|\s)git\s+(?:commit|push)\b[^\n]*--no-verify\b"), "bypass --no-verify"),
+    (
+        re.compile(r"(?:^|\s)git\s+(?:commit|push)\b[^\n]*--no-verify\b"),
+        "bypass --no-verify",
+    ),
     (re.compile(r"(?:^|\s)git\s+reset\s+--hard\b"), "git reset --hard"),
     (
         re.compile(r"(?:^|\s)(?:rm|find)\b[^\n]*(?:governance|\.git|integrity\.lock)"),
@@ -31,7 +34,25 @@ PROHIBITED_BASH = [
         re.compile(r"(?:^|\s)(?:uv\s+run\s+)?wct\s+ratchet\s+record\b"),
         "auto-aprobación de baseline; ejecútala un humano fuera del agente",
     ),
+    (
+        re.compile(
+            r"(?:^|\s)(?:uv\s+run\s+)?wct\s+mutate\s+update-manifest\b[^\n]*--approved-by\b"
+        ),
+        "auto-aprobación de manifiesto+lock; ejecútala un humano fuera del agente",
+    ),
 ]
+
+
+def _normalize_module_invocation(command: str) -> str:
+    """Rewrite `python -m tools.wct ...` (and uv-run variants) to `wct ...`.
+
+    Module-form invocations cannot dodge the prohibited-command patterns.
+    """
+    return re.sub(
+        r"(?:^|\s)(?:\S*python\S*|uv\s+run)\s+(?:-[a-zA-Z0-9_-]+\s+)*-m\s+tools\.wct\b",
+        " wct",
+        command,
+    )
 
 
 def _read() -> dict[str, Any]:
@@ -58,7 +79,9 @@ def _path_is_protected(root: Path, raw: str) -> bool:
         relative = path.resolve().relative_to(root).as_posix()
     except ValueError:
         return False
-    return any(fnmatch.fnmatch(relative, pattern) for pattern in policy["paths"]["protected"])
+    return any(
+        fnmatch.fnmatch(relative, pattern) for pattern in policy["paths"]["protected"]
+    )
 
 
 def pre_tool_use(root: Path, payload: dict[str, Any]) -> int:
@@ -71,7 +94,9 @@ def pre_tool_use(root: Path, payload: dict[str, Any]) -> int:
                 f"{target} está protegido; usa `wct integrity bless` con aprobación humana"
             )
     if name in {"Bash", "exec_command", "shell"}:
-        command = str(data.get("command") or data.get("cmd") or "")
+        command = _normalize_module_invocation(
+            str(data.get("command") or data.get("cmd") or "")
+        )
         for pattern, label in PROHIBITED_BASH:
             if pattern.search(command):
                 return _block(f"comando prohibido: {label}")
@@ -80,7 +105,9 @@ def pre_tool_use(root: Path, payload: dict[str, Any]) -> int:
 
 def _run_gate(root: Path, tier: str) -> int:
     command = [sys.executable, "-m", "tools.wct", "gate", "--tier", tier, "--quiet"]
-    completed = subprocess.run(command, cwd=root, text=True, capture_output=True, check=False)
+    completed = subprocess.run(
+        command, cwd=root, text=True, capture_output=True, check=False
+    )
     if completed.returncode:
         output = (completed.stdout + "\n" + completed.stderr).strip()
         return _block(output[-8000:] or f"tier {tier} falló")
@@ -100,15 +127,11 @@ def _dispatch_unsafe(event: str) -> int:
     if normalized == "config-change":
         return _run_gate(root, "fast")
     if normalized in {"session-start", "subagent-start", "post-compact"}:
-        rules_path = next(
-            (
-                root / name
-                for name in ("GEMINI.md", "CLAUDE.md", "AGENTS.md")
-                if (root / name).is_file()
-            ),
-            None,
+        rules = (
+            (root / "CLAUDE.md").read_text(encoding="utf-8")
+            if (root / "CLAUDE.md").is_file()
+            else "Run `wct rules build`."
         )
-        rules = rules_path.read_text(encoding="utf-8") if rules_path else "Run `wct rules build`."
         print(json.dumps({"hookSpecificOutput": {"additionalContext": rules[:12000]}}))
     return 0
 
