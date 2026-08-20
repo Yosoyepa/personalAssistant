@@ -3,13 +3,13 @@
 | Campo | Valor |
 |---|---|
 | Fase | `22 — admin remote auth` |
-| Estado | `SPEC_APPROVED` (escenarios Gherkin aprobados por el mantenedor, 2026-08-20) |
+| Estado | `COMPLETED` |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `gemini/phase-22-admin-remote-auth` (coder), planner: spec + verificación |
 | Commit base | `49862df` (main tras merge #68) |
 | Fecha de inicio | `2026-08-19` |
-| PR | pendiente |
-| Merge commit | pendiente |
+| PR | #69 (spec), #70 (implementación) |
+| Merge commit | `d4c4697` (spec), `02388eb` (implementación) |
 
 ## Objetivo
 
@@ -199,7 +199,33 @@ Feature: Admin panel authenticates remote clients only behind explicit opt-in
 
 ## Feedback WCT de la fase
 
-(pendiente — se llena al cierre por el planner)
+(cierre por el planner, tras verificación independiente y merge `02388eb`)
+
+1. **El coder terminó sin commitear ni abrir PR**: su sesión se cortó tras la
+   implementación local; el trabajo sobrevivió sin commitear en el worktree
+   compartido y el planner hizo el commit mecánico preservando atribución
+   (`By coder.` + nota en el cuerpo). **Propuesta para el template**: la
+   "definition of done" del rol coder debe incluir explícitamente
+   `git push` + PR abierta; si la sesión se agota antes, el handoff debe
+   decir "queda sin commitear en la rama X".
+2. **Hallazgo menor de seguridad (no bloqueante)**: `POST /admin/login` lee
+   `request.body()` sin tope de `Content-Length` — vector de memory-DoS en
+   un endpoint ahora exponible remotamente. Riesgo bajo tras túnel TLS con
+   límites propios; candidato a guard de una línea (`413` si
+   `content-length > 4 KiB`) en una fase de higiene. Registrado en la PR #70.
+3. **El oráculo siguió bastando**: la verificación fue gates (suite
+   1051/3/396, commit 17/17) + revisión focalizada de los 4 archivos
+   sensibles de seguridad. Sin revisión línea por línea del resto.
+4. **Split preventivo internalizado por tercera fase consecutiva**
+   (`auth.py` → `auth_claims`/`auth_peer`/`auth_local`, todos ≤66 sitios).
+   Refuerza la propuesta P8 del doc consolidado (`wct split-plan`).
+5. **Olor a deuda leve**: `_active_compare_digest` (`auth_local.py:25-31`)
+   hace lookup dinámico en `sys.modules` para preservar un hook de
+   monkeypatch de tests preexistente tras el split. Funciona y sigue el
+   idioma `get_http_attribute` del proyecto, pero es indirección frágil;
+   candidato a inyección explícita en una fase de higiene.
+6. **Sin bless en toda la fase**: cero rutas protegidas tocadas, tal como
+   predijo el spec. La división coder/mantenedor se sostiene sin fricción.
 
 ## Ejecución del Coder (Gemini)
 
