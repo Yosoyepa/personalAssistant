@@ -51,6 +51,7 @@ class AppSettings:
     tts_max_reply_characters: int = 280
     telegram_audio_reply_mode: str = "disabled"
     admin_token: str | None = field(default=None, repr=False)
+    admin_allow_remote: bool = False
     local_auth_principal_id: str = field(default="local-user", repr=False)
     local_auth_permission_tier: PermissionTier = PermissionTier.P5
     public_base_url: str | None = field(default=None, repr=False)

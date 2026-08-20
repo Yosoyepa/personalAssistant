@@ -42,7 +42,11 @@ def current_principal(request: Request) -> Principal:
             "valid local bearer credentials are required",
         )
     peer_host = request.client.host if request.client is not None else None
-    return provider.authenticate(peer_host=peer_host, headers=request.headers)
+    return provider.authenticate(
+        peer_host=peer_host,
+        headers=request.headers,
+        cookies=request.cookies,
+    )
 
 
 def telegram_principal(settings: AppSettings, actor_id: str) -> Principal:
