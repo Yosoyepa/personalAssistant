@@ -61,16 +61,26 @@ def gate_meta_rules(root: Path) -> GateResult:
                 continue
             unknown = sorted(set(checks) - known)
             if unknown:
-                findings.append(f"{rule['id']}: gates desconocidos: {', '.join(unknown)}")
+                findings.append(
+                    f"{rule['id']}: gates desconocidos: {', '.join(unknown)}"
+                )
     return _result(
-        "G-META-2", started, findings, "todas las reglas nombran verificadores conocidos"
+        "G-META-2",
+        started,
+        findings,
+        "todas las reglas nombran verificadores conocidos",
     )
 
 
 def gate_rules_drift(root: Path) -> GateResult:
     started = time.monotonic()
-    findings = [f"regla generada ausente o divergente: {p.relative_to(root)}" for p in drift(root)]
-    return _result("G-RULES-DRIFT", started, findings, "copias por proveedor sincronizadas")
+    findings = [
+        f"regla generada ausente o divergente: {p.relative_to(root)}"
+        for p in drift(root)
+    ]
+    return _result(
+        "G-RULES-DRIFT", started, findings, "copias por proveedor sincronizadas"
+    )
 
 
 def gate_suppressions(root: Path) -> GateResult:
@@ -105,7 +115,9 @@ def external(gate_id: str, command: list[str], *, optional: bool = False) -> Gat
                 int((time.monotonic() - started) * 1000),
                 command=" ".join(command),
             )
-        completed = subprocess.run(command, cwd=root, text=True, capture_output=True, check=False)
+        completed = subprocess.run(
+            command, cwd=root, text=True, capture_output=True, check=False
+        )
         output = (completed.stdout + "\n" + completed.stderr).strip()
         status = Status.PASS if completed.returncode == 0 else Status.FAIL
         summary = (
@@ -132,10 +144,14 @@ def gate_archmetrics(root: Path) -> GateResult:
     zones = [item for item in report["metrics"] if item["zone"] != "healthy"]
     if not compare(len(zones), baseline(root, "archmetrics-zones")):
         findings.extend(
-            f"{item['package']}: zone={item['zone']} D={item['distance']:.3f}" for item in zones
+            f"{item['package']}: zone={item['zone']} D={item['distance']:.3f}"
+            for item in zones
         )
     return _result(
-        "G-ARCHMETRICS", started, findings, "dependency graph y métricas A/I/D saludables"
+        "G-ARCHMETRICS",
+        started,
+        findings,
+        "dependency graph y métricas A/I/D saludables",
     )
 
 
@@ -180,7 +196,9 @@ def gate_mutation_sites(root: Path) -> GateResult:
         for item in report["files"]
         if item["over_limit"] and item["changed_functions"]
     ]
-    return _result("G-MUT-SITES", started, findings, "archivos dentro del presupuesto de mutación")
+    return _result(
+        "G-MUT-SITES", started, findings, "archivos dentro del presupuesto de mutación"
+    )
 
 
 def gate_accept(root: Path) -> GateResult:
@@ -190,12 +208,14 @@ def gate_accept(root: Path) -> GateResult:
         try:
             report = ir_dry(parse_feature(path))
             findings.extend(
-                f"{path.relative_to(root)}:{item['line']}: {item['kind']}"
+                f"{path.relative_to(root)}:{item['line']}: {item['kind']}: {item['message']}"
                 for item in report["findings"]
             )
         except ValueError as exc:
             findings.append(str(exc))
-    return _result("G-ACCEPT", started, findings, "Gherkin parseable y sin repetición estructural")
+    return _result(
+        "G-ACCEPT", started, findings, "Gherkin parseable y sin repetición estructural"
+    )
 
 
 def gate_audit(root: Path) -> GateResult:
@@ -203,7 +223,9 @@ def gate_audit(root: Path) -> GateResult:
     started = time.monotonic()
     for executable in ("uv", "pip-audit"):
         if shutil.which(executable) is None:
-            return GateResult("G-AUDIT", Status.ERROR, f"herramienta ausente: {executable}")
+            return GateResult(
+                "G-AUDIT", Status.ERROR, f"herramienta ausente: {executable}"
+            )
     exported = subprocess.run(
         [
             "uv",
@@ -234,16 +256,36 @@ def gate_audit(root: Path) -> GateResult:
         )
     output = (audited.stdout + "\n" + audited.stderr).strip()
     findings = output.splitlines() if audited.returncode else []
-    return _result("G-AUDIT", started, findings, "dependencias desplegables sin CVEs conocidas")
+    return _result(
+        "G-AUDIT", started, findings, "dependencias desplegables sin CVEs conocidas"
+    )
+
+
+def _audited_secrets(root: Path) -> set[tuple[str, str]]:
+    """Read-only set of (filename, hashed_secret) already triaged by a human.
+
+    The baseline is NOT passed as --baseline to detect-secrets: that flag
+    REWRITES the file (it refreshes generated_at on every run), and the
+    baseline lives on a G-META-1 protected route, so the gate must never
+    dirty it.
+    """
+    baseline = root / ".secrets.baseline"
+    if not baseline.is_file():
+        return set()
+    document = json.loads(baseline.read_text(encoding="utf-8"))
+    return {
+        (filename, str(item.get("hashed_secret", "")))
+        for filename, items in document.get("results", {}).items()
+        for item in items
+    }
 
 
 def gate_secrets(root: Path) -> GateResult:
     started = time.monotonic()
     if shutil.which("detect-secrets") is None:
-        return GateResult("G-SECRET", Status.ERROR, "herramienta ausente: detect-secrets")
-    # Adaptación fase 13 (personal_assistant): rutas reales del repo; los
-    # hallazgos auditados como falsos positivos viven en .secrets.baseline
-    # (archivo protegido por G-META-1) y se excluyen con --baseline.
+        return GateResult(
+            "G-SECRET", Status.ERROR, "herramienta ausente: detect-secrets"
+        )
     paths = [
         "src",
         "tools",
@@ -257,12 +299,8 @@ def gate_secrets(root: Path) -> GateResult:
         "pyproject.toml",
         ".pre-commit-config.yaml",
     ]
-    command = ["detect-secrets", "scan", "--slim"]
-    baseline_file = root / ".secrets.baseline"
-    if baseline_file.is_file():
-        command += ["--baseline", ".secrets.baseline"]
     completed = subprocess.run(
-        [*command, *paths],
+        ["detect-secrets", "scan", "--slim", *paths],
         cwd=root,
         text=True,
         capture_output=True,
@@ -270,16 +308,16 @@ def gate_secrets(root: Path) -> GateResult:
     )
     if completed.returncode:
         return _result("G-SECRET", started, [completed.stderr.strip()], "")
-    # Con todos los hallazgos auditados en el baseline, detect-secrets emite
-    # stdout vacío (exit 0): eso significa "sin hallazgos", no un error.
     raw = completed.stdout.strip()
     document = json.loads(raw) if raw else {}
     results = document.get("results", {})
+    audited = _audited_secrets(root)
     findings = [
         # --slim omite line_number; se reporta "?" cuando no está disponible.
         f"{filename}:{item.get('line_number', '?')}: posible {item['type']}"
         for filename, items in results.items()
         for item in items
+        if (filename, str(item.get("hashed_secret", ""))) not in audited
     ]
     return _result("G-SECRET", started, findings, "sin secretos nuevos")
 
@@ -326,11 +364,20 @@ REGISTRY: dict[str, Gate] = {
         "G-DEAD",
         # tools/vulture_whitelist.py marca el parámetro formal `exc_traceback`
         # de `__exit__` (exigido por la convención de context managers).
-        ["vulture", "src", "tools/wct", "tools/vulture_whitelist.py", "--min-confidence", "80"],
+        [
+            "vulture",
+            "src",
+            "tools/wct",
+            "tools/vulture_whitelist.py",
+            "--min-confidence",
+            "80",
+        ],
     ),
     # -c pyproject.toml: los skips documentados viven en [tool.bandit]
     # (réplica 1:1 del triage S* de fase 10 en [tool.ruff.lint] ignore).
-    "G-SAST-BANDIT": external("G-SAST-BANDIT", ["bandit", "-q", "-c", "pyproject.toml", "-r", "src"]),
+    "G-SAST-BANDIT": external(
+        "G-SAST-BANDIT", ["bandit", "-q", "-c", "pyproject.toml", "-r", "src"]
+    ),
     "G-SAST-SEMGREP": external(
         "G-SAST-SEMGREP",
         [
@@ -371,10 +418,18 @@ REGISTRY: dict[str, Gate] = {
     ),
     "G-COV-TOTAL": external(
         "G-COV-TOTAL",
-        ["pytest", "--cov", "--cov-branch", "--cov-report=lcov:build/coverage/lcov.info", "-q"],
+        [
+            "pytest",
+            "--cov",
+            "--cov-branch",
+            "--cov-report=lcov:build/coverage/lcov.info",
+            "-q",
+        ],
     ),
     "G-COV-DIFF": external(
-        "G-COV-DIFF", ["diff-cover", "build/coverage/lcov.info", "--fail-under=90"], optional=True
+        "G-COV-DIFF",
+        ["diff-cover", "build/coverage/lcov.info", "--fail-under=90"],
+        optional=True,
     ),
     "G-DOC": external("G-DOC", ["interrogate", "src"], optional=True),
     "G-SECRET": gate_secrets,
@@ -389,10 +444,14 @@ REGISTRY: dict[str, Gate] = {
         optional=True,
     ),
     "G-COMMIT-MSG": external(
-        "G-COMMIT-MSG", ["cz", "check", "--commit-msg-file", ".git/COMMIT_EDITMSG"], optional=True
+        "G-COMMIT-MSG",
+        ["cz", "check", "--commit-msg-file", ".git/COMMIT_EDITMSG"],
+        optional=True,
     ),
     "G-MUT": external("G-MUT", ["mutmut", "run"], optional=True),
-    "G-ACCEPT-MUT": external("G-ACCEPT-MUT", ["wct", "accept", "mutate"], optional=True),
+    "G-ACCEPT-MUT": external(
+        "G-ACCEPT-MUT", ["wct", "accept", "mutate"], optional=True
+    ),
     "G-REDTEAM": external("G-REDTEAM", ["wct", "selftest", "redteam"]),
 }
 
@@ -410,7 +469,15 @@ REGISTRY.update(
 )
 
 TIERS: dict[str, list[str]] = {
-    "fast": ["G-META-2", "G-RULES-DRIFT", "G-SUPPRESS", "G-DEBT", "G-LINT", "G-FMT", "G-TYPE"],
+    "fast": [
+        "G-META-2",
+        "G-RULES-DRIFT",
+        "G-SUPPRESS",
+        "G-DEBT",
+        "G-LINT",
+        "G-FMT",
+        "G-TYPE",
+    ],
     "commit": [
         "G-META-1",
         "G-META-2",
@@ -467,12 +534,18 @@ def run_tier(root: Path, tier: str) -> list[GateResult]:
     results: list[GateResult] = []
     for gate_id in TIERS[tier]:
         if gate_id in disabled:
-            results.append(GateResult(gate_id, Status.SKIP, "desactivado por policy.yaml"))
+            results.append(
+                GateResult(gate_id, Status.SKIP, "desactivado por policy.yaml")
+            )
         else:
             try:
                 results.append(REGISTRY[gate_id](root))
             except Exception as exc:  # fail closed: harness errors are blocking
                 results.append(
-                    GateResult(gate_id, Status.ERROR, f"guard crash: {type(exc).__name__}: {exc}")
+                    GateResult(
+                        gate_id,
+                        Status.ERROR,
+                        f"guard crash: {type(exc).__name__}: {exc}",
+                    )
                 )
     return results

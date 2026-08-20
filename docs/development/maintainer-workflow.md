@@ -542,3 +542,36 @@ Una fase está terminada cuando, además:
 
 El objetivo no se marca como completo antes de la aprobación del mantenedor y de
 la evidencia requerida por este Definition of Done.
+
+## 12. Operaciones del harness WCT (Mantenedor)
+
+Esta sección describe las operaciones exclusivas del mantenedor humano sobre el harness WCT. Los hooks de agente bloquean preventivamente cualquier intento de auto-aprobación en sesiones automatizadas.
+
+### 12.1 Bless de integridad con evidencia obligatoria
+
+El comando `integrity bless` re-calcula los hashes de las rutas protegidas (`governance/**`, `pyproject.toml`, `uv.lock`, `tools/wct/**`, etc.) y actualiza `governance/integrity.lock` y `governance/integrity-log.md`.
+
+- **Enforcement humano**: Bloqueado por el hook `PreToolUse` para agentes.
+- **Evidencia obligatoria**: El parámetro `--reason` exige al menos 12 caracteres y debe citar la evidencia de aprobación (URL completa de PR/comentario, o referencia `#N` de PR/issue). Un texto en prosa sin evidencia es rechazado por `require_approval_evidence`.
+- **Inmunidad EOL**: Los hashes usan el algoritmo `sha256:eol-normalized`, normalizando finales de línea (`\r\n` a `\n`), lo que garantiza consistencia entre entornos Linux y Windows sin requerir re-bless accidental.
+
+Comando canónico:
+```bash
+PYTHONPATH=. uv run python -m tools.wct integrity bless --approved-by "Yosoyepa" --reason "https://github.com/Yosoyepa/personalAssistant/pull/72"
+```
+
+### 12.2 Actualización atómica de manifiesto de mutación (Schema 2)
+
+El análisis diferencial de mutación (`G-MUT-SITES`, TEST-007) usa un manifiesto (`governance/generated/mutation-manifest.json`) con schema 2 basado en huellas AST de funciones (`sha256(ast.dump(node, include_attributes=False))`). Los cambios de línea o comentarios no invalidan funciones no modificadas.
+
+Para actualizar el manifiesto y bendecir el lock de forma atómica (evitando que G-META-1 observe un lock desfasado):
+```bash
+PYTHONPATH=. uv run python -m tools.wct mutate update-manifest --approved-by "Yosoyepa" --reason "https://github.com/Yosoyepa/personalAssistant/pull/72"
+```
+
+### 12.3 Manejo de secretos en solo-lectura (Fin del churn de `.secrets.baseline`)
+
+El gate `G-SECRET` ejecuta `detect-secrets scan --slim` sin el flag `--baseline`. El archivo `.secrets.baseline` se lee exclusivamente en modo solo-lectura para comparar los hallazgos `(filename, hashed_secret)` auditados.
+
+- **Beneficio**: `detect-secrets` ya no regenera ni modifica el timestamp de `.secrets.baseline` en cada escaneo, eliminando el ensuciamiento de archivos protegidos y fallos de commit en pre-commit o CI.
+- **Auditoría de nuevos falsos positivos**: Si se introduce un nuevo patrón seguro que requiera auditoría, el mantenedor actualiza `.secrets.baseline` y ejecuta el bless de integridad correspondiente.

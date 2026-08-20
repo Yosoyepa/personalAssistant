@@ -4,8 +4,16 @@ import subprocess
 from pathlib import Path
 
 
-def run_git(root: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(["git", *args], cwd=root, text=True, capture_output=True, check=check)
+def run_git(
+    root: Path, *args: str, check: bool = True
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *args], cwd=root, text=True, capture_output=True, check=check
+    )
+
+
+def _materialized(root: Path, names: set[str]) -> list[Path]:
+    return sorted(root / name for name in names if (root / name).is_file())
 
 
 def changed_files(root: Path, base: str | None = None) -> list[Path]:
@@ -16,12 +24,23 @@ def changed_files(root: Path, base: str | None = None) -> list[Path]:
         ("ls-files", "--others", "--exclude-standard"),
     ]
     if base:
-        commands.insert(0, ("diff", "--name-only", "--diff-filter=ACMR", f"{base}...HEAD"))
+        commands.insert(
+            0, ("diff", "--name-only", "--diff-filter=ACMR", f"{base}...HEAD")
+        )
     for command in commands:
         result = run_git(root, *command, check=False)
         if result.returncode == 0:
             names.update(line for line in result.stdout.splitlines() if line)
-    return sorted(root / name for name in names if (root / name).is_file())
+    return _materialized(root, names)
+
+
+def staged_files(root: Path) -> list[Path]:
+    result = run_git(
+        root, "diff", "--name-only", "--diff-filter=ACMR", "--cached", check=False
+    )
+    if result.returncode != 0:
+        return []
+    return _materialized(root, {line for line in result.stdout.splitlines() if line})
 
 
 def head_sha(root: Path) -> str | None:

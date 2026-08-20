@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import Iterator
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -34,12 +35,12 @@ def module_name(source_root: Path, path: Path, package: str) -> str:
     return ".".join(parts) or package
 
 
-def _iter_runtime_nodes(node: ast.AST) -> Any:
+def _iter_runtime_nodes(node: ast.AST) -> Iterator[ast.AST]:
     """Yield nodes except those under `if TYPE_CHECKING:` blocks.
 
     Type-only imports are erased at runtime; counting them as dependencies
-    turns deliberate cycle-breaking shims (lazy `__getattr__` re-exports) into
-    false cycles. Adaptación fase 13 de personal_assistant.
+    turns deliberate cycle-breaking shims (lazy `__getattr__` re-exports)
+    into false cycles.
     """
     for child in ast.iter_child_nodes(node):
         if isinstance(child, ast.If):
@@ -68,6 +69,38 @@ def _imports(tree: ast.AST, current: str) -> set[str]:
     return found
 
 
+def _dynamic_imports(tree: ast.AST, package: str) -> list[tuple[int, str]]:
+    """Find `importlib.import_module`/`__import__` calls that hide edges.
+
+    A dynamic import is invisible to the static graph, so it can evade
+    G-ARCH-CYCLE without anyone noticing. Calls naming project modules are
+    violations; calls with computed names are flagged as opaque because they
+    cannot be proven innocent.
+    """
+    findings: list[tuple[int, str]] = []
+    for node in _iter_runtime_nodes(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        function = node.func
+        imports_dynamically = (
+            isinstance(function, ast.Attribute) and function.attr == "import_module"
+        ) or (isinstance(function, ast.Name) and function.id == "__import__")
+        if not imports_dynamically:
+            continue
+        argument = node.args[0] if node.args else None
+        if isinstance(argument, ast.Constant) and isinstance(argument.value, str):
+            target = argument.value
+            if target == package or target.startswith(package + "."):
+                findings.append(
+                    (node.lineno, f"import dinámico oculta la arista a {target}")
+                )
+        else:
+            findings.append(
+                (node.lineno, "import dinámico opaco (argumento no literal)")
+            )
+    return findings
+
+
 def _is_abstract(node: ast.AST) -> bool:
     if isinstance(node, ast.ClassDef):
         bases = {ast.unparse(base) for base in node.bases}
@@ -75,11 +108,16 @@ def _is_abstract(node: ast.AST) -> bool:
             return True
         return any(
             isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
-            and any(ast.unparse(dec).endswith("abstractmethod") for dec in child.decorator_list)
+            and any(
+                ast.unparse(dec).endswith("abstractmethod")
+                for dec in child.decorator_list
+            )
             for child in node.body
         )
     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-        return any(ast.unparse(dec).endswith("singledispatch") for dec in node.decorator_list)
+        return any(
+            ast.unparse(dec).endswith("singledispatch") for dec in node.decorator_list
+        )
     if isinstance(node, ast.Assign):
         return (
             isinstance(node.value, ast.Call)
@@ -100,7 +138,9 @@ def analyze(root: Path) -> dict[str, Any]:
     for path in sorted(package_root.rglob("*.py")):
         module = module_name(source_root, path, package)
         try:
-            trees[module] = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            trees[module] = ast.parse(
+                path.read_text(encoding="utf-8"), filename=str(path)
+            )
             files[module] = path
         except SyntaxError as exc:
             parse_errors.append(f"{path.relative_to(root)}:{exc.lineno}: {exc.msg}")
@@ -139,29 +179,38 @@ def analyze(root: Path) -> dict[str, Any]:
             violations.append(f"dependency rule: {source} -> {target}")
     for module, names in external.items():
         layer = module.split(".")[1] if len(module.split(".")) > 1 else ""
-        forbidden = set(policy["architecture"].get("forbidden_external", {}).get(layer, []))
+        forbidden = set(
+            policy["architecture"].get("forbidden_external", {}).get(layer, [])
+        )
         for name in sorted(names & forbidden):
             violations.append(f"external forbidden: {module} -> {name}")
 
     graph: dict[str, set[str]] = {module: set() for module in trees}
     for source, target in edges:
         graph[source].add(target)
-    cycles = _cycles(graph)
-    # Excepciones explícitas y documentadas en thresholds.yaml
-    # (architecture.cycle_allowlist). Fuera de esa lista: cero ciclos.
-    allowlisted_cycles = {
-        frozenset(entry.get("modules", []))
-        for entry in thresholds["architecture"].get("cycle_allowlist", [])
-    }
-    cycles = [cycle for cycle in cycles if frozenset(cycle) not in allowlisted_cycles]
+    allowlist = thresholds["architecture"].get("cycle_allowlist") or []
+    allowed_sets = [frozenset(entry.get("modules", [])) for entry in allowlist]
+    allowed_modules = {module for modules in allowed_sets for module in modules}
+    detected = _cycles(graph)
+    allowlisted = [cycle for cycle in detected if frozenset(cycle) in allowed_sets]
+    cycles = [cycle for cycle in detected if frozenset(cycle) not in allowed_sets]
     violations.extend(f"cycle: {' -> '.join(cycle)}" for cycle in cycles)
+    for module, tree in trees.items():
+        if module in allowed_modules:
+            continue
+        for lineno, message in _dynamic_imports(tree, package):
+            violations.append(f"dynamic import: {module}:{lineno}: {message}")
 
-    packages = [f"{package}.{layer}" for layer in layers if f"{package}.{layer}" in trees]
+    packages = [
+        f"{package}.{layer}" for layer in layers if f"{package}.{layer}" in trees
+    ]
     threshold = float(thresholds["architecture"]["healthy_threshold"])
     metrics: list[PackageMetric] = []
     for current in packages:
         members = {
-            module for module in trees if module == current or module.startswith(current + ".")
+            module
+            for module in trees
+            if module == current or module.startswith(current + ".")
         }
         outgoing = {
             target.rsplit(".", 1)[0]
@@ -177,7 +226,8 @@ def analyze(root: Path) -> dict[str, Any]:
         for module in members:
             for node in trees[module].body:
                 if isinstance(
-                    node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef, ast.Assign)
+                    node,
+                    (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef, ast.Assign),
                 ):
                     symbols += 1
                     abstract += int(_is_abstract(node))
@@ -187,7 +237,11 @@ def analyze(root: Path) -> dict[str, Any]:
         distance = abs(abstractness + instability - 1)
         total = abstractness + instability
         zone = (
-            "pain" if total < 1 - threshold else "useless" if total > 1 + threshold else "healthy"
+            "pain"
+            if total < 1 - threshold
+            else "useless"
+            if total > 1 + threshold
+            else "healthy"
         )
         metrics.append(
             PackageMetric(
@@ -206,6 +260,7 @@ def analyze(root: Path) -> dict[str, Any]:
         "metrics": [item.as_dict() for item in metrics],
         "edges": sorted([list(edge) for edge in edges]),
         "cycles": cycles,
+        "allowlisted_cycles": allowlisted,
         "violations": violations,
     }
 
@@ -219,7 +274,9 @@ def _cycles(graph: dict[str, set[str]]) -> list[list[str]]:
         if node in visiting:
             cycle = [*visiting[visiting.index(node) :], node]
             core = cycle[:-1]
-            rotations = [tuple(core[index:] + core[:index]) for index in range(len(core))]
+            rotations = [
+                tuple(core[index:] + core[:index]) for index in range(len(core))
+            ]
             canonical = min(rotations)
             found.add((*canonical, canonical[0]))
             return

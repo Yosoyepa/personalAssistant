@@ -5,19 +5,27 @@ import json
 import subprocess
 import sys
 
+from tools.wct import __version__
 from tools.wct.accept.pipeline import generate, ir_dry, parse_feature, run_mutations
 from tools.wct.adopt import inspect_repository, render_inventory
 from tools.wct.archmetrics.analyzer import analyze as analyze_architecture
 from tools.wct.config import ConfigError, find_root
 from tools.wct.doctor.checks import diagnose
 from tools.wct.dry.analyzer import analyze as analyze_dry
+from tools.wct.fmt.engine import run as run_fmt
 from tools.wct.gate.runner import TIERS, run_tier
 from tools.wct.hooks.guard import dispatch as dispatch_hook
 from tools.wct.integrity.engine import bless, review, write_lock
 from tools.wct.introvert.analyzer import analyze as analyze_tests
-from tools.wct.mutate.engine import run as run_mutation
-from tools.wct.mutate.engine import scan as scan_mutation
-from tools.wct.mutate.engine import update_manifest
+from tools.wct.mutate.engine import (
+    run as run_mutation,
+)
+from tools.wct.mutate.engine import (
+    scan as scan_mutation,
+)
+from tools.wct.mutate.engine import (
+    update_manifest,
+)
 from tools.wct.ratchet.measure import check as check_ratchets
 from tools.wct.ratchet.measure import record as record_ratchets
 from tools.wct.report.overview import overview
@@ -29,8 +37,10 @@ from tools.wct.webhook import send_from_environment
 
 
 def parser() -> argparse.ArgumentParser:
-    root = argparse.ArgumentParser(prog="wct", description="Well Code hardening harness")
-    root.add_argument("--version", action="version", version="wct 0.1.0")
+    root = argparse.ArgumentParser(
+        prog="wct", description="Well Code hardening harness"
+    )
+    root.add_argument("--version", action="version", version=f"wct {__version__}")
     sub = root.add_subparsers(dest="command", required=True)
 
     gate = sub.add_parser("gate", help="run a quality gate tier")
@@ -66,14 +76,32 @@ def parser() -> argparse.ArgumentParser:
 
     mutate = sub.add_parser("mutate", help="differential mutation workflow")
     mutate.add_argument("action", choices=["scan", "run", "update-manifest"])
+    mutate.add_argument(
+        "--approved-by", help="solo humanos: bendice el lock en el mismo paso"
+    )
+    mutate.add_argument("--reason", help="cita la aprobación (URL o #N de PR/issue)")
 
     accept = sub.add_parser("accept", help="Gherkin acceptance pipeline")
-    accept.add_argument("action", choices=["parse", "ir-dry", "generate", "run", "mutate"])
+    accept.add_argument(
+        "action", choices=["parse", "ir-dry", "generate", "run", "mutate"]
+    )
     accept.add_argument("feature", nargs="?", default="features/example.feature")
-    accept.add_argument("--output", default="tests/acceptance/generated/test_acceptance.py")
+    accept.add_argument(
+        "--output", default="tests/acceptance/generated/test_acceptance.py"
+    )
     accept.add_argument("--runner", nargs=argparse.REMAINDER)
 
-    selftest = sub.add_parser("selftest", help="attack the harness with known-bad inputs")
+    fmt = sub.add_parser("fmt", help="format only the changeset (never the whole tree)")
+    fmt.add_argument("--staged", action="store_true", help="solo archivos staged")
+    fmt.add_argument(
+        "--diff-only",
+        action="store_true",
+        help="changeset completo vs main/master y árbol de trabajo (por defecto)",
+    )
+
+    selftest = sub.add_parser(
+        "selftest", help="attack the harness with known-bad inputs"
+    )
     selftest.add_argument("suite", choices=["redteam"])
 
     sub.add_parser("report", help="show rule-to-gate coverage")
@@ -83,12 +111,16 @@ def parser() -> argparse.ArgumentParser:
     ratchet.add_argument("--approved-by")
     ratchet.add_argument("--reason")
 
-    adopt = sub.add_parser("adopt", help="inventory an existing repository without modifying it")
+    adopt = sub.add_parser(
+        "adopt", help="inventory an existing repository without modifying it"
+    )
     adopt.add_argument("target", nargs="?", default=".")
 
     webhook = sub.add_parser("webhook", help="send a signed, sanitized lifecycle event")
     webhook.add_argument("event")
-    webhook.add_argument("--data", default="{}", help="small JSON object; secrets are forbidden")
+    webhook.add_argument(
+        "--data", default="{}", help="small JSON object; secrets are forbidden"
+    )
 
     return root
 
@@ -106,7 +138,11 @@ def main(argv: list[str] | None = None) -> int:
         root = find_root()
         if args.command == "gate":
             results = run_tier(root, args.tier)
-            print(json_report(results) if args.json else text_report(results, quiet=args.quiet))
+            print(
+                json_report(results)
+                if args.json
+                else text_report(results, quiet=args.quiet)
+            )
             return 1 if any(result.blocking for result in results) else 0
         if args.command == "rules":
             if args.action == "build":
@@ -137,6 +173,8 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
             print(bless(root, args.reason, args.approved_by).relative_to(root))
             return 0
+        if args.command == "fmt":
+            return run_fmt(root, staged_only=args.staged)
         if args.command == "hook":
             return dispatch_hook(args.event)
         if args.command == "archmetrics":
@@ -149,7 +187,10 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(report, indent=2, ensure_ascii=False))
             return bool(
                 report["errors"]
-                or any(item["ai_actionability"] == "EXTRACT" for item in report["candidates"])
+                or any(
+                    item["ai_actionability"] == "EXTRACT"
+                    for item in report["candidates"]
+                )
             )
         if args.command == "introvert":
             paths = [root / path for path in args.paths] if args.paths else None
@@ -162,7 +203,13 @@ def main(argv: list[str] | None = None) -> int:
                 print(json.dumps(report, indent=2, ensure_ascii=False))
                 return bool(report["over_limit"])
             if args.action == "update-manifest":
-                print(update_manifest(root).relative_to(root))
+                print(
+                    update_manifest(
+                        root,
+                        approved_by=args.approved_by or "",
+                        reason=args.reason or "",
+                    ).relative_to(root)
+                )
                 return 0
             return run_mutation(root)
         if args.command == "accept":
@@ -181,7 +228,13 @@ def main(argv: list[str] | None = None) -> int:
                 return 0
             if args.action == "run":
                 return subprocess.run(
-                    [sys.executable, "-m", "pytest", "-q", str(generated.relative_to(root))],
+                    [
+                        sys.executable,
+                        "-m",
+                        "pytest",
+                        "-q",
+                        str(generated.relative_to(root)),
+                    ],
                     cwd=root,
                     check=False,
                 ).returncode
@@ -207,7 +260,11 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "ratchet":
             if args.action == "check":
                 failures = check_ratchets(root)
-                print("\n".join(failures) if failures else "Todos los ratchets se mantienen.")
+                print(
+                    "\n".join(failures)
+                    if failures
+                    else "Todos los ratchets se mantienen."
+                )
                 return bool(failures)
             if not args.approved_by or not args.reason:
                 print("record requiere --approved-by y --reason", file=sys.stderr)
