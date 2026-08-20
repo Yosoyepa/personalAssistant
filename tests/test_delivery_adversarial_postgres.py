@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import secrets
+import time
 from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -173,9 +174,7 @@ def _result(
     def build(request: NotificationRequest) -> NotificationResult:
         success = outcome == "success"
         return NotificationResult(
-            notification_id=(
-                f"telegram:{provider_message_id}" if success else None
-            ),
+            notification_id=(f"telegram:{provider_message_id}" if success else None),
             channel=request.channel,
             idempotency_key=request.idempotency_key,
             outcome=outcome,  # type: ignore[arg-type]  # reason: outcome llega parametrizado como str; los casos solo usan valores del Literal
@@ -210,12 +209,13 @@ def _messages(
     persistence: PostgresPersistence, principal: Principal
 ) -> dict[str, OutboxMessage]:
     return {
-        message.id: message
-        for message in persistence.outbox.list_for_tenant(principal)
+        message.id: message for message in persistence.outbox.list_for_tenant(principal)
     }
 
 
-def _scheduled(persistence: PostgresPersistence, principal: Principal) -> dict[str, Any]:
+def _scheduled(
+    persistence: PostgresPersistence, principal: Principal
+) -> dict[str, Any]:
     return {
         reminder.reminder_id: reminder
         for reminder in persistence.scheduler.list_for_tenant(principal)
@@ -288,9 +288,9 @@ def _install_mirror_failure(
     def remove() -> None:
         with psycopg.connect(database.dsn, autocommit=True) as connection:
             connection.execute(
-                sql.SQL("DROP TRIGGER IF EXISTS {} ON {}.assistant_scheduled_reminders").format(
-                    sql.Identifier(trigger), sql.Identifier(database.schema)
-                )
+                sql.SQL(
+                    "DROP TRIGGER IF EXISTS {} ON {}.assistant_scheduled_reminders"
+                ).format(sql.Identifier(trigger), sql.Identifier(database.schema))
             )
             connection.execute(
                 sql.SQL("DROP FUNCTION IF EXISTS {}.{}()").format(
@@ -395,8 +395,7 @@ def test_two_coordinators_never_double_claim_or_provider_call(
         dsn=delivery_postgres.dsn, schema=delivery_postgres.schema
     )
     seeded = [
-        _seed_delivery(persistence, actor, f"workers-{index}")
-        for index in range(8)
+        _seed_delivery(persistence, actor, f"workers-{index}") for index in range(8)
     ]
     provider = ScriptedNotificationProvider(
         [_result(provider_message_id=100 + index) for index in range(8)]
@@ -434,9 +433,7 @@ def test_two_coordinators_never_double_claim_or_provider_call(
         owner="conflict-recovery",
     )
     for _ in seeded:
-        recovery.dispatch(
-            actor, recovery_clock(), approval_provider=_approval
-        )
+        recovery.dispatch(actor, recovery_clock(), approval_provider=_approval)
     assert len(provider.calls) == len(expected)
     assert len({call.idempotency_key for call in provider.calls}) == len(expected)
     called_ids = {
@@ -479,9 +476,7 @@ def test_ambiguous_sending_commit_never_authorizes_provider_io_and_sweeps(
         dispatcher.dispatch(actor, NOW, approval_provider=_approval)
 
     assert provider.calls == []
-    sending = _assert_mirror(
-        persistence, actor, seeded, DeliveryStatus.sending
-    )
+    sending = _assert_mirror(persistence, actor, seeded, DeliveryStatus.sending)
     assert sending.attempts == 1
     recovery_provider = ScriptedNotificationProvider([])
     recovery = _dispatcher(
@@ -552,9 +547,12 @@ def test_process_crash_during_provider_is_swept_and_never_auto_resent(
     assert swept.swept_message_ids == (seeded.message_id,)
     _assert_mirror(persistence, actor, seeded, DeliveryStatus.uncertain)
     assert recovery_provider.calls == []
-    assert recovery.dispatch(
-        actor, NOW + timedelta(days=30), approval_provider=_approval
-    ).claimed_message_ids == ()
+    assert (
+        recovery.dispatch(
+            actor, NOW + timedelta(days=30), approval_provider=_approval
+        ).claimed_message_ids
+        == ()
+    )
 
 
 def test_known_transient_uses_exact_backoff_and_fails_on_fourth_attempt(
@@ -573,15 +571,16 @@ def test_known_transient_uses_exact_backoff_and_fails_on_fourth_attempt(
 
     for attempt, delay in enumerate((30, 120, 300), start=1):
         dispatcher.dispatch(actor, clock(), approval_provider=_approval)
-        pending = _assert_mirror(
-            persistence, actor, seeded, DeliveryStatus.pending
-        )
+        pending = _assert_mirror(persistence, actor, seeded, DeliveryStatus.pending)
         assert pending.attempts == attempt
         assert pending.next_attempt_at == clock() + timedelta(seconds=delay)
         clock.advance(timedelta(seconds=delay, microseconds=-1))
-        assert dispatcher.dispatch(
-            actor, clock(), approval_provider=_approval
-        ).claimed_message_ids == ()
+        assert (
+            dispatcher.dispatch(
+                actor, clock(), approval_provider=_approval
+            ).claimed_message_ids
+            == ()
+        )
         clock.advance(timedelta(microseconds=1))
 
     dispatcher.dispatch(actor, clock(), approval_provider=_approval)
@@ -622,14 +621,15 @@ def test_retry_after_wins_and_permanent_and_unknown_are_terminal(
     dispatcher.dispatch(actor, clock(), approval_provider=_approval)
     _assert_mirror(persistence, actor, permanent, DeliveryStatus.failed)
     dispatcher.dispatch(actor, clock(), approval_provider=_approval)
-    uncertain = _assert_mirror(
-        persistence, actor, unknown, DeliveryStatus.uncertain
-    )
+    uncertain = _assert_mirror(persistence, actor, unknown, DeliveryStatus.uncertain)
     assert uncertain.last_error is not None
     assert uncertain.last_error.category is DeliveryErrorCategory.unknown
-    assert dispatcher.dispatch(
-        actor, NOW + timedelta(seconds=90), approval_provider=_approval
-    ).claimed_message_ids == ()
+    assert (
+        dispatcher.dispatch(
+            actor, NOW + timedelta(seconds=90), approval_provider=_approval
+        ).claimed_message_ids
+        == ()
+    )
 
 
 def test_concurrent_sweepers_are_disjoint_idempotent_and_ignore_foreign_events(
@@ -690,7 +690,7 @@ def test_concurrent_sweepers_are_disjoint_idempotent_and_ignore_foreign_events(
             owner=owner,
         )
         start.wait(timeout=10)
-        for _ in range(3):
+        for _ in range(10):
             try:
                 return dispatcher.dispatch(
                     actor,
@@ -698,6 +698,7 @@ def test_concurrent_sweepers_are_disjoint_idempotent_and_ignore_foreign_events(
                     approval_provider=_approval,
                 ).swept_message_ids
             except ReminderTransactionConflict:
+                time.sleep(0.005)
                 continue
         raise AssertionError("sweeper did not converge after conflicts")
 
@@ -710,7 +711,10 @@ def test_concurrent_sweepers_are_disjoint_idempotent_and_ignore_foreign_events(
     expected = {item.message_id for item in seeded}
     assert first_ids.isdisjoint(second_ids)
     assert first_ids | second_ids == expected
-    assert _messages(persistence, actor)[foreign.id].dispatch_status is DeliveryStatus.sending
+    assert (
+        _messages(persistence, actor)[foreign.id].dispatch_status
+        is DeliveryStatus.sending
+    )
     empty = _dispatcher(
         persistence,
         ScriptedNotificationProvider([]),
@@ -787,7 +791,10 @@ def test_missing_mirror_after_io_keeps_canonical_outbox_terminal(
     ).dispatch(actor, NOW, approval_provider=_approval)
 
     assert outcome.sent_count == 1
-    assert _messages(persistence, actor)[seeded.message_id].dispatch_status is DeliveryStatus.published
+    assert (
+        _messages(persistence, actor)[seeded.message_id].dispatch_status
+        is DeliveryStatus.published
+    )
     assert persistence.scheduler.list_for_tenant(actor) == []
 
 
@@ -860,9 +867,7 @@ def test_manual_resolution_requires_exact_p5_approval_and_mirrors_both_paths(
         now=NOW + timedelta(minutes=1),
         approval=_resolution_approval(actor, delivered.message_id, "delivered"),
     )
-    published = _assert_mirror(
-        persistence, actor, delivered, DeliveryStatus.published
-    )
+    published = _assert_mirror(persistence, actor, delivered, DeliveryStatus.published)
     assert published.published_at == NOW + timedelta(minutes=1)
     dispatcher.resolve_uncertain(
         actor,
@@ -965,9 +970,7 @@ def test_blocked_provider_claim_one_prevents_aged_queued_claims_and_double_send(
         }
         assert len(sending_ids) == 1
         assert len(pending_ids) == 2
-        assert all(
-            states[message_id].claim_owner is None for message_id in pending_ids
-        )
+        assert all(states[message_id].claim_owner is None for message_id in pending_ids)
         in_flight_id = next(iter(sending_ids))
         in_flight = states[in_flight_id]
         in_flight_seed = next(
@@ -1003,6 +1006,7 @@ def test_blocked_provider_claim_one_prevents_aged_queued_claims_and_double_send(
     all_keys.extend(call.idempotency_key for call in second_provider.calls)
     assert len(all_keys) == len(set(all_keys)) == 3
     terminal = _messages(persistence, actor)
-    assert {
-        terminal[item.message_id].dispatch_status for item in seeded
-    } == {DeliveryStatus.published, DeliveryStatus.uncertain}
+    assert {terminal[item.message_id].dispatch_status for item in seeded} == {
+        DeliveryStatus.published,
+        DeliveryStatus.uncertain,
+    }

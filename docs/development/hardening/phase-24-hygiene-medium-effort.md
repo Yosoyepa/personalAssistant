@@ -148,3 +148,62 @@ del cierre de la fase 23). Si no, se documenta qué falló.
 
 (pendiente — se llena al cierre por el planner, junto con las métricas del
 experimento)
+
+## Ejecución del coder
+
+### 1. Detalle por ítem
+
+#### 24A — Flake sweeper concurrente (`tests/test_delivery_adversarial_postgres.py`)
+- Se elevó el presupuesto de convergencia en `test_concurrent_sweepers_are_disjoint_idempotent_and_ignore_foreign_events` de 3 a 10 intentos, incorporando un micro-backoff `time.sleep(0.005)` en la captura de `ReminderTransactionConflict`.
+- Se mantuvieron intactas todas las aserciones de disjointness, unión, no afectación del evento foráneo y sweep vacío. No se añadieron plugins de rerun ni marcas de skip/xfail.
+- Se verificaron 20 ejecuciones consecutivas locales en verde contra la base de datos PostgreSQL real.
+
+#### 24B — Guard Content-Length (`/admin/login`)
+- Se añadió el escenario Gherkin a `features/admin_remote_auth.feature` (Scenario Outline para 4096 vs 4097 bytes).
+- Se incorporó `ErrorCode.PAYLOAD_TOO_LARGE` en `domain/common/exceptions.py` con mapeo a HTTP 413 en `infrastructure/http_errors.py`, asegurando serialización JSON uniforme estándar.
+- En `infrastructure/http_routes_admin_auth.py`, se valida el header `Content-Length` antes de leer el body (`request.body()`); si excede 4096 bytes, se lanza `AssistantError(ErrorCode.PAYLOAD_TOO_LARGE, ...)` retornando 413 sin procesar datos ni emitir cookies.
+- Se agregaron los tests en `tests/test_admin_remote_auth.py` siguiendo TDD.
+- **Residual documentado**: clientes con transfer-encoding chunked sin header `Content-Length` requieren terminador TLS o proxy inverso como filtro perimetral (documentado en el runbook de la fase 22).
+
+#### 24C — Eliminación de `_active_compare_digest` (`adapters/inbound/auth_local.py`)
+- Se eliminó la función `_active_compare_digest` y su inspección dinámica en `sys.modules`. `LocalPrincipalProvider.verify_token` invoca directamente `hmac.compare_digest`.
+- Se limpió `adapters/inbound/auth.py` eliminando el re-export de `compare_digest`.
+- Se reescribió el test en `tests/test_local_auth.py` (`test_token_comparison_verifies_correct_and_incorrect_tokens`) para probar directamente el SUT con tokens correctos e incorrectos (de igual y distinta longitud) sin monkeypatching, trazando comportamiento real (TEST-003).
+
+### 2. Evidencia de verificación
+
+- **20 ejecuciones de 24A contra PostgreSQL**:
+  ```text
+  Run 1..20: 1 passed in ~1.0s cada una (20/20 PASS)
+  ```
+- **Test suite completa (`pytest`)**:
+  ```text
+  1108 passed, 3 skipped, 1 warning, 396 subtests passed in 107.16s
+  ```
+- **WCT Gate Tier Commit (`wct gate --tier commit`)**:
+  ```text
+  GATE           STATUS  MS      SUMMARY
+  G-META-1       PASS    385     configuración protegida coincide con integrity.lock
+  G-META-2       PASS    67      todas las reglas nombran verificadores conocidos
+  G-RULES-DRIFT  PASS    82      copias por proveedor sincronizadas
+  G-SUPPRESS     PASS    1686    sin erosión por supresiones
+  G-DEBT         PASS    756     deuda diferida trazable
+  G-LINT         PASS    16      ok
+  G-FMT          SKIP    0       desactivado por policy.yaml
+  G-TYPE         PASS    454     ok
+  G-TEST         PASS    102855  ok
+  G-ARCH         PASS    401     ok
+  G-ARCHMETRICS  PASS    925     dependency graph y métricas A/I/D saludables
+  G-DEPS         PASS    343     ok
+  G-DEAD         PASS    1666    ok
+  G-SAST-BANDIT  PASS    4085    ok
+  G-SECRET       PASS    2200    sin secretos nuevos
+  G-MUT-SITES    PASS    1377    archivos dentro del presupuesto de mutación
+  G-ACCEPT       PASS    2       Gherkin parseable y sin repetición estructural
+
+  17/17 gates no bloqueantes
+  ```
+- **Redteam Adversarial (`wct selftest redteam`)**:
+  ```text
+  30/30 adversarios rechazados
+  ```

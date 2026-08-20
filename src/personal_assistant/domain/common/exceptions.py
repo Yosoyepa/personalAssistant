@@ -38,6 +38,7 @@ class ErrorCode(str, Enum):
     NOT_FOUND = "not_found"
     CONFLICT = "conflict"
     INTERNAL_ERROR = "internal_error"
+    PAYLOAD_TOO_LARGE = "payload_too_large"
 
 
 class ErrorDetail(BaseModel):

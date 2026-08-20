@@ -50,3 +50,14 @@ Feature: Admin panel authenticates remote clients only behind explicit opt-in
       | token              | outcome                                |
       | short              | fails with a clear configuration error |
       | <32+ random chars> | succeeds                               |
+
+  Scenario Outline: Login rejects oversized bodies before reading them
+    Given the admin endpoint allows remote logins
+    When a client posts a payload of <size> bytes to "/admin/login"
+    Then the oversized login response status is "<status>"
+    And no session cookie is issued
+
+    Examples:
+      | size | status |
+      | 4096 | 401    |
+      | 4097 | 413    |

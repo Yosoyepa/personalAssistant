@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from hmac import compare_digest
-
 from personal_assistant.adapters.inbound.auth_claims import (
     AuthClaims,
     principal_from_auth_claims,
@@ -20,7 +18,6 @@ __all__ = [
     "LocalPrincipalConfig",
     "LocalPrincipalProvider",
     "LocalPrincipalSettings",
-    "compare_digest",
     "is_loopback_peer",
     "principal_from_auth_claims",
 ]

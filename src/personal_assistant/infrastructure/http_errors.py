@@ -29,6 +29,7 @@ def _status_for_error(code: ErrorCode) -> int:
         ErrorCode.GUARDRAIL_BLOCKED: 422,
         ErrorCode.PII_DETECTED: 422,
         ErrorCode.PROMPT_INJECTION_DETECTED: 422,
+        ErrorCode.PAYLOAD_TOO_LARGE: 413,
     }.get(code, 500)
 
 
