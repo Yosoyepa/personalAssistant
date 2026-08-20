@@ -200,3 +200,23 @@ Feature: Admin panel authenticates remote clients only behind explicit opt-in
 ## Feedback WCT de la fase
 
 (pendiente — se llena al cierre por el planner)
+
+## Ejecución del Coder (Gemini)
+
+- **Rama**: `gemini/phase-22-admin-remote-auth`
+- **Split preventivo (TEST-007)**:
+  - `src/personal_assistant/adapters/inbound/auth_claims.py` (57 mutation sites)
+  - `src/personal_assistant/adapters/inbound/auth_local.py` (66 mutation sites)
+  - `src/personal_assistant/adapters/inbound/auth_peer.py` (58 mutation sites)
+  - `src/personal_assistant/adapters/inbound/auth.py` re-exporta todos los símbolos (8 sites).
+- **Implementación**:
+  - `ADMIN_ALLOW_REMOTE` configurado en `config_settings.py` y parseado con `_env_bool` en `config_loader.py` (default: `False`).
+  - Guardarraíl de arranque en `create_app` (`http_app.py`): cuando `admin_allow_remote=True`, exige `len(admin_token) >= 32`, de lo contrario falla con `RuntimeError`.
+  - Endpoint `POST /admin/login` con parsing urlencoded (stdlib `urllib.parse.parse_qs`) y verificación en tiempo constante (`compare_digest`); emite cookie `admin_token` con `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/admin`, `Max-Age=43200`.
+  - Endpoint `POST /admin/logout` protegido por `current_principal` que elimina la cookie `admin_token`.
+  - Inyección de cookie en `current_principal` (`http_auth.py` / `auth_local.py`): evalúa `Authorization` header o cookie `admin_token`.
+  - Runbook actualizado en `docs/runbook/admin-dashboard.md` con instrucciones de remoto, advertencias TLS, cookies y rotación de secretos.
+- **Verificación**:
+  - Escenarios Gherkin añadidos en `features/admin_remote_auth.feature` (G-ACCEPT: PASS).
+  - Cobertura de tests unitarios y de integración en `tests/test_admin_remote_auth.py` (26 tests).
+  - `wct gate --tier commit`: 17/17 PASS.

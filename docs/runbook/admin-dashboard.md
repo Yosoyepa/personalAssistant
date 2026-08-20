@@ -154,7 +154,45 @@ user content. Caveats for operators:
   into public issues.
 - `ADMIN_TOKEN`, bot tokens, webhook secrets, provider API keys, database URLs,
   and OAuth credentials must stay out of git and out of traces.
-- This is not a production trace dashboard. Never expose it outside loopback;
-  the public HTTPS edge must allow only `POST /webhooks/telegram`. See
-  `docs/runbook/hardened-local-deployment.md` for the exact proxy allowlist and
-  secret-rotation procedure.
+
+## Remote Admin Access (Opt-in)
+
+By default, the admin panel is strictly loopback-only (`127.0.0.0/8`, `::1`).
+To allow remote access from non-loopback peers (e.g. LAN or mobile device via tunnel):
+
+1. Set `ADMIN_ALLOW_REMOTE=true` in your environment or `.env`.
+2. Configure `ADMIN_TOKEN` with high entropy (**minimum 32 characters**).
+   The server enforces this at startup with a `RuntimeError` if remote access is enabled with a weak token.
+
+```bash
+export ADMIN_ALLOW_REMOTE=true
+export ADMIN_TOKEN="test_admin_token_with_high_entropy_32_chars_long"
+```
+
+> [!WARNING]
+> **TLS Requirement:** Remote admin access must only be exposed behind an encrypted
+> TLS connection (e.g. WireGuard, Tailscale, Cloudflare Tunnel, or a reverse proxy
+> with TLS termination). Never expose plaintext HTTP admin ports directly to public
+> networks.
+
+### Browser Login and Session Cookies
+
+For browser access, the admin panel provides session authentication:
+
+- **Login (`POST /admin/login`)**: Accepts `token` via form-urlencoded data (`application/x-www-form-urlencoded`). Upon successful verification with constant-time comparison, sets a hardened cookie:
+  - `admin_token=<token>`
+  - `HttpOnly`: Inaccessible to client-side scripts.
+  - `Secure`: Transmitted only over HTTPS.
+  - `SameSite=Strict`: Mitigates cross-site request forgery (CSRF).
+  - `Path=/admin`: Confined to the admin boundary.
+  - `Max-Age=43200` (12 hours).
+- **Logout (`POST /admin/logout`)**: Clears the `admin_token` cookie.
+- **Header or Cookie**: Endpoints guarded by `current_principal` accept either the `Authorization: Bearer <ADMIN_TOKEN>` header or the `admin_token` cookie.
+
+### Token Rotation
+
+To rotate the admin token:
+1. Generate a new high-entropy token (at least 32 characters).
+2. Update `ADMIN_TOKEN` in `.env`.
+3. Restart the assistant process.
+All existing browser session cookies and bearer clients are immediately invalidated because verification validates the digest of the incoming token against the new secret in constant time.

@@ -20,6 +20,9 @@ from personal_assistant.infrastructure.http_container import (
 from personal_assistant.infrastructure.http_errors import (
     register_exception_handlers,
 )
+from personal_assistant.infrastructure.http_routes_admin_auth import (
+    register_admin_auth_routes,
+)
 from personal_assistant.infrastructure.http_routes_admin_data import (
     register_admin_data_routes,
 )
@@ -70,6 +73,12 @@ def create_app(
         and not runtime_settings.telegram_bot_token
     ):
         raise RuntimeError("durable reminder delivery requires Telegram configuration")
+    if runtime_settings.admin_allow_remote:
+        token = runtime_settings.admin_token or ""
+        if len(token) < 32:
+            raise RuntimeError(
+                "remote admin access requires ADMIN_TOKEN with at least 32 characters"
+            )
     runtime_container = container or build_runtime_container(runtime_settings)
     runtime_heartbeat_store = heartbeat_store
     if runtime_settings.reminder_worker_enabled and runtime_heartbeat_store is None:
@@ -148,6 +157,7 @@ def create_app(
         app,
         dashboard=dashboard,
     )
+    register_admin_auth_routes(app)
     register_runtime_routes(
         app,
         container=runtime_container,
