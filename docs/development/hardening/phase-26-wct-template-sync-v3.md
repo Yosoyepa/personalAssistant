@@ -3,14 +3,14 @@
 | Campo | Valor |
 |---|---|
 | Fase | `26 — wct template sync v3` |
-| Estado | `APPROVED` (alcance aprobado por el mantenedor, 2026-08-21) |
+| Estado | `COMPLETED` (verificación independiente reproduce el reporte; CI 5/5 tras bless, 2026-08-21) |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `gemini/phase-26-wct-sync-v3` (coder a **esfuerzo ALTO** — toca harness y governance; no es clase mecánica) |
 | Commit base | `6394a82` (main tras merge #81) |
 | Fuente del template | `/home/jandradeu/Documents/well_code_template` @ `a8324a9` (PRs #8 y #9; sin tag — referenciar por hash) |
 | Fecha de inicio | `2026-08-21` |
-| PR | TBD (spec), TBD (sync) |
-| Merge commit | TBD |
+| PR | #83 (spec), #84 (sync) |
+| Merge commit | `89e2091` (spec), `b493b7e` (sync, incluye bless `3bd09a7`) |
 
 ## Objetivo
 
@@ -198,9 +198,40 @@ Definition-of-done en el coder.md del piloto), los 3
 
 ## Feedback WCT de la fase
 
-(pendiente — se llena al cierre por el planner)
+- **El hueco de la fase 25 quedó cerrado de fábrica**: `G-COV-DIFF` corre en el
+  tier `pr` local y pasó en verde tanto en la verificación del coder como en la
+  independiente del planner (19/21 con los dos FAIL exclusivamente por drift de
+  `integrity.lock` en la ventana pre-bless). Verificación cruzada exacta.
+- **G — UX de `G-HOOKS-WIRED` cuando falla (feedback para el template)**: el
+  resumen del gate muestra la ÚLTIMA línea de `wct doctor` ("PASS pytest
+  disponible") en lugar del check que falló ("FAIL integrity.lock coincide").
+  Propuesta: cuando doctor falla, el gate debería listar las líneas FAIL, no la
+  última. Menor, pero confunde en la ventana pre-bless.
+- **Feedback inverso pendiente (2 ítems)**: `hooks/guard.py` con
+  `_normalize_module_invocation` tolerante a flags (sigue sin subirse al
+  template) y el ítem G de arriba. Registrar ambos en
+  `docs/development/wct-template-improvements.md` en el próximo ciclo de
+  feedback.
+- **G-ENV validado por diseño**: preflight que falla ANTES de la suite nombrando
+  la variable ausente; `environment_required.pr: [TEST_POSTGRES_DSN]` quedó
+  cableado en `policy.yaml` (bless `3bd09a7`).
+- **Proceso**: cero desviaciones declaradas y verificadas; esfuerzo ALTO del
+  coder justificado por la clase (harness + governance); bless atómico post-PR
+  funcionó igual que en fase 23. `split-plan` demostrado sobre
+  `domain/reminders/parser.py` (245 sitios, legacy manifiesto) — candidato a
+  partición fachada automatizable en una fase futura.
 
 ## Notas de cierre
 
-(pendiente — paridad aproximada G-COV-DIFF vs CI, diferidos G-DOC/G-PROP/
-G-ACCEPT-MUT, feedback inverso de guard.py al template)
+- **Paridad G-COV-DIFF local vs CI**: aproximada por diseño — el gate local usa
+  `build/coverage/lcov.info` (cobertura de rama de pytest) y CI usa
+  `coverage.xml` de línea (`ci.yml:132`). CI sigue siendo la autoridad; el gate
+  local es early warning. Registrado como limitación aceptada.
+- **Diferidos con razón**: `G-DOC` en tier full (exige medir el piso propio de
+  docstrings con `interrogate src` y fijar baseline vía bless — fase de
+  gobernanza futura); `G-PROP` (no existe `tests/property/`); `G-ACCEPT-MUT`
+  (flujo deliberado por fase según PROC-004, no por PR); SHA pinning de
+  workflows (#10 del template — decisión aparte sobre ruta protegida).
+- **Ventana de bless**: G-META-1 y G-HOOKS-WIRED en rojo solo entre el sync y
+  el bless del mantenedor, como en fase 23. Documentado como comportamiento
+  esperado del flujo.
