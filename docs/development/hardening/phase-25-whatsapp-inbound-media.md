@@ -214,6 +214,23 @@ Se añaden a `features/whatsapp_inbound_webhook.feature`:
   - `pytest` suite completa: 1122 tests PASS, 0 fallos.
   - `wct selftest redteam`: 30/30 adversarios bloqueados.
 
+### Ronda 2
+
+- **(a) Desviaciones de pasos Gherkin (Ronda 1) y su razón**:
+  1. `"And the voice response carries the assistant reply with sent flag \"false\""` (en lugar de `"And the response carries..."`): Evita colisión `placeholder-variant` con el paso análogo de texto en la línea 18 detectada por `tools.wct accept ir-dry`.
+  2. `"Then no media download or transcription is attempted"` (en lugar de `"Then no download or transcription is attempted"`): Evita colisión `placeholder-variant` con el paso del escenario de audio sobredimensionado en la línea 55.
+  3. `"Then the endpoint acknowledges the audio replay and the reminder exists exactly once"` (en lugar de `"Then the endpoint acknowledges it..."`): Evita colisión `placeholder-variant` con el paso del escenario de replay de texto en la línea 35.
+- **(b) Hueco de cobertura y resolución**:
+  - En Ronda 1 el diff-coverage fue 79% (39 líneas sin cubrir en `whatsapp_client.py`, `http_whatsapp_transcription.py`, `whatsapp.py` y `channel_replies.py`).
+  - Se añadieron tests unitarios de comportamiento para:
+    - `whatsapp_client.py`: `_NoRedirectHandler.redirect_request`, validación de `media_id`, respuestas sin campo `url`, errores HTTP 4xx/5xx y de red (`URLError`/`TimeoutError`) en `get_media_url`, y en `download_media` redirecciones válidas, redirecciones a hosts no permitidos (`EgressNotAllowedError`), redirecciones sin cabecera `Location`, exceso de redirecciones (>5), y errores de transporte.
+    - `http_whatsapp_transcription.py`: Derivación de extensiones en `_transcription_filename` (`.oga` -> `.ogg`, fallbacks por MIME `ogg`/`opus`/`mp3`/`mp4`/`wav`/default), y ramas tempranas de error (`media_file_id` ausente y `access_token` ausente).
+    - `whatsapp.py`: Bucle de detección de fallback para `media_kind` cuando `type` está ausente o no es reconocido en el payload.
+    - `channel_replies.py`: Verificación de todos los métodos getter localizados de `ChannelRepliesMixin`.
+  - Resultado: **100% diff-coverage** (190/190 líneas cubiertas, 0 líneas faltantes).
+- **(c) Desviaciones nuevas**:
+  - Ninguna. No se modificó código de producción en la Ronda 2, solo se complementó la suite de pruebas.
+
 ## Feedback WCT de la fase
 
 (pendiente — se llena al cierre por el planner)

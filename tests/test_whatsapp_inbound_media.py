@@ -485,3 +485,125 @@ def test_replayed_delivery_of_same_audio_message_creates_no_duplicate() -> None:
     approvals = container.approvals.list_for_tenant(principal)
     assert len(approvals) == 1
     assert len(container.states.list_for_tenant(principal)) == 1
+
+
+def test_transcription_filename_derivations() -> None:
+    from personal_assistant.application.dto.channels import NormalizedMessage
+    from personal_assistant.infrastructure.http_whatsapp_transcription import (
+        _transcription_filename,
+    )
+
+    def _msg(mime: str | None = None) -> NormalizedMessage:
+        return NormalizedMessage(
+            channel="whatsapp",
+            actor_id="573001112233",
+            conversation_id="573001112233",
+            message_id="msg999",
+            source_event_id="msg999",
+            text="[voice message]",
+            media_kind="voice",
+            media_file_id="id-1",
+            media_mime_type=mime,
+        )
+
+    # .oga extension maps to .ogg
+    fn1 = _transcription_filename(_msg(), "https://lookaside.fbsbx.com/media/audio.oga")
+    assert fn1 == "whatsapp-msg999.ogg"
+
+    # Supported extension preserved with query param
+    fn2 = _transcription_filename(
+        _msg(), "https://lookaside.fbsbx.com/media/audio.wav?token=abc"
+    )
+    assert fn2 == "whatsapp-msg999.wav"
+
+    # Unsupported / no extension fallbacks by MIME type
+    assert (
+        _transcription_filename(_msg("audio/ogg"), "https://lookaside.fbsbx.com/raw")
+        == "whatsapp-msg999.ogg"
+    )
+    assert (
+        _transcription_filename(_msg("audio/opus"), "https://lookaside.fbsbx.com/raw")
+        == "whatsapp-msg999.opus"
+    )
+    assert (
+        _transcription_filename(_msg("audio/mp3"), "https://lookaside.fbsbx.com/raw")
+        == "whatsapp-msg999.mp3"
+    )
+    assert (
+        _transcription_filename(_msg("audio/mp4"), "https://lookaside.fbsbx.com/raw")
+        == "whatsapp-msg999.mp4"
+    )
+    assert (
+        _transcription_filename(_msg("audio/wav"), "https://lookaside.fbsbx.com/raw")
+        == "whatsapp-msg999.wav"
+    )
+    assert (
+        _transcription_filename(
+            _msg("application/octet-stream"), "https://lookaside.fbsbx.com/raw"
+        )
+        == "whatsapp-msg999.ogg"
+    )
+    assert (
+        _transcription_filename(_msg(None), "https://lookaside.fbsbx.com/raw")
+        == "whatsapp-msg999.ogg"
+    )
+
+
+def test_transcribe_whatsapp_media_early_error_branches() -> None:
+    from personal_assistant.application.dto.channels import NormalizedMessage
+    from personal_assistant.application.services.replies import AssistantReplies
+    from personal_assistant.infrastructure.http_whatsapp_transcription import (
+        _transcribe_whatsapp_media,
+    )
+
+    replies = AssistantReplies()
+    transcription = _FakeTranscriptionProvider()
+    container = build_container(transcription=transcription)
+
+    # 1. Missing media_file_id
+    msg_no_file_id = NormalizedMessage(
+        channel="whatsapp",
+        actor_id="573001112233",
+        conversation_id="573001112233",
+        message_id="msg101",
+        source_event_id="msg101",
+        text="[voice message]",
+        media_kind="voice",
+        media_file_id=None,
+    )
+    settings_ok = AppSettings(
+        tenant_id="personal",
+        timezone="America/Bogota",
+        whatsapp=WhatsAppSettings(
+            enabled=True, access_token="test_token", phone_number_id="123"
+        ),
+    )
+    res, err = _transcribe_whatsapp_media(
+        container, settings_ok, msg_no_file_id, replies
+    )
+    assert res is None
+    assert err == replies.whatsapp_audio_missing_file_id()
+
+    # 2. Missing access_token
+    msg_with_file_id = NormalizedMessage(
+        channel="whatsapp",
+        actor_id="573001112233",
+        conversation_id="573001112233",
+        message_id="msg102",
+        source_event_id="msg102",
+        text="[voice message]",
+        media_kind="voice",
+        media_file_id="media-id-102",
+    )
+    settings_no_token = AppSettings(
+        tenant_id="personal",
+        timezone="America/Bogota",
+        whatsapp=WhatsAppSettings(
+            enabled=True, access_token=None, phone_number_id="123"
+        ),
+    )
+    res2, err2 = _transcribe_whatsapp_media(
+        container, settings_no_token, msg_with_file_id, replies
+    )
+    assert res2 is None
+    assert err2 == replies.whatsapp_media_download_failed()

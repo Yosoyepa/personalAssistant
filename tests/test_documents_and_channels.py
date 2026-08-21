@@ -193,6 +193,80 @@ class DocumentAndChannelTests(unittest.TestCase):
         self.assertEqual(normalized.media_kind, "image")
         self.assertEqual(normalized.media_file_id, "media-img-1")
 
+    def test_whatsapp_normalizer_falls_back_to_media_dict_when_type_missing_or_unknown(
+        self,
+    ) -> None:
+        for kind in ("voice", "audio", "image", "document", "video"):
+            payload = {
+                "entry": [
+                    {
+                        "changes": [
+                            {
+                                "value": {
+                                    "contacts": [{"wa_id": "573001112233"}],
+                                    "messages": [
+                                        {
+                                            "id": f"wamid.{kind}123",
+                                            "from": "573001112233",
+                                            "type": "unrecognized_or_missing",
+                                            kind: {
+                                                "id": f"media-{kind}-1",
+                                                "mime_type": "application/octet-stream",
+                                            },
+                                        }
+                                    ],
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+            normalized = normalize_whatsapp_webhook(payload, tenant_id="personal")
+            self.assertEqual(normalized.media_kind, kind)
+            self.assertEqual(normalized.media_file_id, f"media-{kind}-1")
+            self.assertEqual(normalized.text, f"[{kind} message]")
+
+    def test_channel_replies_mixin_all_getters_return_localized_copy(self) -> None:
+        from personal_assistant.application.services.replies import AssistantReplies
+
+        replies = AssistantReplies()
+        methods = [
+            (
+                "telegram_audio_missing_file_id",
+                "Telegram no envió un file_id utilizable",
+            ),
+            (
+                "telegram_transcription_not_configured",
+                "falta configurar transcripción",
+            ),
+            ("telegram_token_missing_for_audio", "TELEGRAM_BOT_TOKEN"),
+            ("telegram_audio_too_large", "20MB"),
+            ("telegram_audio_download_too_large", "20MB"),
+            ("telegram_file_path_missing", "archivo de audio en Telegram"),
+            ("telegram_transcription_failed", "No pude transcribir"),
+            (
+                "whatsapp_audio_missing_file_id",
+                "WhatsApp no envió un media_id utilizable",
+            ),
+            (
+                "whatsapp_transcription_not_configured",
+                "falta configurar transcripción",
+            ),
+            ("whatsapp_audio_too_large", "20MB"),
+            ("whatsapp_audio_download_too_large", "20MB"),
+            ("whatsapp_media_download_failed", "No pude descargar"),
+            ("whatsapp_transcription_failed", "No pude transcribir"),
+            (
+                "whatsapp_media_unsupported",
+                "solo puedo procesar mensajes de texto y notas de voz",
+            ),
+        ]
+        for method_name, expected_substr in methods:
+            func = getattr(replies, method_name)
+            result = func()
+            self.assertIsInstance(result, str)
+            self.assertIn(expected_substr, result)
+
 
 if __name__ == "__main__":
     unittest.main()
