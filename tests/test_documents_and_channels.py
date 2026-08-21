@@ -126,6 +126,73 @@ class DocumentAndChannelTests(unittest.TestCase):
         self.assertEqual(normalized.message_id, "wamid.1")
         self.assertEqual(normalized.source_event_id, "wamid.1")
 
+    def test_whatsapp_normalizer_populates_voice_media_fields(self) -> None:
+        payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "573001112233"}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.voice123",
+                                        "from": "573001112233",
+                                        "type": "voice",
+                                        "voice": {
+                                            "id": "media-voice-1",
+                                            "mime_type": "audio/ogg; codecs=opus",
+                                            "file_size": 40960,
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        normalized = normalize_whatsapp_webhook(payload, tenant_id="personal")
+
+        self.assertEqual(normalized.text, "[voice message]")
+        self.assertEqual(normalized.media_kind, "voice")
+        self.assertEqual(normalized.media_file_id, "media-voice-1")
+        self.assertEqual(normalized.media_mime_type, "audio/ogg; codecs=opus")
+        self.assertEqual(normalized.media_file_size, 40960)
+        self.assertEqual(normalized.idempotency_key, "whatsapp:wamid.voice123")
+
+    def test_whatsapp_normalizer_preserves_caption_for_non_audio_media(self) -> None:
+        payload = {
+            "entry": [
+                {
+                    "changes": [
+                        {
+                            "value": {
+                                "contacts": [{"wa_id": "573001112233"}],
+                                "messages": [
+                                    {
+                                        "id": "wamid.img123",
+                                        "from": "573001112233",
+                                        "type": "image",
+                                        "image": {
+                                            "id": "media-img-1",
+                                            "mime_type": "image/jpeg",
+                                            "caption": "foto del recibo",
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        normalized = normalize_whatsapp_webhook(payload, tenant_id="personal")
+
+        self.assertEqual(normalized.text, "foto del recibo")
+        self.assertEqual(normalized.media_kind, "image")
+        self.assertEqual(normalized.media_file_id, "media-img-1")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -140,7 +140,7 @@ uv run python -m tools.wct gate --tier fast            # governance gates (needs
 
 ## Known limitations
 
-- WhatsApp supports plain text and proactive delivery only — no inbound voice transcription or media processing yet.
+- WhatsApp supports plain text, inbound voice/audio transcription, and proactive delivery — non-audio media (images, documents, video) returns an explicit unsupported reply.
 - The admin surface is loopback-only (`127.0.0.1` / `::1`); there is no production auth beyond it.
 - The durable delivery worker requires PostgreSQL.
 - Ambiguous delivery outcomes stop at `uncertain` and require manual operator reconciliation by design.

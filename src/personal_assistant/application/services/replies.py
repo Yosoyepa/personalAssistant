@@ -8,6 +8,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from personal_assistant.application.services.channel_replies import (
+    ChannelRepliesMixin,
+)
 from personal_assistant.domain.reminders.models import ReminderClarificationReason
 
 CatalogValue = str | list[str]
@@ -16,7 +19,7 @@ _DEFAULT_LOCALE = "es"
 _CATALOG_CACHE: dict[str, dict[str, CatalogValue]] = {}
 
 
-class AssistantReplies:
+class AssistantReplies(ChannelRepliesMixin):
     """Build user-facing copy without mixing it into business decisions."""
 
     def __init__(
@@ -177,27 +180,6 @@ class AssistantReplies:
 
     def approval_cancelled(self) -> str:
         return self._text("approval_cancelled")
-
-    def telegram_audio_missing_file_id(self) -> str:
-        return self._text("telegram_audio_missing_file_id")
-
-    def telegram_transcription_not_configured(self) -> str:
-        return self._text("telegram_transcription_not_configured")
-
-    def telegram_token_missing_for_audio(self) -> str:
-        return self._text("telegram_token_missing_for_audio")
-
-    def telegram_audio_too_large(self) -> str:
-        return self._text("telegram_audio_too_large")
-
-    def telegram_audio_download_too_large(self) -> str:
-        return self._text("telegram_audio_download_too_large")
-
-    def telegram_file_path_missing(self) -> str:
-        return self._text("telegram_file_path_missing")
-
-    def telegram_transcription_failed(self) -> str:
-        return self._text("telegram_transcription_failed")
 
     def _minutes_label(self, minutes: int) -> str:
         if minutes == 1:

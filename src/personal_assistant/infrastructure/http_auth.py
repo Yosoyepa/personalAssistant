@@ -19,6 +19,7 @@ from personal_assistant.infrastructure.config import AppSettings
 from personal_assistant.infrastructure.http_dynamic import get_http_attribute
 
 MAX_TELEGRAM_AUDIO_BYTES = 20 * 1024 * 1024
+MAX_WHATSAPP_AUDIO_BYTES = 20 * 1024 * 1024
 TELEGRAM_WEBHOOK_SECRET_HEADER = APIKeyHeader(
     name="X-Telegram-Bot-Api-Secret-Token",
     scheme_name="TelegramWebhookSecret",

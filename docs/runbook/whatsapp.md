@@ -51,11 +51,26 @@ WHATSAPP_PHONE_NUMBER_ID=100000000000001
 - **Verificación Inbound (HMAC-SHA256)**: Cada petición `POST /webhooks/whatsapp` debe incluir la cabecera `X-Hub-Signature-256: sha256=<hex_digest>`. El digest se calcula usando `WHATSAPP_APP_SECRET` como clave sobre el cuerpo crudo en bytes de la petición.
 - **Protección contra Replay**: Los identificadores de mensaje (`wamid...`) se almacenan en caché; mensajes duplicados devuelven respuesta inmediata `status: duplicate` sin reejecutar lógica de negocio.
 - **Aislamiento de Remitentes**: Remitentes fuera de `WHATSAPP_ALLOWED_USER_IDS` son rechazados silenciosamente (`status: skipped`, HTTP 200) para no filtrar metadatos ni permitir ataques de amplificación.
-- **Egress Allowlist**: Si `WHATSAPP_ACCESS_TOKEN` está presente, el servidor valida que el host `graph.facebook.com` esté autorizado en el allowlist de salida antes de iniciar conexiones de red.
+- **Egress Allowlist**: Si `WHATSAPP_ACCESS_TOKEN` está presente, el servidor valida que los hosts `graph.facebook.com` y `lookaside.fbsbx.com` estén autorizados en el allowlist de salida antes de iniciar conexiones de red para llamadas de API y descargas de media.
 
 ---
 
-## 4. Prueba de Humo Local con Payload Sintético
+## 4. Procesamiento de Medios y Transcripción de Audio
+
+El canal soporta procesamiento de notas de voz y archivos de audio entrantes:
+
+1. **Flujo de Audio/Voz**:
+   - Mensajes con `type: audio` o `type: voice` se descargan desde Meta Graph API y se transcriben usando el proveedor compartido (`TRANSCRIPTION_PROVIDER`, ej. Whisper/Groq).
+   - El texto transcrito ingresa de forma transparente al pipeline de conversación (creación de recordatorios, aprobaciones, comandos).
+   - **Límites de Tamaño**: Máximo 20 MB (`MAX_WHATSAPP_AUDIO_BYTES`). Se valida tanto el tamaño declarado antes de la descarga como los bytes reales descargados.
+   - **Egress Seguro**: La descarga sigue redirecciones manualmente validando cada salto contra `EgressAllowlist` (`lookaside.fbsbx.com`).
+   - **Observabilidad**: Se registran eventos de traza `tool_called` (`audio.transcribe`) y `agent_failed` con `run_id=whatsapp:{conversation}:{message}:transcription` (con sanitización de privacidad y sin almacenar binarios de audio en disco).
+2. **Medios No Soportados**:
+   - Mensajes de tipo `image`, `document`, `video` o `sticker` reciben una respuesta explícita (`whatsapp_media_unsupported`) informando que solo se procesan mensajes de texto y notas de voz.
+
+---
+
+## 5. Prueba de Humo Local con Payload Sintético
 
 Puedes verificar el funcionamiento del endpoint localmente utilizando `curl` y `openssl` para calcular la firma HMAC correspondiente:
 
@@ -119,7 +134,7 @@ curl -s -X POST "http://127.0.0.1:8000/webhooks/whatsapp" \
 
 ---
 
-## 5. Diagnóstico y Troubleshooting
+## 6. Diagnóstico y Troubleshooting
 
 | Síntoma | Causa Probable | Solución |
 |---|---|---|

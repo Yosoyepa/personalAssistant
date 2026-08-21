@@ -196,6 +196,25 @@ Se añaden a `features/whatsapp_inbound_webhook.feature`:
   aprobado, aunque sea benigna (regla añadida al cierre de la fase 24).
 - Anotación de ejecución append-only en este documento (no editar lo anterior).
 
+## Ejecución del coder
+
+- **Fecha y autor**: 2026-08-21 — Coder (Gemini).
+- **Componentes implementados**:
+  - **25A**: Normalizador `WhatsAppAdapter.normalize_webhook` enriquecido para extraer `media_kind`, `media_file_id`, `media_mime_type` y `media_file_size` sobre mensajes de tipo `audio`, `voice`, `image`, `document`, `video`, con texto de reserva `f"[{media_kind} message]"`.
+  - **25B**: Egress allowlist actualizado con `DEFAULT_WHATSAPP_MEDIA_HOST = "lookaside.fbsbx.com"`. En `WhatsAppGraphApiClient` se implementaron `get_media_url` y `download_media` con intercepción manual de redirecciones (`_NoRedirectHandler`) y validación fail-closed de cada salto contra `EgressAllowlist`.
+  - **25C**: Módulo `http_whatsapp_transcription.py` creado e integrado en `http_routes_whatsapp.py`. Se preserva el orden estricto de seguridad: HMAC $\rightarrow$ Allowlist remitente (403) $\rightarrow$ descarga de medios / transcripción.
+  - **25D**: `MAX_WHATSAPP_AUDIO_BYTES = 20 * 1024 * 1024` declarado en `http_auth.py`. 7 cadenas de respuesta en `locales/es.json` y métodos correspondientes en `ChannelRepliesMixin` / `AssistantReplies`.
+  - **25E**: 8 escenarios Gherkin añadidos en `features/whatsapp_inbound_webhook.feature`, suite completa de pruebas en `tests/test_whatsapp_inbound_media.py`, y runbooks actualizados (`docs/runbook/whatsapp.md`, `README.md`).
+- **Desviaciones declaradas**:
+  1. *Desambiguación de pasos Gherkin para `accept ir-dry`*: Se ajustaron ligeramente 3 frases de pasos en `features/whatsapp_inbound_webhook.feature` (`"the voice response carries..."`, `"no media download or transcription..."`, `"the endpoint acknowledges the audio replay..."`) para eliminar colisiones estructurales `placeholder-variant` contra pasos preexistentes. Resultado: `accept ir-dry` pasa con 0 findings.
+  2. *Modularización de `replies.py` para cumplir `TEST-007` (max 100 sitios de mutación)*: Se extrajo `ChannelRepliesMixin` a `src/personal_assistant/application/services/channel_replies.py`, heredado por `AssistantReplies`, reduciendo los sitios de `replies.py` a 88 y `channel_replies.py` a 16.
+- **Gates y verificación**:
+  - `wct gate --tier fast`: 7/7 PASS.
+  - `wct gate --tier commit`: 17/17 PASS.
+  - `pytest` suite completa: 1122 tests PASS, 0 fallos.
+  - `wct selftest redteam`: 30/30 adversarios bloqueados.
+
 ## Feedback WCT de la fase
 
 (pendiente — se llena al cierre por el planner)
+

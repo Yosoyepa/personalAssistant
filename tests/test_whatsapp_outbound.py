@@ -940,6 +940,85 @@ class WhatsAppRuntimeWiringTests(unittest.TestCase):
             notifications_arg = mock_build.call_args.kwargs.get("notifications")
             self.assertIsInstance(notifications_arg, ChannelNotificationRouter)
 
+    def test_whatsapp_graph_client_get_media_url(self) -> None:
+        allowlist = EgressAllowlist.from_entries({"graph.facebook.com"})
+        client = WhatsAppGraphApiClient(
+            access_token="wa-token",
+            phone_number_id="12345",
+            egress_allowlist=allowlist,
+        )
+        fake_response = io.BytesIO(
+            json.dumps({"url": "https://lookaside.fbsbx.com/wa_media_1"}).encode(
+                "utf-8"
+            )
+        )
+        with patch(
+            "urllib.request.urlopen", return_value=fake_response
+        ) as mock_urlopen:
+            url = client.get_media_url("media-id-123")
+            self.assertEqual(url, "https://lookaside.fbsbx.com/wa_media_1")
+            req = mock_urlopen.call_args[0][0]
+            self.assertEqual(
+                req.full_url, "https://graph.facebook.com/v21.0/media-id-123"
+            )
+            self.assertEqual(req.headers.get("Authorization"), "Bearer wa-token")
+
+    def test_whatsapp_graph_client_download_media_follows_allowlisted_redirects(
+        self,
+    ) -> None:
+        allowlist = EgressAllowlist.from_entries(
+            {"graph.facebook.com", "lookaside.fbsbx.com"}
+        )
+        client = WhatsAppGraphApiClient(
+            access_token="wa-token",
+            phone_number_id="12345",
+            egress_allowlist=allowlist,
+        )
+
+        class FakeOpener:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def open(self, req: Any, timeout: float = 10.0) -> Any:
+                self.calls += 1
+                if self.calls == 1:
+                    headers = Message()
+                    headers["Location"] = (
+                        "https://lookaside.fbsbx.com/download/file.ogg"
+                    )
+                    raise HTTPError(
+                        req.full_url, 302, "Found", headers, io.BytesIO(b"")
+                    )
+                return io.BytesIO(b"AUDIO_BYTES_OK")
+
+        fake_opener = FakeOpener()
+        with patch("urllib.request.build_opener", return_value=fake_opener):
+            data = client.download_media("https://graph.facebook.com/v21.0/media-dl")
+            self.assertEqual(data, b"AUDIO_BYTES_OK")
+            self.assertEqual(fake_opener.calls, 2)
+
+    def test_whatsapp_graph_client_download_media_blocks_unauthorized_redirect(
+        self,
+    ) -> None:
+        allowlist = EgressAllowlist.from_entries({"graph.facebook.com"})
+        client = WhatsAppGraphApiClient(
+            access_token="wa-token",
+            phone_number_id="12345",
+            egress_allowlist=allowlist,
+        )
+
+        class EvilRedirectOpener:
+            def open(self, req: Any, timeout: float = 10.0) -> Any:
+                headers = Message()
+                headers["Location"] = "https://evil-attacker.com/leak"
+                raise HTTPError(req.full_url, 302, "Found", headers, io.BytesIO(b""))
+
+        with (
+            patch("urllib.request.build_opener", return_value=EvilRedirectOpener()),
+            self.assertRaises(EgressNotAllowedError),
+        ):
+            client.download_media("https://graph.facebook.com/v21.0/media-dl")
+
 
 if __name__ == "__main__":
     unittest.main()

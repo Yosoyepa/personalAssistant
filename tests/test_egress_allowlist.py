@@ -190,6 +190,26 @@ class EgressDerivationTests(unittest.TestCase):
         self.assertNotIn(DEFAULT_TELEGRAM_API_URL, without_token)
         self.assertIn(DEFAULT_TELEGRAM_API_URL, with_token)
 
+    def test_whatsapp_hosts_require_a_configured_token(self) -> None:
+        without_token = derive_egress_entries(
+            llm_base_url=None,
+            transcription_base_url=None,
+            tts_base_url=None,
+            telegram_bot_token_configured=False,
+            whatsapp_access_token_configured=False,
+        )
+        with_token = derive_egress_entries(
+            llm_base_url=None,
+            transcription_base_url=None,
+            tts_base_url=None,
+            telegram_bot_token_configured=False,
+            whatsapp_access_token_configured=True,
+        )
+        self.assertNotIn("https://graph.facebook.com", without_token)
+        self.assertNotIn("https://lookaside.fbsbx.com", without_token)
+        self.assertIn("https://graph.facebook.com", with_token)
+        self.assertIn("https://lookaside.fbsbx.com", with_token)
+
 
 class StartupCoverageTests(unittest.TestCase):
     def test_uncovered_required_target_fails_closed(self) -> None:
@@ -270,9 +290,7 @@ class AppSettingsEgressTests(unittest.TestCase):
         self.assertIn("TELEGRAM_BOT_TOKEN", str(caught.exception))
 
     def test_disabled_providers_need_no_coverage(self) -> None:
-        settings = AppSettings(
-            egress_allowed_hosts=frozenset({"unrelated.example"})
-        )
+        settings = AppSettings(egress_allowed_hosts=frozenset({"unrelated.example"}))
         self.assertEqual(
             settings.egress_allowed_hosts, frozenset({"unrelated.example"})
         )

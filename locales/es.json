@@ -52,6 +52,14 @@
   "telegram_audio_download_too_large": "El audio descargado supera el límite local de 20MB.",
   "telegram_file_path_missing": "No pude resolver el archivo de audio en Telegram.",
   "telegram_transcription_failed": "No pude transcribir ese audio. Intenta reenviarlo o escribe el recordatorio en texto.",
+  "whatsapp_audio_missing_file_id": "Recibí un audio, pero WhatsApp no envió un media_id utilizable.",
+  "whatsapp_transcription_not_configured": "Recibí tu audio, pero falta configurar transcripción. Activa TRANSCRIPTION_PROVIDER y TRANSCRIPTION_API_KEY en el backend.",
+  "whatsapp_audio_too_large": "El audio supera el límite local de 20MB.",
+  "whatsapp_audio_download_too_large": "El audio descargado supera el límite local de 20MB.",
+  "whatsapp_media_download_failed": "No pude descargar el archivo de audio desde WhatsApp.",
+  "whatsapp_transcription_failed": "No pude transcribir ese audio. Intenta reenviarlo o escribe el recordatorio en texto.",
+  "whatsapp_media_unsupported": "Por ahora solo puedo procesar mensajes de texto y notas de voz. No puedo leer imágenes, documentos ni videos.",
   "minutes_singular": "1 minuto",
   "minutes_plural": "{minutes} minutos"
 }
+
