@@ -144,6 +144,19 @@ providers:
     target: GEMINI.md
 
 # ---------------------------------------------------------------------------
+# Variables de entorno que cada tier exige (p. ej. DSN de una base de datos
+# real para tests de integración). Si falta alguna, el tier falla ANTES de
+# correr gates, con un mensaje que nombra la variable: nunca como skips
+# silenciosos ni errores crípticos de conexión a mitad de suite.
+# ---------------------------------------------------------------------------
+environment_required:
+  fast: []
+  commit: []
+  pr:
+    - TEST_POSTGRES_DSN
+  full: []
+
+# ---------------------------------------------------------------------------
 # Flags de gates. Un gate desactivado aparece en `wct report` como NO CUBIERTO
 # y el modo de fallo que cubría queda listado como no verificado.
 # ---------------------------------------------------------------------------

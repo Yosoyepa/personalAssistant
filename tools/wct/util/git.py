@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -54,3 +55,20 @@ def tracked_files(root: Path) -> set[str] | None:
     if result.returncode != 0:
         return None
     return {line for line in result.stdout.splitlines() if line}
+
+
+def remote_base(root: Path) -> str | None:
+    """Remote ref that differential gates compare against (CI parity).
+
+    Order: the base ref GitHub reports for PRs, then the remote default
+    branch (what CI diffs against), then the local branch as last resort.
+    """
+    candidates: list[str] = []
+    base_ref = os.environ.get("GITHUB_BASE_REF")
+    if base_ref:
+        candidates.append(f"origin/{base_ref}")
+    candidates.extend(["origin/main", "origin/master", "main", "master"])
+    for ref in candidates:
+        if run_git(root, "rev-parse", "--verify", ref, check=False).returncode == 0:
+            return ref
+    return None

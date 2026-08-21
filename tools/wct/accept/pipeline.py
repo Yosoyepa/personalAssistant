@@ -90,48 +90,71 @@ def parse_feature(path: Path) -> dict[str, Any]:
     }
 
 
+def normalize_step_text(text: str) -> str:
+    return re.sub(r"(?:\d+(?:\.\d+)?|\"[^\"]*\"|'[^']*')", "<value>", text.lower())
+
+
 def ir_dry(ir: dict[str, Any]) -> dict[str, Any]:
     findings: list[dict[str, Any]] = []
-    global_steps: list[tuple[str, str, str, int]] = []
+    global_steps: list[tuple[str, str, str, int, bool]] = []
     for scenario in ir["scenarios"]:
         seen: dict[str, int] = {}
         for step in scenario["steps"]:
-            normalized = re.sub(
-                r"(?:\d+(?:\.\d+)?|\"[^\"]*\"|'[^']*')", "<value>", step["text"].lower()
-            )
+            normalized = normalize_step_text(step["text"])
             if normalized in seen:
                 findings.append(
                     {
-                        "kind": "duplicate-in-scenario",
+                        "kind": "duplicate-step",
                         "scenario": scenario["name"],
                         "line": step["line"],
                         "other_line": seen[normalized],
                         "step": step["text"],
                         "message": (
-                            f"Paso '{step['text']}' repite la forma de la línea "
-                            f"{seen[normalized]} dentro del escenario '{scenario['name']}'"
+                            f"Paso '{step['text']}' duplicado en escenario "
+                            f"'{scenario['name']}' (líneas {seen[normalized]} y {step['line']})"
                         ),
                     }
                 )
             seen[normalized] = step["line"]
             global_steps.append(
-                (normalized, step["text"], scenario["name"], step["line"])
+                (
+                    normalized,
+                    step["text"],
+                    scenario["name"],
+                    step["line"],
+                    scenario["outline"],
+                )
             )
-    for index, (left, left_text, left_scenario, left_line) in enumerate(global_steps):
-        for right, _right_text, right_scenario, right_line in global_steps[index + 1 :]:
+    for index, (left, left_text, left_scenario, left_line, left_outline) in enumerate(
+        global_steps
+    ):
+        for (
+            right,
+            _right_text,
+            right_scenario,
+            right_line,
+            right_outline,
+        ) in global_steps[index + 1 :]:
             if left_scenario != right_scenario and left == right:
+                suggestion = "parametriza uno de los dos"
+                if left_outline or right_outline:
+                    outline = left_scenario if left_outline else right_scenario
+                    suggestion = (
+                        f"parametriza el paso en el Scenario Outline '{outline}' con una "
+                        f"columna nueva en Examples, o reformula su texto para diferenciarlos"
+                    )
                 findings.append(
                     {
                         "kind": "placeholder-variant",
                         "scenario": right_scenario,
                         "line": right_line,
-                        "other_line": left_line,
                         "other_scenario": left_scenario,
+                        "other_line": left_line,
                         "step": left_text,
                         "message": (
                             f"Paso '{left_text}' del escenario '{left_scenario}' (línea "
                             f"{left_line}) colisiona con el escenario '{right_scenario}' "
-                            f"(línea {right_line}); parametriza uno de los dos"
+                            f"(línea {right_line}); {suggestion}"
                         ),
                     }
                 )
