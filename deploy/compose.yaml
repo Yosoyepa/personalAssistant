@@ -12,7 +12,7 @@ services:
   assistant:
     build:
       context: ..
-    image: personal-assistant:0.2.0-alpha.1
+    image: personal-assistant:0.2.0-alpha.4
     read_only: true
     tmpfs:
       - /tmp
@@ -26,7 +26,8 @@ services:
       APP_ENV_FILE: disabled
     ports:
       # Loopback-only publication. The public HTTPS edge forwards exactly
-      # POST /webhooks/telegram and denies every other path and method
-      # (see docs/runbook/hardened-local-deployment.md).
+      # GET+POST /webhooks/whatsapp and POST /webhooks/telegram and denies
+      # every other path and method (see docs/runbook/hardened-local-deployment.md
+      # and docs/runbook/whatsapp-demo.md).
       - "127.0.0.1:8000:8000"
     restart: unless-stopped
