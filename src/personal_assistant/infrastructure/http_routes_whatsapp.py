@@ -27,6 +27,9 @@ from personal_assistant.infrastructure.http_models_whatsapp import (
 from personal_assistant.infrastructure.http_whatsapp_replies import (
     _send_whatsapp_reply,
 )
+from personal_assistant.infrastructure.http_whatsapp_transcription import (
+    _transcribe_whatsapp_media,
+)
 
 
 def _is_status_only_or_empty_callback(payload: dict[str, Any]) -> bool:
@@ -131,6 +134,60 @@ def register_whatsapp_routes(
             message.actor_id,
             tenant_id=settings.tenant_id,
         )
+        replies = container.commands.replies
+        reply_sender = get_http_attribute("_send_whatsapp_reply", _send_whatsapp_reply)
+        if message.media_kind in {"voice", "audio"}:
+            transcribe_func = get_http_attribute(
+                "_transcribe_whatsapp_media", _transcribe_whatsapp_media
+            )
+            transcribed, transcription_error = transcribe_func(
+                container,
+                settings,
+                message,
+                replies,
+            )
+            if transcription_error is not None:
+                sent = False
+                if settings.whatsapp.access_token:
+                    sent = reply_sender(
+                        container,
+                        principal,
+                        settings.whatsapp,
+                        recipient=message.actor_id,
+                        text=transcription_error,
+                        idempotency_key=message.idempotency_key
+                        or f"whatsapp:{message.actor_id}:{message.message_id}",
+                    )
+                return WhatsAppWebhookResponse(
+                    status=AgentStatus.needs_clarification,
+                    reply=transcription_error,
+                    sent=sent,
+                    approval_id=None,
+                    command=message.command,
+                )
+            if transcribed is not None:
+                message = transcribed
+        elif message.media_kind in {"image", "document", "video"}:
+            unsupported_reply = replies.whatsapp_media_unsupported()
+            sent = False
+            if settings.whatsapp.access_token:
+                sent = reply_sender(
+                    container,
+                    principal,
+                    settings.whatsapp,
+                    recipient=message.actor_id,
+                    text=unsupported_reply,
+                    idempotency_key=message.idempotency_key
+                    or f"whatsapp:{message.actor_id}:{message.message_id}",
+                )
+            return WhatsAppWebhookResponse(
+                status=AgentStatus.needs_clarification,
+                reply=unsupported_reply,
+                sent=sent,
+                approval_id=None,
+                command=message.command,
+            )
+
         active_datetime = get_http_attribute("datetime", datetime)
         try:
             result = container.commands.handle(
@@ -150,9 +207,6 @@ def register_whatsapp_routes(
 
         sent = False
         if settings.whatsapp.access_token and result.reply:
-            reply_sender = get_http_attribute(
-                "_send_whatsapp_reply", _send_whatsapp_reply
-            )
             sent = reply_sender(
                 container,
                 principal,

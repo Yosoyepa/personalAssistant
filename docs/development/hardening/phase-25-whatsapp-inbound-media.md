@@ -196,6 +196,42 @@ Se añaden a `features/whatsapp_inbound_webhook.feature`:
   aprobado, aunque sea benigna (regla añadida al cierre de la fase 24).
 - Anotación de ejecución append-only en este documento (no editar lo anterior).
 
+## Ejecución del coder
+
+- **Fecha y autor**: 2026-08-21 — Coder (Gemini).
+- **Componentes implementados**:
+  - **25A**: Normalizador `WhatsAppAdapter.normalize_webhook` enriquecido para extraer `media_kind`, `media_file_id`, `media_mime_type` y `media_file_size` sobre mensajes de tipo `audio`, `voice`, `image`, `document`, `video`, con texto de reserva `f"[{media_kind} message]"`.
+  - **25B**: Egress allowlist actualizado con `DEFAULT_WHATSAPP_MEDIA_HOST = "lookaside.fbsbx.com"`. En `WhatsAppGraphApiClient` se implementaron `get_media_url` y `download_media` con intercepción manual de redirecciones (`_NoRedirectHandler`) y validación fail-closed de cada salto contra `EgressAllowlist`.
+  - **25C**: Módulo `http_whatsapp_transcription.py` creado e integrado en `http_routes_whatsapp.py`. Se preserva el orden estricto de seguridad: HMAC $\rightarrow$ Allowlist remitente (403) $\rightarrow$ descarga de medios / transcripción.
+  - **25D**: `MAX_WHATSAPP_AUDIO_BYTES = 20 * 1024 * 1024` declarado en `http_auth.py`. 7 cadenas de respuesta en `locales/es.json` y métodos correspondientes en `ChannelRepliesMixin` / `AssistantReplies`.
+  - **25E**: 8 escenarios Gherkin añadidos en `features/whatsapp_inbound_webhook.feature`, suite completa de pruebas en `tests/test_whatsapp_inbound_media.py`, y runbooks actualizados (`docs/runbook/whatsapp.md`, `README.md`).
+- **Desviaciones declaradas**:
+  1. *Desambiguación de pasos Gherkin para `accept ir-dry`*: Se ajustaron ligeramente 3 frases de pasos en `features/whatsapp_inbound_webhook.feature` (`"the voice response carries..."`, `"no media download or transcription..."`, `"the endpoint acknowledges the audio replay..."`) para eliminar colisiones estructurales `placeholder-variant` contra pasos preexistentes. Resultado: `accept ir-dry` pasa con 0 findings.
+  2. *Modularización de `replies.py` para cumplir `TEST-007` (max 100 sitios de mutación)*: Se extrajo `ChannelRepliesMixin` a `src/personal_assistant/application/services/channel_replies.py`, heredado por `AssistantReplies`, reduciendo los sitios de `replies.py` a 88 y `channel_replies.py` a 16.
+- **Gates y verificación**:
+  - `wct gate --tier fast`: 7/7 PASS.
+  - `wct gate --tier commit`: 17/17 PASS.
+  - `pytest` suite completa: 1122 tests PASS, 0 fallos.
+  - `wct selftest redteam`: 30/30 adversarios bloqueados.
+
+### Ronda 2
+
+- **(a) Desviaciones de pasos Gherkin (Ronda 1) y su razón**:
+  1. `"And the voice response carries the assistant reply with sent flag \"false\""` (en lugar de `"And the response carries..."`): Evita colisión `placeholder-variant` con el paso análogo de texto en la línea 18 detectada por `tools.wct accept ir-dry`.
+  2. `"Then no media download or transcription is attempted"` (en lugar de `"Then no download or transcription is attempted"`): Evita colisión `placeholder-variant` con el paso del escenario de audio sobredimensionado en la línea 55.
+  3. `"Then the endpoint acknowledges the audio replay and the reminder exists exactly once"` (en lugar de `"Then the endpoint acknowledges it..."`): Evita colisión `placeholder-variant` con el paso del escenario de replay de texto en la línea 35.
+- **(b) Hueco de cobertura y resolución**:
+  - En Ronda 1 el diff-coverage fue 79% (39 líneas sin cubrir en `whatsapp_client.py`, `http_whatsapp_transcription.py`, `whatsapp.py` y `channel_replies.py`).
+  - Se añadieron tests unitarios de comportamiento para:
+    - `whatsapp_client.py`: `_NoRedirectHandler.redirect_request`, validación de `media_id`, respuestas sin campo `url`, errores HTTP 4xx/5xx y de red (`URLError`/`TimeoutError`) en `get_media_url`, y en `download_media` redirecciones válidas, redirecciones a hosts no permitidos (`EgressNotAllowedError`), redirecciones sin cabecera `Location`, exceso de redirecciones (>5), y errores de transporte.
+    - `http_whatsapp_transcription.py`: Derivación de extensiones en `_transcription_filename` (`.oga` -> `.ogg`, fallbacks por MIME `ogg`/`opus`/`mp3`/`mp4`/`wav`/default), y ramas tempranas de error (`media_file_id` ausente y `access_token` ausente).
+    - `whatsapp.py`: Bucle de detección de fallback para `media_kind` cuando `type` está ausente o no es reconocido en el payload.
+    - `channel_replies.py`: Verificación de todos los métodos getter localizados de `ChannelRepliesMixin`.
+  - Resultado: **100% diff-coverage** (190/190 líneas cubiertas, 0 líneas faltantes).
+- **(c) Desviaciones nuevas**:
+  - Ninguna. No se modificó código de producción en la Ronda 2, solo se complementó la suite de pruebas.
+
 ## Feedback WCT de la fase
 
 (pendiente — se llena al cierre por el planner)
+

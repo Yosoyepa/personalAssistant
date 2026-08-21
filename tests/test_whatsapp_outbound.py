@@ -12,6 +12,7 @@ from email.message import Message
 from http.client import IncompleteRead
 from typing import Any, Self
 from unittest.mock import patch
+from urllib import request as urllib_request
 from urllib.error import HTTPError, URLError
 
 from fastapi.testclient import TestClient
@@ -939,6 +940,203 @@ class WhatsAppRuntimeWiringTests(unittest.TestCase):
             self.assertEqual(mock_build.call_count, 1)
             notifications_arg = mock_build.call_args.kwargs.get("notifications")
             self.assertIsInstance(notifications_arg, ChannelNotificationRouter)
+
+    def test_whatsapp_graph_client_get_media_url(self) -> None:
+        allowlist = EgressAllowlist.from_entries({"graph.facebook.com"})
+        client = WhatsAppGraphApiClient(
+            access_token="wa-token",
+            phone_number_id="12345",
+            egress_allowlist=allowlist,
+        )
+        fake_response = io.BytesIO(
+            json.dumps({"url": "https://lookaside.fbsbx.com/wa_media_1"}).encode(
+                "utf-8"
+            )
+        )
+        with patch(
+            "urllib.request.urlopen", return_value=fake_response
+        ) as mock_urlopen:
+            url = client.get_media_url("media-id-123")
+            self.assertEqual(url, "https://lookaside.fbsbx.com/wa_media_1")
+            req = mock_urlopen.call_args[0][0]
+            self.assertEqual(
+                req.full_url, "https://graph.facebook.com/v21.0/media-id-123"
+            )
+            self.assertEqual(req.headers.get("Authorization"), "Bearer wa-token")
+
+    def test_whatsapp_graph_client_download_media_follows_allowlisted_redirects(
+        self,
+    ) -> None:
+        allowlist = EgressAllowlist.from_entries(
+            {"graph.facebook.com", "lookaside.fbsbx.com"}
+        )
+        client = WhatsAppGraphApiClient(
+            access_token="wa-token",
+            phone_number_id="12345",
+            egress_allowlist=allowlist,
+        )
+
+        class FakeOpener:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            def open(self, req: Any, timeout: float = 10.0) -> Any:
+                self.calls += 1
+                if self.calls == 1:
+                    headers = Message()
+                    headers["Location"] = (
+                        "https://lookaside.fbsbx.com/download/file.ogg"
+                    )
+                    raise HTTPError(
+                        req.full_url, 302, "Found", headers, io.BytesIO(b"")
+                    )
+                return io.BytesIO(b"AUDIO_BYTES_OK")
+
+        fake_opener = FakeOpener()
+        with patch("urllib.request.build_opener", return_value=fake_opener):
+            data = client.download_media("https://graph.facebook.com/v21.0/media-dl")
+            self.assertEqual(data, b"AUDIO_BYTES_OK")
+            self.assertEqual(fake_opener.calls, 2)
+
+    def test_whatsapp_graph_client_download_media_blocks_unauthorized_redirect(
+        self,
+    ) -> None:
+        allowlist = EgressAllowlist.from_entries({"graph.facebook.com"})
+        client = WhatsAppGraphApiClient(
+            access_token="wa-token",
+            phone_number_id="12345",
+            egress_allowlist=allowlist,
+        )
+
+        class EvilRedirectOpener:
+            def open(self, req: Any, timeout: float = 10.0) -> Any:
+                headers = Message()
+                headers["Location"] = "https://evil-attacker.com/leak"
+                raise HTTPError(req.full_url, 302, "Found", headers, io.BytesIO(b""))
+
+        with (
+            patch("urllib.request.build_opener", return_value=EvilRedirectOpener()),
+            self.assertRaises(EgressNotAllowedError),
+        ):
+            client.download_media("https://graph.facebook.com/v21.0/media-dl")
+
+    def test_no_redirect_handler_returns_none(self) -> None:
+        from personal_assistant.adapters.outbound.notifications.whatsapp_client import (
+            _NoRedirectHandler,
+        )
+
+        handler = _NoRedirectHandler()
+        req = urllib_request.Request("https://graph.facebook.com/v21.0/media-dl")
+        self.assertIsNone(
+            handler.redirect_request(
+                req, None, 302, "Found", Message(), "https://lookaside.fbsbx.com"
+            )
+        )
+
+    def test_whatsapp_graph_client_get_media_url_validation_and_errors(
+        self,
+    ) -> None:
+        client = WhatsAppGraphApiClient(
+            access_token="wa-token",
+            phone_number_id="12345",
+        )
+
+        with self.assertRaises(ValueError):
+            client.get_media_url("")
+        with self.assertRaises(ValueError):
+            client.get_media_url("   ")
+
+        # Invalid response body without "url"
+        with patch(
+            "personal_assistant.adapters.outbound.notifications.whatsapp_client.urllib_request.urlopen",
+            return_value=io.BytesIO(b'{"id": "123"}'),
+        ):
+            with self.assertRaises(RuntimeError) as ctx:
+                client.get_media_url("media-123")
+            self.assertIn("invalid response", str(ctx.exception))
+
+        # HTTP error 404
+        error = HTTPError(
+            "https://graph.facebook.com/v21.0/media-123",
+            404,
+            "Not Found",
+            Message(),
+            io.BytesIO(b'{"error": "not found"}'),
+        )
+        with patch(
+            "personal_assistant.adapters.outbound.notifications.whatsapp_client.urllib_request.urlopen",
+            side_effect=error,
+        ):
+            with self.assertRaises(RuntimeError) as ctx:
+                client.get_media_url("media-123")
+            self.assertIn("failed with status 404", str(ctx.exception))
+
+        # URLError / TimeoutError
+        with patch(
+            "personal_assistant.adapters.outbound.notifications.whatsapp_client.urllib_request.urlopen",
+            side_effect=URLError("Connection refused"),
+        ):
+            with self.assertRaises(RuntimeError) as ctx:
+                client.get_media_url("media-123")
+            self.assertIn("network error", str(ctx.exception))
+
+    def test_whatsapp_graph_client_download_media_errors(self) -> None:
+        allowlist = EgressAllowlist.from_entries(
+            {"graph.facebook.com", "lookaside.fbsbx.com"}
+        )
+        client = WhatsAppGraphApiClient(
+            access_token="wa-token",
+            phone_number_id="12345",
+            egress_allowlist=allowlist,
+        )
+
+        # Redirect missing Location header
+        class MissingLocationOpener:
+            def open(self, req: Any, timeout: float = 10.0) -> Any:
+                raise HTTPError(req.full_url, 302, "Found", Message(), io.BytesIO(b""))
+
+        with patch("urllib.request.build_opener", return_value=MissingLocationOpener()):
+            with self.assertRaises(RuntimeError) as ctx:
+                client.download_media("https://graph.facebook.com/v21.0/media-dl")
+            self.assertIn("Redirect without Location header", str(ctx.exception))
+
+        # Too many redirects (> 5)
+        class LoopRedirectOpener:
+            def open(self, req: Any, timeout: float = 10.0) -> Any:
+                headers = Message()
+                headers["Location"] = "https://lookaside.fbsbx.com/loop"
+                raise HTTPError(req.full_url, 302, "Found", headers, io.BytesIO(b""))
+
+        with patch("urllib.request.build_opener", return_value=LoopRedirectOpener()):
+            with self.assertRaises(RuntimeError) as ctx:
+                client.download_media("https://graph.facebook.com/v21.0/media-dl")
+            self.assertIn("Too many redirects", str(ctx.exception))
+
+        # Non-3xx HTTPError
+        class Http404Opener:
+            def open(self, req: Any, timeout: float = 10.0) -> Any:
+                raise HTTPError(
+                    req.full_url,
+                    404,
+                    "Not Found",
+                    Message(),
+                    io.BytesIO(b"not found"),
+                )
+
+        with patch("urllib.request.build_opener", return_value=Http404Opener()):
+            with self.assertRaises(RuntimeError) as ctx:
+                client.download_media("https://graph.facebook.com/v21.0/media-dl")
+            self.assertIn("failed with status 404", str(ctx.exception))
+
+        # URLError
+        class NetworkErrorOpener:
+            def open(self, req: Any, timeout: float = 10.0) -> Any:
+                raise URLError("Unreachable")
+
+        with patch("urllib.request.build_opener", return_value=NetworkErrorOpener()):
+            with self.assertRaises(RuntimeError) as ctx:
+                client.download_media("https://graph.facebook.com/v21.0/media-dl")
+            self.assertIn("network error", str(ctx.exception))
 
 
 if __name__ == "__main__":

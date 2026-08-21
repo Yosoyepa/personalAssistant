@@ -23,6 +23,8 @@ DEFAULT_TELEGRAM_API_HOST = "api.telegram.org"
 DEFAULT_TELEGRAM_API_URL = f"https://{DEFAULT_TELEGRAM_API_HOST}"
 DEFAULT_WHATSAPP_API_HOST = "graph.facebook.com"
 DEFAULT_WHATSAPP_API_URL = f"https://{DEFAULT_WHATSAPP_API_HOST}"
+DEFAULT_WHATSAPP_MEDIA_HOST = "lookaside.fbsbx.com"
+DEFAULT_WHATSAPP_MEDIA_URL = f"https://{DEFAULT_WHATSAPP_MEDIA_HOST}"
 
 
 class EgressNotAllowedError(AssistantError):
@@ -127,6 +129,7 @@ def derive_egress_entries(
         entries.add(DEFAULT_TELEGRAM_API_URL)
     if whatsapp_access_token_configured:
         entries.add(DEFAULT_WHATSAPP_API_URL)
+        entries.add(DEFAULT_WHATSAPP_MEDIA_URL)
     return frozenset(entries)
 
 
