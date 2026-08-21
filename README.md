@@ -16,7 +16,7 @@ This is intentionally **not** a generic autonomous agent loop. It is a single-as
 
 ### Channels
 
-- **WhatsApp** (inbound + outbound): webhook with Meta challenge validation and HMAC SHA-256 signature verification (`X-Hub-Signature-256`), immediate replies to allow-listed users via the Graph API, and proactive reminder delivery. Setup in `docs/runbook/whatsapp.md`.
+- **WhatsApp** (inbound + outbound): webhook with Meta challenge validation and HMAC SHA-256 signature verification (`X-Hub-Signature-256`), voice-note transcription into the conversation pipeline (OpenAI-compatible speech-to-text), immediate replies to allow-listed users via the Graph API, and proactive reminder delivery. Setup in `docs/runbook/whatsapp.md`; live-demo guide in `docs/runbook/whatsapp-demo.md`.
 - **Telegram**: webhook normalization with secret-token verification and user allowlist, command routing, text replies, optional voice transcription (OpenAI-compatible speech-to-text) and MiniMax TTS audio replies. Setup in `docs/runbook/telegram.md`.
 - **Multi-channel routing**: `ChannelNotificationRouter` delivers scheduled reminders over Telegram or WhatsApp through one outbox pipeline.
 
@@ -116,6 +116,7 @@ uv run python -m tools.wct gate --tier fast            # governance gates (needs
 |---|---|
 | `docs/runbook/telegram.md` | BotFather, webhook, audio/TTS, local runtime notes |
 | `docs/runbook/whatsapp.md` | Meta app, webhook subscription, HMAC verification, smoke test, troubleshooting |
+| `docs/runbook/whatsapp-demo.md` | Live demo with Meta sandbox: setup, tunnel, script, troubleshooting |
 | `docs/runbook/admin-dashboard.md` | Admin panel, P5 actions, uncertain reconciliation, JSON endpoints |
 | `docs/runbook/persistence.md` | Memory/Postgres backends, schema, idempotency, worker CLI |
 | `docs/runbook/hardened-local-deployment.md` | HTTPS webhook-only boundary, secrets, rotation, rollback |
