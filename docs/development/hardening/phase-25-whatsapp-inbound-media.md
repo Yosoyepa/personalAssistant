@@ -3,13 +3,13 @@
 | Campo | Valor |
 |---|---|
 | Fase | `25 — whatsapp inbound media (audio/voice transcription)` |
-| Estado | `APPROVED` (escenarios Gherkin aprobados por el mantenedor, 2026-08-20) |
+| Estado | `COMPLETED` (ronda 1 rechazada por diff-coverage CI; ronda 2 verificada y mergeada, 2026-08-21) |
 | Mantenedor | `Yosoyepa` |
 | Rama de fase | `gemini/phase-25-whatsapp-media` (coder a **medium effort**, con regla de reporte de desviaciones de la fase 24) |
 | Commit base | `3d06ead` (main tras merge #78, release v0.2.0-alpha.3) |
 | Fecha de inicio | `2026-08-20` |
-| PR | TBD (spec), TBD (implementación) |
-| Merge commit | TBD |
+| PR | #79 (spec), #80 (implementación, 2 rondas) |
+| Merge commit | `dcbc4de` (spec), `dad8716` (implementación) |
 
 ## Objetivo
 
@@ -233,5 +233,33 @@ Se añaden a `features/whatsapp_inbound_webhook.feature`:
 
 ## Feedback WCT de la fase
 
-(pendiente — se llena al cierre por el planner)
+- **F — G-COV-DIFF ausente del tier local (hallazgo principal)**: la ronda 1
+  pasó `wct gate --tier commit` (17/17) y aun así CI la tumbó: el check
+  `diff-cover --fail-under=90` solo existe en `.github/workflows/ci.yml` y el
+  harness local no lo ofrece. El coder corrió todo lo que el tier local expone;
+  la brecha es del harness, no del ejecutor. Propuesta para el template: añadir
+  `G-COV-DIFF` al tier commit (o un tier `pr`) ejecutando
+  `diff-cover coverage.xml --compare-branch <base> --fail-under=90`, para que la
+  verificación local sea fiel a CI. Mientras tanto, los prompts del coder deben
+  incluir el comando diff-cover explícito en la lista de verificación.
+- **Desviaciones de redacción Gherkin (2ª fase consecutiva)**: la causa raíz es
+  legítima —evitar colisiones `placeholder-variant`— y en ronda 2 el coder las
+  declaró con justificación técnica (detectadas vía `wct accept ir-dry`). La
+  regla "declara toda desviación" funciona cuando se hace cumplir; refuerza la
+  propuesta B (diagnóstico enriquecido que *sugiera* la reformulación al
+  detectar la colisión).
+- **Experimento medium, segunda muestra**: la calidad del código se mantuvo
+  (espejo fiel del blueprint de Telegram, invariante de seguridad con test de
+  cero llamadas de red, redirects hop-a-hop validados, tests existentes solo
+  aditivos 167+/3−). El fallo fue de fidelidad de verificación local, no de
+  código. Se mantiene la conclusión: medium es default para clase mecánica;
+  el checklist de verificación del prompt debe replicar CI.
+- **Positivo de ronda 2**: corrección quirúrgica (332 inserciones, 0 cambios de
+  producción), diff-coverage 100% (190/190), suite 1129/3/396, gate 17/17,
+  redteam 30/30, CI 5/5. El ciclo rechazo→corrección→verificación funcionó sin
+  intervención humana en el código.
+- **Residual registrado** (no bloqueante): `int(raw_file_size)` en el
+  normalizador (`channels/whatsapp.py`) puede levantar `ValueError` ante un
+  payload con `file_size` no numérico → 500 en el webhook. Solo alcanzable tras
+  pasar la firma HMAC; riesgo bajo. Candidato a fase de higiene futura.
 
