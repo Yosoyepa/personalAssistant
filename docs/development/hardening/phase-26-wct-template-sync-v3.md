@@ -165,8 +165,36 @@ Definition-of-done en el coder.md del piloto), los 3
   `governance/thresholds.yaml` SOLO en lo autorizado arriba.
 - El bless lo hace el mantenedor tras tu PR (no lo intentes: el hook lo
   bloquea).
-- Anota tu ejecución en este documento con "## Ejecución del coder"
-  APPEND-ONLY.
+## Ejecución del coder
+
+- **Fecha y autor**: 2026-08-21 — Coder (Gemini).
+- **Archivos sincronizados por clasificación**:
+  - **Reemplazo/adición directa**:
+    - `tools/wct/splitplan/__init__.py`: módulo nuevo importado del template.
+    - `tools/wct/splitplan/engine.py`: módulo nuevo para generación de propuestas de partición fachada (TEST-007).
+    - `tools/wct/util/git.py`: función `remote_base(root: Path)` añadida para resolución de ramas base en gates diferenciales.
+  - **Merge hunk a hunk**:
+    - `tools/wct/gate/runner.py`: incorporados `MANIFEST_DIAGNOSTICS`, `gate_coverage_diff`, preflight `G-ENV` en `run_tier`, tier `pr` adaptado (21 gates), exclusión de `^governance/generated/` en `gate_secrets`, y recableado de `G-HOOKS-WIRED` y `G-REDTEAM` a `uv run python -m tools.wct ...` conservando todo el cableado local.
+    - `tools/wct/mutate/engine.py`: incorporadas constantes `MUTABLE_NODES`, `_is_site`, función `function_sites`, y estado `manifest: ok|legacy|missing` en `scan()`.
+    - `tools/wct/accept/pipeline.py`: incorporada sugerencia outline-aware en colisiones `placeholder-variant` de `ir_dry()`.
+    - `tools/wct/cli.py`: añadido subcomando `split-plan` y sus argumentos `--json`.
+    - `tools/wct/ratchet/measure.py`: adoptado `require_approval_evidence(reason)` en `record()`.
+    - `governance/policy.yaml`: añadido bloque `environment_required` con `pr: [TEST_POSTGRES_DSN]`.
+  - **Preservados intactos**:
+    - `tools/wct/hooks/guard.py`: versión avanzada del piloto con normalización tolerante de invocación de módulos.
+    - `tools/wct/selftest/redteam.py`: regex de secretos local.
+    - `tools/wct/__init__.py`: versión 0.1.0 fija.
+- **Tests añadidos/actualizados (layout plano `tests/test_wct_*.py`)**:
+  - `tests/test_wct_splitplan.py`: 5 tests unitarios para `function_sites`, suma de sitios, particiones por partes y CLI.
+  - `tests/test_wct_gate_preflight.py`: 2 tests unitarios para fallo temprano por variables ausentes y ejecución normal con variables provistas.
+  - `tests/test_wct_gate_tiers.py`: 6 tests unitarios verificando composición del tier `pr` (21 gates), orden producer/consumer de lcov, y manejo de `diff-cover` / ramas remotas.
+  - `tests/test_wct_mutate.py`: extendido con 4 tests para estados `manifest` (legacy/missing/ok) y orden de diagnósticos de stale manifest.
+  - `tests/test_wct_accept.py`: extendido con test para sugerencias outline-aware nombrando el `Scenario Outline`.
+  - `tests/test_wct_ratchets.py`: 3 tests unitarios para suppressions, debt markers y rechazo de `ratchet record` sin evidencia.
+- **Desviaciones declaradas**:
+  - Ninguna. Se ejecutó el spec al 100% de fidelidad respecto al plan aprobado.
+- **Ventana esperada de gobernanza**:
+  - `G-META-1` y `G-HOOKS-WIRED` (vía `wct doctor`) reportan FAIL hasta que el mantenedor realice el bless de los cambios autorizados en `governance/policy.yaml` y `tools/wct/**`.
 
 ## Feedback WCT de la fase
 

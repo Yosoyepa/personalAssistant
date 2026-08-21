@@ -47,28 +47,60 @@ def function_hashes(path: Path, root: Path) -> dict[str, str]:
     return hashes
 
 
+MUTABLE_NODES = (
+    ast.Compare,
+    ast.BoolOp,
+    ast.BinOp,
+    ast.UnaryOp,
+    ast.If,
+    ast.IfExp,
+    ast.While,
+    ast.Constant,
+)
+
+
+def _is_site(node: ast.AST) -> bool:
+    return isinstance(node, MUTABLE_NODES) and not (
+        isinstance(node, ast.Constant) and node.value in {None, Ellipsis}
+    )
+
+
 def mutation_sites(path: Path) -> int:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-    mutable = (
-        ast.Compare,
-        ast.BoolOp,
-        ast.BinOp,
-        ast.UnaryOp,
-        ast.If,
-        ast.IfExp,
-        ast.While,
-        ast.Constant,
-    )
-    return sum(
-        isinstance(node, mutable)
-        and not (isinstance(node, ast.Constant) and node.value in {None, Ellipsis})
-        for node in ast.walk(tree)
-    )
+    return sum(_is_site(node) for node in ast.walk(tree))
+
+
+def function_sites(path: Path) -> dict[str, int]:
+    """Mutation sites per function/method qualname, plus the `<module>` bucket.
+
+    Every site lands in exactly one bucket: the innermost enclosing function
+    (classes only contribute to the qualname), or module level. The sum of
+    the values equals `mutation_sites(path)` — split plans rely on it.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    counts: dict[str, int] = {"<module>": 0}
+
+    def visit(node: ast.AST, prefix: list[str], scope: str) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                qualname = ".".join([*prefix, child.name])
+                counts[qualname] = counts.get(qualname, 0)
+                visit(child, [*prefix, child.name], qualname)
+            elif isinstance(child, ast.ClassDef):
+                visit(child, [*prefix, child.name], scope)
+            else:
+                if _is_site(child):
+                    counts[scope] += 1
+                visit(child, prefix, scope)
+
+    visit(tree, [], "<module>")
+    return counts
 
 
 def scan(root: Path) -> dict[str, Any]:
     _root, policy, thresholds = load_config(root)
     previous: dict[str, str] = {}
+    manifest_status = "missing"
     manifest = root / MANIFEST
     if manifest.is_file():
         document = json.loads(manifest.read_text(encoding="utf-8"))
@@ -77,6 +109,9 @@ def scan(root: Path) -> dict[str, Any]:
         # Rojo explícito, nunca silencio.
         if int(document.get("schema_version", 0)) >= MANIFEST_SCHEMA:
             previous = document.get("functions", {})
+            manifest_status = "ok"
+        else:
+            manifest_status = "legacy"
     functions: dict[str, str] = {}
     files: list[dict[str, Any]] = []
     limit = int(thresholds["mutation"]["max_sites_per_file"])
@@ -101,6 +136,7 @@ def scan(root: Path) -> dict[str, Any]:
         "functions": functions,
         "changed_functions": sum(len(item["changed_functions"]) for item in files),
         "over_limit": [item["file"] for item in files if item["over_limit"]],
+        "manifest": manifest_status,
     }
 
 

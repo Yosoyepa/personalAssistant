@@ -68,3 +68,31 @@ Scenario: two
     assert "one" in finding["message"]
     assert "two" in finding["message"]
     assert "value" in finding["message"]
+
+
+def test_placeholder_variant_names_the_outline_and_suggests_fix(tmp_path: Path) -> None:
+    """Phases 24-25 of the pilot: the message must suggest the reformulation.
+
+    When one side of the collision is a Scenario Outline, the cheapest fix is
+    a new Examples column on THAT step — say so instead of "either one".
+    """
+    feature = tmp_path / "collide.feature"
+    feature.write_text(
+        """Feature: collide
+Scenario: plain
+  Given value "1"
+Scenario Outline: tabulated
+  Given value "2"
+  Examples:
+    | n |
+    | 3 |
+""",
+        encoding="utf-8",
+    )
+
+    report = ir_dry(parse_feature(feature))
+    finding = report["findings"][0]
+
+    assert finding["kind"] == "placeholder-variant"
+    assert "Scenario Outline 'tabulated'" in finding["message"]
+    assert "columna" in finding["message"]

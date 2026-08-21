@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -24,6 +25,18 @@ from tools.wct.ratchet.engine import (
     suppression_findings,
 )
 from tools.wct.rules.engine import drift, rule_documents
+from tools.wct.util.git import remote_base
+
+MANIFEST_DIAGNOSTICS = {
+    "legacy": (
+        "manifiesto schema 1: toda función cuenta como cambiada; "
+        "regenera con 'wct mutate update-manifest'"
+    ),
+    "missing": (
+        "manifiesto ausente: toda función cuenta como cambiada; "
+        "genera con 'wct mutate update-manifest'"
+    ),
+}
 
 Gate = Callable[[Path], GateResult]
 
@@ -196,9 +209,13 @@ def gate_mutation_sites(root: Path) -> GateResult:
         for item in report["files"]
         if item["over_limit"] and item["changed_functions"]
     ]
+    diagnostic = MANIFEST_DIAGNOSTICS.get(report.get("manifest") or "")
+    if findings and diagnostic:
+        findings.insert(0, diagnostic)
     return _result(
         "G-MUT-SITES", started, findings, "archivos dentro del presupuesto de mutación"
     )
+
 
 
 def gate_accept(root: Path) -> GateResult:
@@ -299,8 +316,19 @@ def gate_secrets(root: Path) -> GateResult:
         "pyproject.toml",
         ".pre-commit-config.yaml",
     ]
+    # governance/generated/ contiene artefactos regenerados por las propias
+    # herramientas (p. ej. fingerprints sha256 del manifiesto de mutación):
+    # hex de alta entropía por diseño, no secretos. Auditarlos en el baseline
+    # sería fricción en cada regeneración.
     completed = subprocess.run(
-        ["detect-secrets", "scan", "--slim", *paths],
+        [
+            "detect-secrets",
+            "scan",
+            "--slim",
+            "--exclude-files",
+            "^governance/generated/",
+            *paths,
+        ],
         cwd=root,
         text=True,
         capture_output=True,
@@ -320,6 +348,44 @@ def gate_secrets(root: Path) -> GateResult:
         if (filename, str(item.get("hashed_secret", ""))) not in audited
     ]
     return _result("G-SECRET", started, findings, "sin secretos nuevos")
+
+
+def gate_coverage_diff(root: Path) -> GateResult:
+    started = time.monotonic()
+    if shutil.which("diff-cover") is None:
+        return GateResult("G-COV-DIFF", Status.ERROR, "herramienta ausente: diff-cover")
+    base = remote_base(root)
+    if base is None:
+        return GateResult(
+            "G-COV-DIFF",
+            Status.ERROR,
+            "sin rama base resoluble: no encontré origin/main ni main",
+        )
+    command = [
+        "diff-cover",
+        "build/coverage/lcov.info",
+        "--compare-branch",
+        base,
+        "--fail-under",
+        "90",
+        "--include-untracked",
+    ]
+    completed = subprocess.run(
+        command, cwd=root, text=True, capture_output=True, check=False
+    )
+    output = (completed.stdout + "\n" + completed.stderr).strip()
+    status = Status.PASS if completed.returncode == 0 else Status.FAIL
+    summary = (
+        "ok" if status is Status.PASS else (output.splitlines()[-1] if output else "exit 1")
+    )
+    return GateResult(
+        "G-COV-DIFF",
+        status,
+        summary,
+        int((time.monotonic() - started) * 1000),
+        output.splitlines()[-50:],
+        " ".join(command),
+    )
 
 
 def alias(gate_id: str, target: Gate) -> Gate:
@@ -426,11 +492,7 @@ REGISTRY: dict[str, Gate] = {
             "-q",
         ],
     ),
-    "G-COV-DIFF": external(
-        "G-COV-DIFF",
-        ["diff-cover", "build/coverage/lcov.info", "--fail-under=90"],
-        optional=True,
-    ),
+    "G-COV-DIFF": gate_coverage_diff,
     "G-DOC": external("G-DOC", ["interrogate", "src"], optional=True),
     "G-SECRET": gate_secrets,
     "G-PROP": external("G-PROP", ["pytest", "-q", "tests/property"]),
@@ -452,14 +514,20 @@ REGISTRY: dict[str, Gate] = {
     "G-ACCEPT-MUT": external(
         "G-ACCEPT-MUT", ["wct", "accept", "mutate"], optional=True
     ),
-    "G-REDTEAM": external("G-REDTEAM", ["wct", "selftest", "redteam"]),
+    "G-REDTEAM": external(
+        "G-REDTEAM", ["uv", "run", "python", "-m", "tools.wct", "selftest", "redteam"]
+    ),
 }
 
 REGISTRY.update(
     {
         "G-ARCH-CYCLE": alias("G-ARCH-CYCLE", gate_archmetrics),
         "G-CVE": alias("G-CVE", REGISTRY["G-AUDIT"]),
-        "G-HOOKS-WIRED": external("G-HOOKS-WIRED", ["wct", "doctor"], optional=False),
+        "G-HOOKS-WIRED": external(
+            "G-HOOKS-WIRED",
+            ["uv", "run", "python", "-m", "tools.wct", "doctor"],
+            optional=False,
+        ),
         "G-IMPORT-ORDER": alias("G-IMPORT-ORDER", REGISTRY["G-LINT"]),
         "G-RULES-SYNC": alias("G-RULES-SYNC", gate_rules_drift),
         "G-SAST": alias("G-SAST", REGISTRY["G-SAST-BANDIT"]),
@@ -525,11 +593,44 @@ TIERS: dict[str, list[str]] = {
         "G-SBOM",
         "G-REDTEAM",
     ],
+    "pr": [
+        "G-META-1",
+        "G-META-2",
+        "G-RULES-DRIFT",
+        "G-SUPPRESS",
+        "G-DEBT",
+        "G-LINT",
+        "G-FMT",
+        "G-TYPE",
+        "G-TEST",
+        "G-ARCH",
+        "G-ARCHMETRICS",
+        "G-DEPS",
+        "G-DEAD",
+        "G-SAST-BANDIT",
+        "G-SECRET",
+        "G-MUT-SITES",
+        "G-ACCEPT",
+        "G-HOOKS-WIRED",
+        "G-COV-TOTAL",
+        "G-COV-DIFF",
+        "G-REDTEAM",
+    ],
 }
 
 
 def run_tier(root: Path, tier: str) -> list[GateResult]:
     _root, policy, _thresholds = load_config(root)
+    required = policy.get("environment_required", {}).get(tier, [])
+    missing = [name for name in required if not os.environ.get(name)]
+    if missing:
+        return [
+            GateResult(
+                "G-ENV",
+                Status.ERROR,
+                f"variables de entorno ausentes para el tier {tier}: {', '.join(missing)}",
+            )
+        ]
     disabled = set(policy.get("gates", {}).get("disabled", []))
     results: list[GateResult] = []
     for gate_id in TIERS[tier]:

@@ -33,6 +33,8 @@ from tools.wct.report.render import json_report, text_report
 from tools.wct.rules.engine import build as build_rules
 from tools.wct.rules.engine import drift as rule_drift
 from tools.wct.selftest.redteam import run as run_redteam
+from tools.wct.splitplan.engine import plan as plan_split
+from tools.wct.splitplan.engine import render as render_split
 from tools.wct.webhook import send_from_environment
 
 
@@ -98,6 +100,12 @@ def parser() -> argparse.ArgumentParser:
         action="store_true",
         help="changeset completo vs main/master y árbol de trabajo (por defecto)",
     )
+    split = sub.add_parser(
+        "split-plan",
+        help="propose a facade partition for a mutation-heavy file (TEST-007)",
+    )
+    split.add_argument("file", help="archivo fuente a planear")
+    split.add_argument("--json", action="store_true", help="salida JSON")
 
     selftest = sub.add_parser(
         "selftest", help="attack the harness with known-bad inputs"
@@ -175,6 +183,13 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.command == "fmt":
             return run_fmt(root, staged_only=args.staged)
+        if args.command == "split-plan":
+            report = plan_split(root, root / args.file)
+            if args.json:
+                print(json.dumps(report, indent=2, ensure_ascii=False))
+            else:
+                print(render_split(report))
+            return 0 if report["ok"] else 1
         if args.command == "hook":
             return dispatch_hook(args.event)
         if args.command == "archmetrics":
